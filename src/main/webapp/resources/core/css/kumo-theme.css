@@ -1,0 +1,51 @@
+:root {
+  --kumo-bg: #f7f4eb;
+  --kumo-sidebar: #191919;
+  --kumo-card-bg: #ffffff;
+  --kumo-pink: #fbe4e8;
+  --kumo-purple: #e3d7ff;
+  --kumo-yellow: #fef1cc;
+  --kumo-green: #d4f3e6;
+  --kumo-text-dark: #222222;
+  --kumo-radius: 20px;
+}
+
+body {
+  background-color: var(--kumo-bg);
+  color: var(--kumo-text-dark);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sidebar lateral idéntica a las imágenes de referencia */
+.kumo-sidebar {
+  background-color: var(--kumo-sidebar);
+  border-radius: var(--kumo-radius);
+  color: #fff;
+  min-height: calc(100vh - 2rem);
+}
+
+.kumo-sidebar .nav-link {
+  color: #a0a0a0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.kumo-sidebar .nav-link.active, .kumo-sidebar .nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Tarjetas Bento */
+.kumo-card {
+  background-color: var(--kumo-card-bg);
+  border-radius: var(--kumo-radius);
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+}
+
+.kumo-badge-pink { background-color: var(--kumo-pink); color: #8a2b43; }
+.kumo-badge-purple { background-color: var(--kumo-purple); color: #4a2b8a; }
+.kumo-badge-yellow { background-color: var(--kumo-yellow); color: #8a6d2b; }
+.kumo-badge-green { background-color: var(--kumo-green); color: #2b8a5d; }
