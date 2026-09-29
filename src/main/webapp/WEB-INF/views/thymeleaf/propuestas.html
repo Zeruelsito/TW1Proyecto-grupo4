@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Kumo - Propuestas</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Iconos Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+</head>
+<body class="p-3">
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
+            <div>
+                <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-check2-square me-2"></i> Tareas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-3">
+                <a href="#" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10 px-4">
+            <!-- Header Bar -->
+            <div class="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <h2 class="fw-bold mb-0">Propuestas del Hogar</h2>
+                    <p class="text-muted small">Proponé gastos o cambios de reglas y decidan entre todos.</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">U</div>
+                        <span class="fw-medium small">Hola, Usuario</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner (validación del backend o voto rechazado) -->
+            <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${mensajeError}">Error</span>
+            </div>
+
+            <div class="row g-4">
+                <!-- Columna Izquierda: Formulario de nueva propuesta -->
+                <div class="col-lg-4">
+                    <div class="kumo-card">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Nueva Propuesta</h5>
+
+                        <form th:action="@{/propuestas/guardar}" th:object="${datosPropuesta}" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Título</label>
+                                <input type="text" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Comprar un aire acondicionado">
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Descripción</label>
+                                <textarea class="form-control rounded-3" rows="3" th:field="*{descripcion}" placeholder="Contá de qué se trata"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Quórum de aprobación (%)</label>
+                                <input type="number" min="1" max="100" step="1" class="form-control rounded-3" th:field="*{porcentajeQuorum}">
+                                <div class="form-text">Porcentaje de integrantes que deben votar a favor.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Fecha límite</label>
+                                <input type="date" class="form-control rounded-3" th:field="*{fechaLimite}">
+                                <div class="form-text">Se puede votar hasta el final de ese día.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">
+                                Crear propuesta
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Lista de propuestas -->
+                <div class="col-lg-8">
+                    <div class="kumo-card mb-3" th:each="propuesta : ${listaPropuestas}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-1" th:text="${propuesta.titulo}">Título de la propuesta</h5>
+                                <small class="text-muted">
+                                    Quórum:
+                                    <span th:text="${#numbers.formatDecimal(propuesta.porcentajeQuorum, 1, 0)} + '%'">50%</span>
+                                    · Vence el
+                                    <span th:text="${#temporals.format(propuesta.fechaLimite, 'dd/MM/yyyy')}">01/01/2026</span>
+                                </small>
+                            </div>
+                            <span class="badge px-2 py-1"
+                                  th:text="${propuesta.estado}"
+                                  th:classappend="${propuesta.estado?.name() == 'APROBADA' ? 'kumo-badge-green' : (propuesta.estado?.name() == 'RECHAZADA' ? 'kumo-badge-pink' : (propuesta.estado?.name() == 'CANCELADA' ? 'kumo-badge-purple' : 'kumo-badge-yellow'))}">
+                                PENDIENTE
+                            </span>
+                        </div>
+
+                        <p class="mb-3" style="white-space: pre-line;" th:text="${propuesta.descripcion}">Descripción</p>
+
+                        <!-- Formulario de voto: solo mientras la propuesta está pendiente -->
+                        <form th:if="${propuesta.estado?.name() == 'PENDIENTE'}"
+                              th:action="@{/propuestas/{id}/votar(id=${propuesta.id})}"
+                              method="post" class="d-flex gap-2">
+                            <input type="text" name="comentario" class="form-control form-control-sm rounded-3"
+                                   placeholder="Comentario (opcional)" maxlength="500">
+                            <button type="submit" name="esAfirmativo" value="true" class="btn btn-success btn-sm rounded-3">
+                                Aprobar
+                            </button>
+                            <button type="submit" name="esAfirmativo" value="false" class="btn btn-outline-danger btn-sm rounded-3">
+                                Rechazar
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="kumo-card text-center text-muted py-4" th:if="${#lists.isEmpty(listaPropuestas)}">
+                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                        No hay propuestas todavía. ¡Creá la primera!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
