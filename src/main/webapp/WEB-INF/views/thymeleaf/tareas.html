@@ -27,7 +27,7 @@
                         <a class="nav-link active" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
+                        <a class="nav-link" href="#"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
                     </li>
                 </ul>
             </div>
@@ -41,8 +41,8 @@
             <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
-                    <h2 class="fw-bold mb-0">Tareas del Hogar</h2>
-                    <p class="text-muted small">Asignación de responsabilidades y créditos para la casa.</p>
+                    <h2 class="fw-bold mb-0">Registro de Trabajo Doméstico</h2>
+                    <p class="text-muted small">Cargá las tareas que realizaste y las horas dedicadas para recibir tu crédito descontable.</p>
                 </div>
                 <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
                     <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">U</div>
@@ -50,91 +50,104 @@
                 </div>
             </div>
 
-            <!-- Error/Success Banner -->
+            <!-- Banner Resumen de Crédito Ganado (Bento Card) -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="kumo-card bg-primary text-white p-3 d-flex align-items-center justify-content-between rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-white text-primary rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-coin fs-4"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-white-50 text-uppercase small">Tu Crédito Monetario Acumulado</h6>
+                                <h3 class="fw-bold mb-0 text-white" th:text="'$' + ${#numbers.formatDecimal(creditoAcumulado, 1, 'POINT', 2, 'COMMA')}">$0,00</h3>
+                            </div>
+                        </div>
+                        <span class="badge bg-light text-primary rounded-pill px-3 py-2 fw-semibold">
+                            <i class="bi bi-arrow-down-left-circle me-1"></i> Descontable de Liquidación
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner -->
             <div th:if="${error}" class="alert alert-danger rounded-4 mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <span th:text="${error}">Error al guardar la tarea</span>
+                <span th:text="${error}">Error al procesar la tarea</span>
             </div>
 
             <div class="row g-4">
-                <!-- Formulario de Nueva Tarea -->
+                <!-- Formulario de Carga de Trabajo Realizado -->
                 <div class="col-lg-4">
                     <div class="kumo-card">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Nueva Tarea</h5>
-                        
-                        <form th:action="@{/tareas/guardar}" th:object="${tarea}" method="post">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Tarea Realizada</h5>
+                            <span class="badge kumo-badge-purple px-2 py-1 fw-bold" 
+                                th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">
+                                $1.000,00/h
+                            </span>
+                        </div>
+                        <form th:action="@{/tareas/crear}" th:object="${nuevaTarea}" method="post">
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Nombre de la Tarea</label>
-                                <input type="text" class="form-control rounded-3" th:field="*{nombre}" placeholder="Ej: Limpiar el baño">
+                                <label class="form-label small fw-semibold">¿Qué tarea realizaste?</label>
+                                <input type="text" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Limpieza profunda de cocina" required>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Asignado a (ID Usuario)</label>
-                                <input type="number" class="form-control rounded-3" th:field="*{usuarioId}" placeholder="ID de Usuario">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Puntos / Crédito ($)</label>
-                                <input type="number" step="0.01" class="form-control rounded-3" th:field="*{credito}" placeholder="Ej: 1500.00">
+                                <label class="form-label small fw-semibold">Tiempo dedicado (en horas)</label>
+                                <input type="number" step="0.5" class="form-control rounded-3" th:field="*{horasDedicadas}" placeholder="Ej: 2.5" required>
                             </div>
 
                             <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">
-                                Crear Tarea
+                                Registrar Trabajo
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <!-- Tablero Kanban / Lista de Tareas -->
+                <!-- Tablero de Trabajo Doméstico -->
                 <div class="col-lg-8">
                     <div class="row g-3">
-                        <!-- Columna Pendientes -->
+                        <!-- Columna Pendientes de Aprobación/Acreditación -->
                         <div class="col-md-6">
                             <div class="kumo-card bg-light border-0">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 text-uppercase small"><i class="bi bi-hourglass-split me-1"></i> Pendientes</h6>
-                                    <span class="badge kumo-badge-yellow rounded-pill" th:text="${#lists.size(tareasPendientes)}">0</span>
+                                    <h6 class="fw-bold mb-0 text-uppercase small"><i class="bi bi-hourglass-split me-1"></i> Registradas sin acreditar</h6>
                                 </div>
 
-                                <div th:each="t : ${tareasPendientes}" class="kumo-card mb-3 p-3">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="fw-bold mb-1" th:text="${t.nombre}">Cocinar la cena</h6>
-                                        <span class="badge kumo-badge-pink fw-bold" th:text="'$' + ${t.credito}">$1000</span>
+                                <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).PENDIENTE}" class="kumo-card mb-3 p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0" th:text="${t.titulo}">Limpieza de cocina</h6>
+                                        <span class="badge kumo-badge-pink fw-bold" th:text="'$' + ${t.valorCredito}">$2500</span>
                                     </div>
-                                    <p class="small text-muted mb-2" th:text="'Asignado a ID: ' + ${t.usuarioId}">Asignado a ID: 1</p>
+                                    <p class="small text-muted mb-2">
+                                        <i class="bi bi-clock me-1"></i> <span th:text="${t.horasDedicadas}">2</span> hs dedicadas 
+                                        (<span th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">$1000/h</span>)
+                                    </p>
                                     
                                     <form th:action="@{/tareas/completar}" method="post">
-                                        <input type="hidden" name="id" th:value="${t.id}" />
+                                        <input type="hidden" name="tareaId" th:value="${t.id}" />
                                         <button type="submit" class="btn btn-outline-success btn-sm w-100 rounded-3 mt-1">
-                                            <i class="bi bi-check-lg me-1"></i> Marcar Completada
+                                            <i class="bi bi-check-lg me-1"></i> Confirmar y Acreditar Crédito
                                         </button>
                                     </form>
-                                </div>
-
-                                <div th:if="${#lists.isEmpty(tareasPendientes)}" class="text-center py-4 text-muted small">
-                                    Sin tareas pendientes
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Columna Completadas -->
+                        <!-- Columna Créditos Acreditados -->
                         <div class="col-md-6">
                             <div class="kumo-card bg-light border-0">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 text-uppercase small text-success"><i class="bi bi-check-circle-fill me-1"></i> Completadas</h6>
-                                    <span class="badge kumo-badge-green rounded-pill" th:text="${#lists.size(tareasCompletadas)}">0</span>
+                                    <h6 class="fw-bold mb-0 text-uppercase small text-success"><i class="bi bi-check-circle-fill me-1"></i> Créditos Acreditados</h6>
                                 </div>
 
-                                <div th:each="t : ${tareasCompletadas}" class="kumo-card mb-3 p-3 opacity-75">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="fw-bold mb-1 text-decoration-line-through" th:text="${t.nombre}">Sacar la basura</h6>
-                                        <span class="badge kumo-badge-green fw-bold" th:text="'$' + ${t.credito}">$500</span>
+                                <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).COMPLETADA}" class="kumo-card mb-3 p-3 opacity-75">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <h6 class="fw-bold mb-0 text-decoration-line-through" th:text="${t.titulo}">Lavar los platos</h6>
+                                        <span class="badge kumo-badge-green fw-bold" th:text="'$' + ${t.valorCredito}">$1000</span>
                                     </div>
-                                    <p class="small text-muted mb-0" th:text="'Realizada por ID: ' + ${t.usuarioId}">Realizada por ID: 2</p>
-                                </div>
-
-                                <div th:if="${#lists.isEmpty(tareasCompletadas)}" class="text-center py-4 text-muted small">
-                                    Aún no hay tareas completadas
+                                    <p class="small text-muted mb-0"><i class="bi bi-person-check me-1"></i> Acreditado a la cuenta</p>
                                 </div>
                             </div>
                         </div>

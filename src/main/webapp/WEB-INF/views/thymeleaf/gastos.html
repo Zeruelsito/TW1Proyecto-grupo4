@@ -25,7 +25,8 @@
                         <a class="nav-link active" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-check2-square me-2"></i> Tareas</a>
+                        <a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
+                        <!--falta commitear el th:href para que el boton a tareas funcione-->
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
@@ -53,10 +54,10 @@
                 </div>
             </div>
 
-            <!-- Error Banner (Si la validación del backend falla) -->
-            <div th:if="${error}" class="alert alert-danger rounded-4 mb-4" role="alert">
+            <!-- Error Banner (CORREGIDO: usa mensajeError) -->
+            <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                <span th:text="${error}">Error al registrar el gasto</span>
+                <span th:text="${mensajeError}">Error al registrar el gasto</span>
             </div>
 
             <div class="row g-4">
@@ -71,6 +72,21 @@
                                 <input type="text" class="form-control rounded-3" th:field="*{descripcion}" placeholder="Ej: Supermercado Coto">
                             </div>
 
+                            <!-- Selector de Tipo de Gasto -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Tipo de gasto</label>
+                                <div class="btn-group w-100" role="group" aria-label="Tipo de gasto">
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="FIJO" id="tipoFijo" autocomplete="off" checked>
+                                    <label class="btn btn-outline-dark rounded-start-3 py-2" for="tipoFijo">Fijo</label>
+
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="RECURRENTE" id="tipoRecurrente" autocomplete="off">
+                                    <label class="btn btn-outline-dark py-2" for="tipoRecurrente">Recurrente</label>
+
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="OCASIONAL" id="tipoOcasional" autocomplete="off">
+                                    <label class="btn btn-outline-dark rounded-end-3 py-2" for="tipoOcasional">Ocasional</label>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold">Monto ($)</label>
                                 <input type="number" step="0.01" class="form-control rounded-3" th:field="*{monto}" placeholder="0.00">
@@ -80,10 +96,10 @@
                                 <label for="pagadorId" class="form-label small fw-semibold">¿Quién pagó?</label>
                                 <select class="form-select rounded-3" id="pagadorId" th:field="*{pagadorId}">
                                     <option th:value="null" hidden selected>Seleccioná quién pagó</option>
-                                        <option th:each="usuario : ${integrantes}" 
-                                                th:value="${usuario.id}" 
-                                                th:text="${#strings.arraySplit(usuario.email, '@')[0]}">
-                                        </option>
+                                    <option th:each="usuario : ${integrantes}" 
+                                            th:value="${usuario.id}" 
+                                            th:text="${#strings.arraySplit(usuario.email, '@')[0]}">
+                                    </option>
                                 </select>
                             </div>
 
@@ -120,7 +136,7 @@
                         <div class="col-md-6">
                             <div class="kumo-card kumo-badge-purple">
                                 <span class="small text-uppercase fw-bold">Total Registrados</span>
-                                <h4 class="fw-bold my-1" th:text="${#lists.size(listaGastos)} + ' gastos'">0 gastos</h4>
+                                <h4 class="fw-bold my-1" th:text="${listaGastos != null ? #lists.size(listaGastos) : 0} + ' gastos'">0 gastos</h4>
                                 <small class="text-muted">Actualizado en tiempo real</small>
                             </div>
                         </div>
@@ -128,13 +144,15 @@
 
                     <!-- Tabla de Gastos -->
                     <div class="kumo-card">
-                        <h5 class="fw-bold mb-3">Historial de Compras</h5>
+                        <!-- Renombrado a Historial de Gastos -->
+                        <h5 class="fw-bold mb-3">Historial de Gastos</h5>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
                                 <thead class="table-light">
                                     <tr>
                                         <th>ID</th>
                                         <th>Descripción</th>
+                                        <th>Tipo</th>
                                         <th>Categoría</th>
                                         <th>Pagador ID</th>
                                         <th class="text-end">Monto</th>
@@ -145,13 +163,19 @@
                                         <td th:text="${gastoItem.id}">1</td>
                                         <td class="fw-medium" th:text="${gastoItem.descripcion}">Supermercado</td>
                                         <td>
+                                            <span class="badge kumo-badge-green px-2 py-1" 
+                                                  th:text="${gastoItem.tipoGasto != null ? gastoItem.tipoGasto.descripcion : 'Sin tipo'}">
+                                                Fijo
+                                            </span>
+                                        </td>
+                                        <td>
                                             <span class="badge kumo-badge-yellow px-2 py-1" th:text="${gastoItem.categoria}">ALIMENTACION</span>
                                         </td>
                                         <td th:text="${gastoItem.pagadorId}">1</td>
                                         <td class="text-end fw-bold" th:text="${'$' + #numbers.formatDecimal(gastoItem.monto, 1, 'POINT', 2, 'COMMA')}">$0.00</td>
                                     </tr>
                                     <tr th:if="${#lists.isEmpty(listaGastos)}">
-                                        <td colspan="5" class="text-center py-4 text-muted">
+                                        <td colspan="6" class="text-center py-4 text-muted">
                                             <i class="bi bi-inbox display-6 d-block mb-2"></i>
                                             No hay gastos registrados todavía.
                                         </td>
