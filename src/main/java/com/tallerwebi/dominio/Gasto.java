@@ -18,10 +18,18 @@ public class Gasto {
   private Double monto;
   private Long pagadorId;
   private String categoria;
+  private TipoGasto tipoGasto;
 
   public Gasto() {}
 
-  public Gasto(String descripcion, Double monto, Long pagadorId, String categoria) {
+  public Gasto(
+    TipoGasto tipoGasto,
+    String descripcion,
+    Double monto,
+    Long pagadorId,
+    String categoria
+  ) {
+    this.tipoGasto = tipoGasto;
     this.descripcion = descripcion;
     this.monto = monto;
     this.pagadorId = pagadorId;
@@ -66,5 +74,13 @@ public class Gasto {
 
   public void setCategoria(String categoria) {
     this.categoria = categoria;
+  }
+
+  public TipoGasto getTipoGasto() {
+    return tipoGasto;
+  }
+
+  public void setTipoGasto(TipoGasto tipoGasto) {
+    this.tipoGasto = tipoGasto;
   }
 }

@@ -1,9 +1,7 @@
 package com.tallerwebi.presentacion;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.Mockito.doThrow;
@@ -13,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
-import com.tallerwebi.dominio.Usuario;
+import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import java.util.ArrayList;
@@ -94,20 +92,22 @@ public class ControladorRegistroGastoTest {
 
   private void givenExistenGastosEnElSistema() {
     List<Gasto> listaGastos = new ArrayList<>();
-    listaGastos.add(new Gasto("Compras supermercado", 12000.0, 1L, "ALIMENTACION"));
+    listaGastos.add(
+      new Gasto(TipoGasto.OCASIONAL, "Compras supermercado", 12000.0, 1L, "ALIMENTACION")
+    );
     when(servicioRegistroGasto.obtenerTodosLosGastos()).thenReturn(listaGastos);
   }
 
   private Gasto givenUnGastoValido() {
-    return new Gasto("Internet y Cable", 20000.0, 2L, "SERVICIOS");
+    return new Gasto(TipoGasto.RECURRENTE, "Internet y Cable", 20000.0, 2L, "SERVICIOS");
   }
 
   private Gasto givenUnGastoConMontoInvalido() {
-    return new Gasto("Compras del chino", -500.0, 2L, "ALIMENTACION");
+    return new Gasto(TipoGasto.OCASIONAL, "Compras del chino", -500.0, 2L, "ALIMENTACION");
   }
 
   private Gasto givenUnGastoConDescripcionVacia() {
-    return new Gasto("", 15000.0, 2L, "ALIMENTACION");
+    return new Gasto(TipoGasto.OCASIONAL, "", 15000.0, 2L, "ALIMENTACION");
   }
 
   private ModelAndView whenIrAGastos() {

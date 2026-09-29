@@ -125,4 +125,15 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     }
     return email;
   }
+
+  @Override
+  public List<Gasto> obtenerGastosPorTipo(TipoGasto tipo) {
+    List<Gasto> gastosFiltrados = new ArrayList<>();
+    for (Gasto gasto : this.gastosRegistrados) {
+      if (gasto.getTipoGasto().equals(tipo)) {
+        gastosFiltrados.add(gasto);
+      }
+    }
+    return gastosFiltrados;
+  }
 }
