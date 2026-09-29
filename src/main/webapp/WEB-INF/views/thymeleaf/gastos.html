@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Kumo - Registro de Gastos</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Iconos Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+</head>
+<body class="p-3">
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
+            <div>
+                <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
+                        <!--falta commitear el th:href para que el boton a tareas funcione-->
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-3">
+                <a href="#" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10 px-4">
+            <!-- Header Bar -->
+            <div class="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <h2 class="fw-bold mb-0">Gestión de Gastos</h2>
+                    <p class="text-muted small">Registrá las compras del hogar y mantén las cuentas claras.</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">U</div>
+                        <span class="fw-medium small">Hola, Usuario</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner (CORREGIDO: usa mensajeError) -->
+            <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${mensajeError}">Error al registrar el gasto</span>
+            </div>
+
+            <div class="row g-4">
+                <!-- Columna Izquierda: Formulario de Registro -->
+                <div class="col-lg-4">
+                    <div class="kumo-card">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Nuevo Gasto</h5>
+                        
+                        <form th:action="@{/gastos/guardar}" th:object="${gasto}" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Descripción</label>
+                                <input type="text" class="form-control rounded-3" th:field="*{descripcion}" placeholder="Ej: Supermercado Coto">
+                            </div>
+
+                            <!-- Selector de Tipo de Gasto -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Tipo de gasto</label>
+                                <div class="btn-group w-100" role="group" aria-label="Tipo de gasto">
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="FIJO" id="tipoFijo" autocomplete="off" checked>
+                                    <label class="btn btn-outline-dark rounded-start-3 py-2" for="tipoFijo">Fijo</label>
+
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="RECURRENTE" id="tipoRecurrente" autocomplete="off">
+                                    <label class="btn btn-outline-dark py-2" for="tipoRecurrente">Recurrente</label>
+
+                                    <input type="radio" class="btn-check" th:field="*{tipoGasto}" value="OCASIONAL" id="tipoOcasional" autocomplete="off">
+                                    <label class="btn btn-outline-dark rounded-end-3 py-2" for="tipoOcasional">Ocasional</label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Monto ($)</label>
+                                <input type="number" step="0.01" class="form-control rounded-3" th:field="*{monto}" placeholder="0.00">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="pagadorId" class="form-label small fw-semibold">¿Quién pagó?</label>
+                                <select class="form-select rounded-3" id="pagadorId" th:field="*{pagadorId}">
+                                    <option th:value="null" hidden selected>Seleccioná quién pagó</option>
+                                    <option th:each="usuario : ${integrantes}" 
+                                            th:value="${usuario.id}" 
+                                            th:text="${#strings.arraySplit(usuario.email, '@')[0]}">
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Categoría</label>
+                                <select class="form-select rounded-3" th:field="*{categoria}">
+                                    <option value="ALIMENTACION">Alimentación</option>
+                                    <option value="SERVICIOS">Servicios</option>
+                                    <option value="ALQUILER">Alquiler</option>
+                                    <option value="VARIOS">Varios</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">
+                                Registrar Gasto
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Tabla y Resumen -->
+                <div class="col-lg-8">
+                    <!-- Bento Cards Resumen -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="kumo-card kumo-badge-pink">
+                                <span class="small text-uppercase fw-bold">Sugerencia Inteligente</span>
+                                <h4 class="fw-bold my-1" th:text="'Próximo a pagar: ' + ${sugerenciaProximoPagador}">
+                                    Próximo a pagar: Matias
+                                </h4>
+                                <small class="text-muted">Es el integrante con menor monto pagado este mes.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="kumo-card kumo-badge-purple">
+                                <span class="small text-uppercase fw-bold">Total Registrados</span>
+                                <h4 class="fw-bold my-1" th:text="${listaGastos != null ? #lists.size(listaGastos) : 0} + ' gastos'">0 gastos</h4>
+                                <small class="text-muted">Actualizado en tiempo real</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Gastos -->
+                    <div class="kumo-card">
+                        <!-- Renombrado a Historial de Gastos -->
+                        <h5 class="fw-bold mb-3">Historial de Gastos</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Descripción</th>
+                                        <th>Tipo</th>
+                                        <th>Categoría</th>
+                                        <th>Pagador ID</th>
+                                        <th class="text-end">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="gastoItem : ${listaGastos}">
+                                        <td th:text="${gastoItem.id}">1</td>
+                                        <td class="fw-medium" th:text="${gastoItem.descripcion}">Supermercado</td>
+                                        <td>
+                                            <span class="badge kumo-badge-green px-2 py-1" 
+                                                  th:text="${gastoItem.tipoGasto != null ? gastoItem.tipoGasto.descripcion : 'Sin tipo'}">
+                                                Fijo
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge kumo-badge-yellow px-2 py-1" th:text="${gastoItem.categoria}">ALIMENTACION</span>
+                                        </td>
+                                        <td th:text="${gastoItem.pagadorId}">1</td>
+                                        <td class="text-end fw-bold" th:text="${'$' + #numbers.formatDecimal(gastoItem.monto, 1, 'POINT', 2, 'COMMA')}">$0.00</td>
+                                    </tr>
+                                    <tr th:if="${#lists.isEmpty(listaGastos)}">
+                                        <td colspan="6" class="text-center py-4 text-muted">
+                                            <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                            No hay gastos registrados todavía.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

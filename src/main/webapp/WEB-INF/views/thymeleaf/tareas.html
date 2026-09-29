@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Kumo - Tareas del Hogar</title>
+    <!-- Bootstrap 5 CSS & Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+</head>
+<body class="p-3">
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
+            <div>
+                <h3 class="fw-bold px-3 my-3 text-white">Kumo ☁️</h3>
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-3">
+                <a href="#" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10 px-4">
+            <!-- Header Bar -->
+            <div class="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <h2 class="fw-bold mb-0">Registro de Trabajo Doméstico</h2>
+                    <p class="text-muted small">Cargá las tareas que realizaste y las horas dedicadas para recibir tu crédito descontable.</p>
+                </div>
+                <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">U</div>
+                    <span class="fw-medium small">Hola, Usuario</span>
+                </div>
+            </div>
+
+            <!-- Banner Resumen de Crédito Ganado (Bento Card) -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="kumo-card bg-primary text-white p-3 d-flex align-items-center justify-content-between rounded-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-white text-primary rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-coin fs-4"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-white-50 text-uppercase small">Tu Crédito Monetario Acumulado</h6>
+                                <h3 class="fw-bold mb-0 text-white" th:text="'$' + ${#numbers.formatDecimal(creditoAcumulado, 1, 'POINT', 2, 'COMMA')}">$0,00</h3>
+                            </div>
+                        </div>
+                        <span class="badge bg-light text-primary rounded-pill px-3 py-2 fw-semibold">
+                            <i class="bi bi-arrow-down-left-circle me-1"></i> Descontable de Liquidación
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Banner -->
+            <div th:if="${error}" class="alert alert-danger rounded-4 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${error}">Error al procesar la tarea</span>
+            </div>
+
+            <div class="row g-4">
+                <!-- Formulario de Carga de Trabajo Realizado -->
+                <div class="col-lg-4">
+                    <div class="kumo-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Tarea Realizada</h5>
+                            <span class="badge kumo-badge-purple px-2 py-1 fw-bold" 
+                                th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">
+                                $1.000,00/h
+                            </span>
+                        </div>
+                        <form th:action="@{/tareas/crear}" th:object="${nuevaTarea}" method="post">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">¿Qué tarea realizaste?</label>
+                                <input type="text" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Limpieza profunda de cocina" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Tiempo dedicado (en horas)</label>
+                                <input type="number" step="0.5" class="form-control rounded-3" th:field="*{horasDedicadas}" placeholder="Ej: 2.5" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">
+                                Registrar Trabajo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tablero de Trabajo Doméstico -->
+                <div class="col-lg-8">
+                    <div class="row g-3">
+                        <!-- Columna Pendientes de Aprobación/Acreditación -->
+                        <div class="col-md-6">
+                            <div class="kumo-card bg-light border-0">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 text-uppercase small"><i class="bi bi-hourglass-split me-1"></i> Registradas sin acreditar</h6>
+                                </div>
+
+                                <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).PENDIENTE}" class="kumo-card mb-3 p-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h6 class="fw-bold mb-0" th:text="${t.titulo}">Limpieza de cocina</h6>
+                                        <span class="badge kumo-badge-pink fw-bold" th:text="'$' + ${t.valorCredito}">$2500</span>
+                                    </div>
+                                    <p class="small text-muted mb-2">
+                                        <i class="bi bi-clock me-1"></i> <span th:text="${t.horasDedicadas}">2</span> hs dedicadas 
+                                        (<span th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">$1000/h</span>)
+                                    </p>
+                                    
+                                    <form th:action="@{/tareas/completar}" method="post">
+                                        <input type="hidden" name="tareaId" th:value="${t.id}" />
+                                        <button type="submit" class="btn btn-outline-success btn-sm w-100 rounded-3 mt-1">
+                                            <i class="bi bi-check-lg me-1"></i> Confirmar y Acreditar Crédito
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Columna Créditos Acreditados -->
+                        <div class="col-md-6">
+                            <div class="kumo-card bg-light border-0">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="fw-bold mb-0 text-uppercase small text-success"><i class="bi bi-check-circle-fill me-1"></i> Créditos Acreditados</h6>
+                                </div>
+
+                                <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).COMPLETADA}" class="kumo-card mb-3 p-3 opacity-75">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <h6 class="fw-bold mb-0 text-decoration-line-through" th:text="${t.titulo}">Lavar los platos</h6>
+                                        <span class="badge kumo-badge-green fw-bold" th:text="'$' + ${t.valorCredito}">$1000</span>
+                                    </div>
+                                    <p class="small text-muted mb-0"><i class="bi bi-person-check me-1"></i> Acreditado a la cuenta</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
