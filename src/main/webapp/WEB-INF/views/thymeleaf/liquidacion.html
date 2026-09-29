@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Kumo - Liquidación de Cuentas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumo - Liquidación Mensual</title>
+
     <!-- Bootstrap 5 CSS & Iconos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
@@ -15,10 +17,10 @@
         <!-- Sidebar Navigation -->
         <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
             <div>
-                <h3 class="fw-bold px-3 my-3 text-white">Kumo ☁️</h3>
+                <h3 class="fw-bold px-3 my-3 text-white">KUMO️</h3>
                 <ul class="nav flex-column mt-4">
                     <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
+                        <a class="nav-link" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
@@ -41,101 +43,66 @@
             <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
-                    <h2 class="fw-bold mb-0">Cierre de Mes y Saldos</h2>
-                    <p class="text-muted small">Cálculo de transferencias mínimas y compensación por tareas.</p>
+                    <h2 class="fw-bold mb-0">Liquidación de Fin de Mes</h2>
+                    <p class="text-muted small mb-0">Hoja de ruta simplificada para saldar deudas en el hogar.</p>
                 </div>
                 <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">U</div>
-                    <span class="fw-medium small">Hola, Usuario</span>
+                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                        <span th:text="${usuarioLogueado != null ? #strings.substring(usuarioLogueado, 0, 1) : 'U'}">U</span>
+                    </div>
+                    <span class="fw-medium small" th:text="${usuarioLogueado != null ? usuarioLogueado : 'Mi Casa'}">Mi Casa</span>
                 </div>
             </div>
 
-            <!-- Bento Top Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="kumo-card kumo-badge-purple">
-                        <span class="small text-uppercase fw-bold">Total Gastado en la Casa</span>
-                        <h3 class="fw-bold my-1" th:text="${'$' + totalGastado}">$0.00</h3>
-                        <small class="text-muted">Suma global de facturas y compras</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="kumo-card kumo-badge-green">
-                        <span class="small text-uppercase fw-bold">Créditos por Tareas</span>
-                        <h3 class="fw-bold my-1" th:text="${'$' + totalCreditosTareas}">$0.00</h3>
-                        <small class="text-muted">Monto total descontado por limpieza/cocina</small>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="kumo-card kumo-badge-yellow">
-                        <span class="small text-uppercase fw-bold">Estado del Período</span>
-                        <h3 class="fw-bold my-1">Abierto</h3>
-                        <small class="text-muted">Cierre previsto a fin de mes</small>
-                    </div>
-                </div>
-            </div>
+            <!-- Bento Card: Resultados de Transferencias -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <div class="kumo-card p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">
+                                <i class="bi bi-arrow-left-right me-2 text-primary"></i>Transferencias Sugeridas
+                            </h5>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-semibold rounded-pill"
+                                  th:text="${#lists.size(transferencias)} + ' transacciones necesarias'">
+                                1 transacción necesaria
+                            </span>
+                        </div>
 
-            <div class="row g-4">
-                <!-- Tabla de Saldos Netos por Integrante -->
-                <div class="col-lg-7">
-                    <div class="kumo-card">
-                        <h5 class="fw-bold mb-3">Balance por Integrante</h5>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Usuario</th>
-                                        <th>Pagó (Gastos)</th>
-                                        <th>Ganó (Tareas)</th>
-                                        <th class="text-end">Saldo Final</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:each="saldo : ${listaSaldos}">
-                                        <td class="fw-medium" th:text="${saldo.nombreUsuario}">Nombre</td>
-                                        <td th:text="${'$' + saldo.montoGastado}">$0.00</td>
-                                        <td th:text="${'$' + saldo.montoTareas}">$0.00</td>
-                                        <td class="text-end fw-bold">
-                                            <span th:classappend="${saldo.saldoNeto >= 0} ? 'text-success' : 'text-danger'"
-                                                  th:text="${(saldo.saldoNeto >= 0 ? '+$' : '-$') + #math.abs(saldo.saldoNeto)}">
-                                                $0.00
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <!-- Lista de Transferencias -->
+                        <div class="list-group list-group-flush mt-3" th:if="${not #lists.isEmpty(transferencias)}">
+                            <div th:each="item : ${transferencias}" class="list-group-item d-flex justify-content-between align-items-center py-3 border-0 bg-light rounded-3 mb-2">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-circle bg-danger text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">
+                                        <span th:text="${#strings.substring(item.emisor, 0, 1)}">M</span>
+                                    </div>
+                                    <div>
+                                        <p class="mb-0 fw-bold">
+                                            <span th:text="${item.emisor}" class="text-danger">María</span>
+                                            <i class="bi bi-arrow-right mx-2 text-muted"></i>
+                                            <span th:text="${item.receptor}" class="text-success">Juan</span>
+                                        </p>
+                                        <span class="small text-muted">Debe realizar transferencia directa</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle fs-6 px-3 py-2 fw-bold rounded-3"
+                                          th:text="'$' + ${#numbers.formatDecimal(item.monto, 1, 'POINT', 2, 'COMMA')}">
+                                        $3.000,00
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mensaje en caso de estar al día -->
+                        <div th:if="${#lists.isEmpty(transferencias)}" class="text-center py-5">
+                            <i class="bi bi-emoji-smile fs-1 text-success"></i>
+                            <h5 class="fw-bold mt-2">¡Todos están al día!</h5>
+                            <p class="text-muted small">No hay deudas ni transferencias pendientes para realizar este mes.</p>
                         </div>
                     </div>
                 </div>
-
-                <!-- Plan de Transferencias / ¿Quién le paga a quién? -->
-                <div class="col-lg-5">
-                    <div class="kumo-card">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-arrow-left-right me-2"></i>Transferencias Sugeridas</h5>
-                        <p class="small text-muted">Saldado mínimo para quedar mano a mano:</p>
-
-                        <ul class="list-group list-group-flush mb-4">
-                            <li th:each="transaccion : ${listaTransferencias}" class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 border-bottom">
-                                <div>
-                                    <span class="fw-bold" th:text="${transaccion.deudor}">Santi</span>
-                                    <span class="text-muted small"> le debe a </span>
-                                    <span class="fw-bold" th:text="${transaccion.acreedor}">Lucía</span>
-                                </div>
-                                <span class="badge kumo-badge-pink fs-6" th:text="${'$' + transaccion.monto}">$0.00</span>
-                            </li>
-                            <li th:if="${#lists.isEmpty(listaTransferencias)}" class="list-group-item bg-transparent text-center py-3 text-muted small">
-                                Cuentas equilibradas. Ningún integrante debe dinero.
-                            </li>
-                        </ul>
-
-                        <form th:action="@{/liquidacion/cerrar-mes}" method="post">
-                            <button type="submit" class="btn btn-dark w-100 rounded-3 py-2">
-                                <i class="bi bi-lock-fill me-1"></i> Cerrar Mes y Archivar
-                            </button>
-                        </form>
-                    </div>
-                </div>
             </div>
+
         </div>
     </div>
 </div>
