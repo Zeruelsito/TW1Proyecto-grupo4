@@ -24,7 +24,8 @@ public class ControllerDashboard {
 
   @PostMapping("/dashboard/enviarDato")
   public ModelAndView procesarDato(@RequestParam("montoValor") double valorHora) {
-    double resultado = serviceGasto.establecerValorHora(valorHora);
+    serviceGasto.establecerValorHora(valorHora);
+    Double resultado = serviceGasto.getValorHora();
     Map<String, Object> model = new ModelMap();
     model.put("resultadoValorHora", resultado);
     return new ModelAndView("dashboard", model);

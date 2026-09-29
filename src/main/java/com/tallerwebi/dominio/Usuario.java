@@ -23,9 +23,18 @@ public class Usuario {
   private String nombre;
   private Double ingresoMensual;
   private Double capacidadRelativaPagoMensual;
+  private Double cuotaMensual;
   private Double horasATrabajar;
   private static Double creditosPorTareas;
   private Double porcentajeSegunCapacidadDePagoMensual;
+
+  public Double getCuotaMensual() {
+    return cuotaMensual;
+  }
+
+  public void setCuotaMensual(Double cuotaMensual) {
+    this.cuotaMensual = cuotaMensual;
+  }
 
   public String getNombre() {
     return nombre;

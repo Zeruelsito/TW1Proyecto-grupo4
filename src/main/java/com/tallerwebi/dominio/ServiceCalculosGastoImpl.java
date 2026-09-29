@@ -11,18 +11,23 @@ public class ServiceCalculosGastoImpl implements ServiceCalculosGasto {
 
   private static Double valorHoraConfigurado;
   private static Double valorPisoMinimoSeguro;
-  private static Double valorMontoTotalSumaDeCapacidadesDeCadaUsuario;
+  private static Double valorPozoTotalDeSumaCapacidadesDeCadaUsuario;
+  private static Double valorFijoIndispensableDeHogar;
 
   @Override
-  public Double establecerPisoMinimoSeguro(Double valorPisoMinimoSeguro) {
-    ServiceCalculosGastoImpl.valorPisoMinimoSeguro = valorPisoMinimoSeguro;
-    return valorPisoMinimoSeguro;
+  public void establecerValorFijoIndispensableDeHogar(Double valorPisoMinimoSeguro){
+    ServiceCalculosGastoImpl.valorFijoIndispensableDeHogar = valorPisoMinimoSeguro;
   }
 
   @Override
-  public Double establecerValorHora(Double valorHoraConfigurado) {
+  public void establecerPisoMinimoSeguro(Double valorPisoMinimoSeguro) {
+    ServiceCalculosGastoImpl.valorPisoMinimoSeguro = valorPisoMinimoSeguro;
+
+  }
+
+  @Override
+  public void establecerValorHora(Double valorHoraConfigurado) {
     ServiceCalculosGastoImpl.valorHoraConfigurado = valorHoraConfigurado;
-    return valorHoraConfigurado;
   }
 
   @Override
@@ -30,13 +35,18 @@ public class ServiceCalculosGastoImpl implements ServiceCalculosGasto {
     if (valorPisoMinimoSeguro == null || valorPisoMinimoSeguro <= 0) {
       throw new MontoInvalidoPisoMinimoException();
     }
-    return usuario.getIngresoMensual() - valorPisoMinimoSeguro;
+    Double capacidadDelUsuario = usuario.getIngresoMensual() - valorPisoMinimoSeguro;
+    if (capacidadDelUsuario >= 0) {
+      return capacidadDelUsuario;
+    }
+    return 0.0;
   }
 
   @Override
   public void calcularTotalSumaDeCapacidadesDeCadaUsuario(List<Usuario> usuarios) {
     for (Usuario usuario : usuarios) {
-      usuario.setCapacidadRelativaPagoMensual(calculoCapacidadRelativaDePago(usuario));
+      double capacidadDePago = calculoCapacidadRelativaDePago(usuario);
+      usuario.setCapacidadRelativaPagoMensual(capacidadDePago);
     }
   }
 
@@ -46,21 +56,50 @@ public class ServiceCalculosGastoImpl implements ServiceCalculosGasto {
     for (Usuario usuario : usuarios) {
       montoSubtotales += usuario.getCapacidadRelativaPagoMensual();
     }
-    valorMontoTotalSumaDeCapacidadesDeCadaUsuario = montoSubtotales;
+    valorPozoTotalDeSumaCapacidadesDeCadaUsuario = montoSubtotales;
   }
 
+
   @Override
-  public List<Usuario> calcularPorcentajesDeCapacidadMensualDeUsuarios(List<Usuario> usuarios) {
+  public void calcularPorcentajesDeCapacidadMensualDeUsuarios(List<Usuario> usuarios) {
     for (Usuario usuario : usuarios) {
-      Double porcentajeParcial =
-        usuario.getCapacidadRelativaPagoMensual() / valorMontoTotalSumaDeCapacidadesDeCadaUsuario;
+      double porcentajeParcial =
+        usuario.getCapacidadRelativaPagoMensual() / valorPozoTotalDeSumaCapacidadesDeCadaUsuario;
       usuario.setPorcentajeSegunCapacidadDePagoMensual(porcentajeParcial * 100d);
     }
-    return usuarios;
   }
 
   @Override
   public Double getMontoCapacidadTotalDeLosUsuarios() {
-    return valorMontoTotalSumaDeCapacidadesDeCadaUsuario;
+    return valorPozoTotalDeSumaCapacidadesDeCadaUsuario;
   }
+
+  @Override
+  public Double getValorPisoMinimo() {
+    return valorPisoMinimoSeguro;
+  }
+
+  @Override
+  public Double getValorHora(){
+    return valorHoraConfigurado;
+  }
+
+  @Override
+  public Double getValorFijoIndispensableDeHogar(){
+    return valorPisoMinimoSeguro;
+  }
+
+  @Override
+  public void calcularCuotasMensualesDeUsuarios(List<Usuario> usuariosConPorcentajes) {
+    for (Usuario usuario : usuariosConPorcentajes) {
+      Double calculoCuota = (getMontoCapacidadTotalDeLosUsuarios()*usuario.getPorcentajeSegunCapacidadDePagoMensual())/100;
+      Double pisoMinimo = this.getValorPisoMinimo();
+      if (calculoCuota < pisoMinimo){
+        usuario.setCuotaMensual(pisoMinimo);
+      }else {
+        usuario.setCuotaMensual(calculoCuota);
+      }
+    }
+  }
+
 }
