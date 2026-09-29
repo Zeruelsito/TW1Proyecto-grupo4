@@ -8,13 +8,18 @@ package com.tallerwebi.dominio;
 import java.util.List;
 
 public interface ServiceCalculosGasto {
-  Double establecerPisoMinimoSeguro(Double valorPisoMinimoSeguro);
-  Double establecerValorHora(Double valorHoraConfigurado);
+
+  void establecerValorFijoIndispensableDeHogar(Double valorPisoMinimoSeguro);
+  void establecerPisoMinimoSeguro(Double valorPisoMinimoSeguro);
+  void establecerValorHora(Double valorHoraConfigurado);
   Double calculoCapacidadRelativaDePago(Usuario usuario);
   void calcularTotalSumaDeCapacidadesDeCadaUsuario(List<Usuario> usuarios);
-  List<Usuario> calcularPorcentajesDeCapacidadMensualDeUsuarios(List<Usuario> usuarios);
-
+  void calcularPorcentajesDeCapacidadMensualDeUsuarios(List<Usuario> usuarios);
   Double getMontoCapacidadTotalDeLosUsuarios();
-
   void establecerMontoTotalDeLasSumasDeCapacidades(List<Usuario> usuarios);
+  Double getValorPisoMinimo();
+  Double getValorHora();
+  Double getValorFijoIndispensableDeHogar();
+
+  void calcularCuotasMensualesDeUsuarios(List<Usuario> usuariosConPorcentajes);
 }

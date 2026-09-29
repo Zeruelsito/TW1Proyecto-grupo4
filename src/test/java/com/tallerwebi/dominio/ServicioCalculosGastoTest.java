@@ -15,7 +15,7 @@ public class ServicioCalculosGastoTest {
 
   @Test
   public void dadoUnParticipantePuedoCalcularSuCapacidadRelativaDePago() {
-    givenPisoMinimoConValor10000();
+    givenPisoMinimoConValor(10000d);
     Double montoEsperado = 5000d;
     Usuario usuario = givenUnUsuario();
 
@@ -25,72 +25,64 @@ public class ServicioCalculosGastoTest {
   }
 
   @Test
-  public void deberiaLanzarUnExceptionSiPisoMinimoEs0() {
+  public void dadoUnMontoInvalidodeberiaLanzarUnExceptionSiPisoMinimo() {
     givenPisoMinimoConValor0();
     Usuario usuario = givenUnUsuario();
-    assertThrows(
-      MontoInvalidoPisoMinimoException.class,
-      () -> whenCalculoCapacidadRelativaDePago(usuario)
-    );
+    thenSeLanzaMontoInvalidoPisoMinimoException(usuario);
   }
 
   @Test
   public void dadoVariosUsuariosCalcularLaSumaDeSusCapacidades() {
-    givenPisoMinimoConValor10000();
+    givenPisoMinimoConValor(10000d);
     List<Usuario> usuarios = givenListaUsuarios();
     Double montoEsperado = 620000d;
-    serviceCalculosGasto.calcularTotalSumaDeCapacidadesDeCadaUsuario(usuarios);
-    serviceCalculosGasto.establecerMontoTotalDeLasSumasDeCapacidades(usuarios);
-    Double montoCapacidadDeTodosLosUsuario =
-      serviceCalculosGasto.getMontoCapacidadTotalDeLosUsuarios();
-    assertThat(montoCapacidadDeTodosLosUsuario, equalTo(montoEsperado));
+    Double montoCapacidadDeTodosLosUsuario = whenSeCalculaLaSumaDeLasCapacidades(usuarios);
+    thenLaSumaDebeDarElMontoEsperado(montoEsperado, montoCapacidadDeTodosLosUsuario);
   }
 
   @Test
   public void dadoVariosUsuariosCalcularSusPorcentajesDelTotalDeSusCapacidades() {
-    givenPisoMinimoConValor10000();
+    givenPisoMinimoConValor(10000d);
     List<Usuario> usuarios = givenListaUsuarios();
-
-    serviceCalculosGasto.calcularTotalSumaDeCapacidadesDeCadaUsuario(usuarios);
-    serviceCalculosGasto.establecerMontoTotalDeLasSumasDeCapacidades(usuarios);
-
-    usuarios = serviceCalculosGasto.calcularPorcentajesDeCapacidadMensualDeUsuarios(usuarios);
-
-    Double porcentajeUsuario1Esperado = 22.58;
-    Double porcentajeUsuario2Esperado = 30.65d;
-    Double porcentajeUsuario3Esperado = 46.77d;
-
-    assertThat(
-      usuarios.get(0).getPorcentajeSegunCapacidadDePagoMensual(),
-      equalTo(porcentajeUsuario1Esperado)
-    );
-    assertThat(
-      usuarios.get(1).getPorcentajeSegunCapacidadDePagoMensual(),
-      equalTo(porcentajeUsuario2Esperado)
-    );
-    assertThat(
-      usuarios.get(2).getPorcentajeSegunCapacidadDePagoMensual(),
-      equalTo(porcentajeUsuario3Esperado)
-    );
+    List<Usuario> usuariosConPorcentajes = whenSeCalculaPorcentajesDeUsuariosAsignaLaSumaTotalDelPozoYLaSumaDeSusCapacidades(usuarios);
+    thenLosPorcentajesDeLosUsuariosEstanSeteados(usuariosConPorcentajes);
   }
 
-  private List<Usuario> givenListaUsuarios() {
-    List<Usuario> usuarios = new ArrayList<>();
-    Usuario usuario1 = new Usuario("Lucas", 150000d, 15d);
-    Usuario usuario2 = new Usuario("Maca", 200000d, 15d);
-    Usuario usuario3 = new Usuario("Lucas", 300000d, 115d);
-    usuarios.add(usuario1);
-    usuarios.add(usuario2);
-    usuarios.add(usuario3);
-    return usuarios;
+  @Test
+  public void dadoElPozoTotalDelMesAsignarLascuotasMensualesAjustandoseAcadaUsuario(){
+    givenPisoMinimoConValor(160000d);
+    List<Usuario> usuarios = givenListaUsuarios();
+    Usuario usuario4 = new Usuario("Ian",600000d,0d);
+    usuarios.add(usuario4);
+    List<Usuario> usuariosConPorcentajes = whenSeCalculaPorcentajesDeUsuariosAsignaLaSumaTotalDelPozoYLaSumaDeSusCapacidades(usuarios);
+    serviceCalculosGasto.calcularCuotasMensualesDeUsuarios(usuariosConPorcentajes);
+    thenSeDefineLaCuotaMensualPorPorcentaje(usuariosConPorcentajes);
+
+
   }
 
-  private void thenLaCapacidadCoincideConElMontoEsperado(
-    Double capacidadRelativaDePago,
-    Double montoEsperado
-  ) {
-    assertThat(capacidadRelativaDePago, equalTo(montoEsperado));
+  private void thenSeDefineLaCuotaMensualPorPorcentaje(List<Usuario> usuariosConPorcentajes) {
+
+    Double montoEsperado1 = 160000d;
+    Double montoEsperado2 = 160000d;
+    Double montoEsperado3 = 160000d;
+    Double montoEsperado4 = 440014d;
+
+    assertThat(usuariosConPorcentajes.get(0).getCuotaMensual(),
+            equalTo(montoEsperado1)
+    );
+    assertThat(usuariosConPorcentajes.get(1).getCuotaMensual(),
+            equalTo(montoEsperado2)
+    );
+    assertThat(usuariosConPorcentajes.get(2).getCuotaMensual(),
+            equalTo(montoEsperado3)
+    );
+    assertThat(usuariosConPorcentajes.get(3).getCuotaMensual(),
+            equalTo(montoEsperado4)
+    );
+
   }
+
 
   private Usuario givenUnUsuario() {
     return new Usuario("eze", 15000d, 15d);
@@ -100,11 +92,70 @@ public class ServicioCalculosGastoTest {
     serviceCalculosGasto.establecerPisoMinimoSeguro(0d);
   }
 
-  private void givenPisoMinimoConValor10000() {
-    serviceCalculosGasto.establecerPisoMinimoSeguro(10000d);
+  private void givenPisoMinimoConValor(Double valor) {
+    serviceCalculosGasto.establecerPisoMinimoSeguro(valor);
+  }
+
+  private List<Usuario> givenListaUsuarios() {
+    List<Usuario> usuarios = new ArrayList<>();
+    Usuario usuario1 = new Usuario("Lucas", 150000d, 0d);
+    Usuario usuario2 = new Usuario("Maca", 200000d, 0d);
+    Usuario usuario3 = new Usuario("Lucas", 300000d, 0d);
+    usuarios.add(usuario1);
+    usuarios.add(usuario2);
+    usuarios.add(usuario3);
+    return usuarios;
   }
 
   private Double whenCalculoCapacidadRelativaDePago(Usuario usuario) {
     return serviceCalculosGasto.calculoCapacidadRelativaDePago(usuario);
+  }
+
+  private Double whenSeCalculaLaSumaDeLasCapacidades(List<Usuario> usuarios) {
+    serviceCalculosGasto.calcularTotalSumaDeCapacidadesDeCadaUsuario(usuarios);
+    serviceCalculosGasto.establecerMontoTotalDeLasSumasDeCapacidades(usuarios);
+    return serviceCalculosGasto.getMontoCapacidadTotalDeLosUsuarios();
+  }
+
+  private List<Usuario> whenSeCalculaPorcentajesDeUsuariosAsignaLaSumaTotalDelPozoYLaSumaDeSusCapacidades(List<Usuario> usuarios) {
+    serviceCalculosGasto.calcularTotalSumaDeCapacidadesDeCadaUsuario(usuarios);
+    serviceCalculosGasto.establecerMontoTotalDeLasSumasDeCapacidades(usuarios);
+    serviceCalculosGasto.calcularPorcentajesDeCapacidadMensualDeUsuarios(usuarios);
+    return usuarios;
+  }
+
+  private void thenSeLanzaMontoInvalidoPisoMinimoException(Usuario usuario) {
+    assertThrows(
+            MontoInvalidoPisoMinimoException.class,
+            () -> whenCalculoCapacidadRelativaDePago(usuario)
+    );
+  }
+
+  private void thenLaCapacidadCoincideConElMontoEsperado(
+          Double capacidadRelativaDePago,
+          Double montoEsperado
+  ) {
+    assertThat(capacidadRelativaDePago, equalTo(montoEsperado));
+  }
+
+  private void thenLaSumaDebeDarElMontoEsperado(Double montoEsperado, Double montoCapacidadDeTodosLosUsuario) {
+    assertThat(montoCapacidadDeTodosLosUsuario, equalTo(montoEsperado));
+  }
+
+  private void thenLosPorcentajesDeLosUsuariosEstanSeteados(List<Usuario> usuariosConPorcentajes) {
+
+    Double porcentajeUsuario1Esperado = 22.58;
+    Double porcentajeUsuario2Esperado = 30.65d;
+    Double porcentajeUsuario3Esperado = 46.77d;
+
+    assertThat(usuariosConPorcentajes.get(0).getPorcentajeSegunCapacidadDePagoMensual(),
+            equalTo(porcentajeUsuario1Esperado)
+    );
+    assertThat(usuariosConPorcentajes.get(1).getPorcentajeSegunCapacidadDePagoMensual(),
+            equalTo(porcentajeUsuario2Esperado)
+    );
+    assertThat(usuariosConPorcentajes.get(2).getPorcentajeSegunCapacidadDePagoMensual(),
+            equalTo(porcentajeUsuario3Esperado)
+    );
   }
 }
