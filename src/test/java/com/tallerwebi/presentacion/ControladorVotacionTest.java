@@ -44,7 +44,7 @@ public class ControladorVotacionTest {
   @Test
   public void irAPropuestasConSesionDeberiaMostrarLasPropuestas() {
     // preparacion
-    when(sessionMock.getAttribute("idUsuario")).thenReturn(1L);
+    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
     // ejecucion
     ModelAndView modelAndView = controladorVotacion.irAPropuestas(requestMock);
@@ -56,7 +56,7 @@ public class ControladorVotacionTest {
   @Test
   public void guardarPropuestaValidaDeberiaVolverAPropuestas() {
     // preparacion
-    when(sessionMock.getAttribute("idUsuario")).thenReturn(1L);
+    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
     // ejecucion
     ModelAndView modelAndView = controladorVotacion.guardarPropuesta(
@@ -72,7 +72,7 @@ public class ControladorVotacionTest {
   @Test
   public void guardarPropuestaInvalidaDeberiaMostrarError() {
     // preparacion
-    when(sessionMock.getAttribute("idUsuario")).thenReturn(1L);
+    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
     doThrow(new PropuestaNoExiste("El campo titulo no puede estar vacío"))
       .when(servicioVotacionMock)
       .guardarPropuesta(any(Propuesta.class));
@@ -94,7 +94,7 @@ public class ControladorVotacionTest {
   @Test
   public void votarDeberiaRegistrarElVotoYVolverAPropuestas() {
     // preparacion
-    when(sessionMock.getAttribute("idUsuario")).thenReturn(1L);
+    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
     // ejecucion
     ModelAndView modelAndView = controladorVotacion.votar(5L, true, "Dale", requestMock);
@@ -107,7 +107,7 @@ public class ControladorVotacionTest {
   @Test
   public void votarDosVecesDeberiaMostrarError() {
     // preparacion
-    when(sessionMock.getAttribute("idUsuario")).thenReturn(1L);
+    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
     doThrow(new UsuarioYaVoto("El usuario ya ha votado en esta propuesta"))
       .when(servicioVotacionMock)
       .votar(anyLong(), anyLong(), anyBoolean(), any());
