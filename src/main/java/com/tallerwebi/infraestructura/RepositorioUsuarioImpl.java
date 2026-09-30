@@ -53,4 +53,20 @@ public class RepositorioUsuarioImpl implements RepositorioUsuario {
     }
     sessionFactory.getCurrentSession().merge(usuario);
   }
+
+  @Override
+  public Usuario buscarPorId(Long id) {
+    return sessionFactory.getCurrentSession().get(Usuario.class, id);
+  }
+
+  @Override
+  public List<Usuario> obtenerTodos() {
+    return sessionFactory.getCurrentSession().createQuery("from Usuario order by id", Usuario.class).getResultList();
+  }
+
+  @Override
+  public List<Usuario> obtenerIntegrantesDelHogar() {
+    return sessionFactory.getCurrentSession().createQuery("from Usuario where fechaBaja is null order by id", Usuario.class)
+        .getResultList();
+  }
 }
