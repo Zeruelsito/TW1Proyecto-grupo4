@@ -116,3 +116,4 @@ public class Usuario {
   public void setFechaBaja(LocalDateTime fechaBaja) {
     this.fechaBaja = fechaBaja;
   }
+}
