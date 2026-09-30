@@ -1,10 +1,10 @@
 package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.ItemCompra;
+import com.tallerwebi.dominio.ServicioListaCompras;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
-import com.tallerwebi.dominio.service.ServicioListaCompras;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

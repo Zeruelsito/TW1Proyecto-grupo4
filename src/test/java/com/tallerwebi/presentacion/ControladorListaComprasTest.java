@@ -3,10 +3,10 @@ package com.tallerwebi.presentacion;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.text.IsEqualIgnoringCase.equalToIgnoringCase;
 import static org.mockito.Mockito.*;
- 
+
+import com.tallerwebi.dominio.ServicioListaCompras;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
-import com.tallerwebi.dominio.service.ServicioListaCompras;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
