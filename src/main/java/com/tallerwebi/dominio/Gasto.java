@@ -2,6 +2,7 @@ package com.tallerwebi.dominio;
 
 //import java.math.BigDecimal;
 
+import java.time.LocalDateTime;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,6 +20,7 @@ public class Gasto {
   private Long pagadorId;
   private String categoria;
   private TipoGasto tipoGasto;
+  private LocalDateTime fecha;
 
   public Gasto() {}
 
@@ -82,5 +84,13 @@ public class Gasto {
 
   public void setTipoGasto(TipoGasto tipoGasto) {
     this.tipoGasto = tipoGasto;
+  }
+  
+  public LocalDateTime getFecha() {
+    return fecha;
+  }
+
+  public void setFecha(LocalDateTime fecha) {
+    this.fecha = fecha;
   }
 }
