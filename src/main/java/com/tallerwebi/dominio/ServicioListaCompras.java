@@ -1,7 +1,7 @@
 package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.ItemCompra;
-import com.tallerwebi.dominio.enums.EstadoItemCompra;
+import com.tallerwebi.dominio.EstadoItemCompra;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
