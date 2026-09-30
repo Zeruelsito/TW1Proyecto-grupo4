@@ -9,11 +9,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.enums.EstadoPropuesta;
+import com.tallerwebi.dominio.EstadoPropuesta;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
-import com.tallerwebi.dominio.service.ServicioVotacion;
+import com.tallerwebi.dominio.ServicioVotacion;
 
 import jakarta.servlet.http.HttpServletRequest;
 
