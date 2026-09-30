@@ -20,7 +20,6 @@ public class Usuario {
   private String password;
   private String rol;
   private Boolean activo = false;
-  private String nombre;
   private Double ingresoMensual;
   private Double capacidadRelativaPagoMensual;
   private Double cuotaMensual;
@@ -33,14 +32,6 @@ public class Usuario {
 
   public void setHorasTareaARealizar(Double horasTareaARealizar) {
     this.horasTareaARealizar = horasTareaARealizar;
-  }
-
-  public String getNombre() {
-    return nombre;
-  }
-
-  public void setNombre(String nombre) {
-    this.nombre = nombre;
   }
 
   public Double getCuotaMensual() {
@@ -82,8 +73,6 @@ public class Usuario {
     this.nombre = nombre;
     this.ingresoMensual = ingresoMensual;
   }
-
-  public Usuario() {}
 
   public Usuario() {}
 
