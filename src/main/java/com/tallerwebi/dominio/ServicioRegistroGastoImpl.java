@@ -38,21 +38,17 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   public List<Usuario> obtenerIntegrantes() {
     List<Usuario> usuarios = new ArrayList<>();
 
-    Usuario u1 = new Usuario();
+    Usuario u1 = new Usuario("macarena", "macarena@kumo.com", "1111");
     u1.setId(1L);
-    u1.setEmail("macarena@kumo.com");
 
-    Usuario u2 = new Usuario();
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
     u2.setId(2L);
-    u2.setEmail("ezequiel@kumo.com");
 
-    Usuario u3 = new Usuario();
+    Usuario u3 = new Usuario("oriana", "oriana@kumo.com", "3333");
     u3.setId(3L);
-    u3.setEmail("oriana@kumo.com");
 
-    Usuario u4 = new Usuario();
+    Usuario u4 = new Usuario("dylan", "dylan@kumo.com", "4444");
     u4.setId(4L);
-    u4.setEmail("dylan@kumo.com");
 
     usuarios.add(u1);
     usuarios.add(u2);
