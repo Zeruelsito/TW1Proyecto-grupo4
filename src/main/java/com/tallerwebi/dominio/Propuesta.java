@@ -1,6 +1,6 @@
 package com.tallerwebi.dominio;
 
-import com.tallerwebi.dominio.enums.EstadoPropuesta;
+import com.tallerwebi.dominio.EstadoPropuesta;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
