@@ -3,6 +3,7 @@ package com.tallerwebi.infraestructura;
 import com.tallerwebi.dominio.RepositorioUsuario;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
+import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -61,12 +62,17 @@ public class RepositorioUsuarioImpl implements RepositorioUsuario {
 
   @Override
   public List<Usuario> obtenerTodos() {
-    return sessionFactory.getCurrentSession().createQuery("from Usuario order by id", Usuario.class).getResultList();
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery("from Usuario order by id", Usuario.class)
+      .getResultList();
   }
 
   @Override
   public List<Usuario> obtenerIntegrantesDelHogar() {
-    return sessionFactory.getCurrentSession().createQuery("from Usuario where fechaBaja is null order by id", Usuario.class)
-        .getResultList();
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery("from Usuario where fechaBaja is null order by id", Usuario.class)
+      .getResultList();
   }
 }

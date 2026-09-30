@@ -44,7 +44,10 @@ public class ControladorLiquidacion {
     gastoUno.setDescripcion("Supermercado");
     gastos.add(gastoUno);
 
-    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(hogar,gastos);
+    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
+      hogar,
+      gastos
+    );
 
     modelo.put("transferencias", transferencias);
     modelo.put("hogar", hogar);

@@ -7,4 +7,6 @@ public interface ServicioTareaRepetitiva {
 
   void asignarEquitativamente(Long tareaId, List<Usuario> integrantes);
   //la modifica, le pone su usuario asignado asi queda en el objeto
+
+  List<TareaRepetitiva> obtenerTodas();
 }

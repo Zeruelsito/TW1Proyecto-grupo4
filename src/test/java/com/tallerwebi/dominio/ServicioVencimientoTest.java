@@ -3,9 +3,9 @@ package com.tallerwebi.dominio;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.tallerwebi.dominio.ServicioVencimiento;
+/*import com.tallerwebi.dominio.ServicioVencimiento;
 import com.tallerwebi.dominio.ServicioVencimientoImpl;
-import com.tallerwebi.dominio.Vencimiento;
+import com.tallerwebi.dominio.Vencimiento;*/
 import com.tallerwebi.dominio.excepcion.VencimientoInvalidoException;
 import java.time.LocalDate;
 import java.util.List;

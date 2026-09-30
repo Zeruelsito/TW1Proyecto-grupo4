@@ -1,11 +1,11 @@
 package com.tallerwebi.dominio;
 
-import jakarta.persistence.PrePersist;         
-import java.time.LocalDateTime;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import java.time.LocalDateTime;
 
 @Entity
 public class Usuario {
@@ -81,19 +81,18 @@ public class Usuario {
   public void setNombre(String nombre) {
     this.nombre = nombre;
   }
-  
-  @PrePersist 
+
+  @PrePersist
   void registrarFechaAlta() {
-    if (fechaAlta == null)
-    fechaAlta = LocalDateTime.now();
+    if (fechaAlta == null) fechaAlta = LocalDateTime.now();
   }
 
   public boolean estaDeBaja() {
     return fechaBaja != null;
   }
 
-  public boolean participaEn(LocalDateTime fechaGasto){
-    if(fechaGasto == null){
+  public boolean participaEn(LocalDateTime fechaGasto) {
+    if (fechaGasto == null) {
       return true;
     }
     boolean ingresoAntes = fechaAlta == null || !fechaAlta.isAfter(fechaGasto);

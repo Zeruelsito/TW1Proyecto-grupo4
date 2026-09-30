@@ -17,6 +17,11 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
   }
 
   @Override
+  public List<TareaRepetitiva> obtenerTodas() {
+    return new ArrayList<>(tareas);
+  }
+
+  @Override
   public void asignarEquitativamente(Long tareaId, List<Usuario> integrantes) {
     if (integrantes.isEmpty()) {
       throw new HogarSinIntegrantesException();
