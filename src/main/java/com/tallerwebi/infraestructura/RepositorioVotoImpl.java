@@ -1,7 +1,7 @@
 package com.tallerwebi.infraestructura;
 
 import com.tallerwebi.dominio.Voto;
-import com.tallerwebi.dominio.repository.RepositorioVoto;
+import com.tallerwebi.dominio.RepositorioVoto;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.stereotype.Repository;
