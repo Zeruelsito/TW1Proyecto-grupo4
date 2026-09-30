@@ -11,12 +11,12 @@ import java.math.RoundingMode;
 
 
 @Entity
+@SuppressWarnings("PMD.TooManyFields")
 public class Usuario {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
-
 
   private String email;
   private String password;
@@ -29,13 +29,14 @@ public class Usuario {
   private Double horasATrabajar;
   private static Double creditosPorTareas;
   private Double porcentajeSegunCapacidadDePagoMensual;
+  private Double horasTareaARealizar;
 
-  public Double getCuotaMensual() {
-    return cuotaMensual;
+  public Double getHorasTareaARealizar() {
+    return horasTareaARealizar;
   }
 
-  public void setCuotaMensual(Double cuotaMensual) {
-    this.cuotaMensual = cuotaMensual;
+  public void setHorasTareaARealizar(Double horasTareaARealizar) {
+    this.horasTareaARealizar = horasTareaARealizar;
   }
 
   public String getNombre() {
@@ -44,6 +45,14 @@ public class Usuario {
 
   public void setNombre(String nombre) {
     this.nombre = nombre;
+  }
+
+  public Double getCuotaMensual() {
+    return cuotaMensual;
+  }
+
+  public void setCuotaMensual(Double cuotaMensual) {
+    this.cuotaMensual = cuotaMensual;
   }
 
   public Double getIngresoMensual() {
@@ -85,23 +94,25 @@ public class Usuario {
   }
 
   public Double getPorcentajeSegunCapacidadDePagoMensual() {
+    if (this.porcentajeSegunCapacidadDePagoMensual == null) {
+      return 0.0;
+    }
     double porcentaje = this.porcentajeSegunCapacidadDePagoMensual;
 
     // Redondea para arriba el double y tomma solo los dos decimales despues de la coma
     return BigDecimal.valueOf(porcentaje).setScale(2, RoundingMode.HALF_DOWN).doubleValue();
   }
 
-  public Usuario(String eze, Double ingresoMensual, Double horasATrabajar) {
-    this.nombre = eze;
+  public Usuario(String nombre, Double ingresoMensual) {
+    this.nombre = nombre;
     this.ingresoMensual = ingresoMensual;
-    this.horasATrabajar = horasATrabajar;
   }
 
   public Usuario() {}
   private LocalDateTime fechaAlta;
   private LocalDateTime fechaBaja;
 
-  public Usuario() {}
+
 
   public Usuario(String nombre, String email, String password) {
     this.nombre = nombre;
@@ -153,13 +164,6 @@ public class Usuario {
     activo = true;
   }
 
-  public String getNombre() {
-    return nombre;
-  }
-
-  public void setNombre(String nombre) {
-    this.nombre = nombre;
-  }
 
   @PrePersist
   void registrarFechaAlta() {
