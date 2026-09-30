@@ -71,7 +71,7 @@ public class ControladorVotacion {
   }
 
   private Long obtenerIdUsuario(HttpServletRequest request) {
-    return (Long) request.getSession().getAttribute("idUsuario");
+    return (Long) request.getSession().getAttribute("USUARIO_ID");
   }
 
   private Propuesta armarPropuesta(DatosPropuesta datos, Long idUsuario) {
