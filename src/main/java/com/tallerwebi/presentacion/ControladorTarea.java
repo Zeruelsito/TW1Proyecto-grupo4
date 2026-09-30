@@ -53,7 +53,7 @@ public class ControladorTarea {
       servicioCreditoTarea.registrarTarea(tarea);
       return new ModelAndView("redirect:/tareas");
     } catch (ValorCreditoInvalidoException e) {
-      model.put(ATRIBUTO_ERROR, "Las horas dedicadas deben ser mayores a 0.");
+      model.put(ATRIBUTO_ERROR, "El valor del crédito debe ser mayor a $0.");
       cargarDatosDashboardTareas(model, usuarioId);
       return new ModelAndView(VISTA_TAREAS, model);
     }
@@ -80,7 +80,7 @@ public class ControladorTarea {
     } catch (TareaNoEncontradaException e) {
       model.put(ATRIBUTO_ERROR, "La tarea seleccionada no existe.");
     } catch (TareaYaCompletadaException e) {
-      model.put(ATRIBUTO_ERROR, "Esta tarea ya fue acreditada previamente.");
+      model.put(ATRIBUTO_ERROR, "Esta tarea ya fue completada previamente.");
     }
 
     cargarDatosDashboardTareas(model, usuarioId);
