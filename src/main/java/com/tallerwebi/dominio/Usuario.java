@@ -153,15 +153,7 @@ public class Usuario {
     activo = true;
   }
 
-  public String getNombre() {
-    return nombre;
-  }
-
-  public void setNombre(String nombre) {
-    this.nombre = nombre;
-  }
-  
-  @PrePersist 
+  @PrePersist
   void registrarFechaAlta() {
     if (fechaAlta == null) fechaAlta = LocalDateTime.now();
   }
