@@ -5,12 +5,12 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
  
-import com.tallerwebi.dominio.enums.EstadoPropuesta;
+import com.tallerwebi.dominio.EstadoPropuesta;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-import com.tallerwebi.dominio.repository.RepositorioPropuesta;
-import com.tallerwebi.dominio.repository.RepositorioVoto;
-import com.tallerwebi.dominio.service.ServicioVotacion;
+import com.tallerwebi.dominio.RepositorioPropuesta;
+import com.tallerwebi.dominio.RepositorioVoto;
+import com.tallerwebi.dominio.ServicioVotacion;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
