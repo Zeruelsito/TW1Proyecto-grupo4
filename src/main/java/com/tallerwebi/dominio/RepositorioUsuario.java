@@ -9,5 +9,5 @@ public interface RepositorioUsuario {
   void modificar(Usuario usuario);
   Usuario buscarPorId(Long id);
   List<Usuario> obtenerTodos();
-  List<Usuario> obtenerIntegrantesDelHogar()
+  List<Usuario> obtenerIntegrantesDelHogar();
 }
