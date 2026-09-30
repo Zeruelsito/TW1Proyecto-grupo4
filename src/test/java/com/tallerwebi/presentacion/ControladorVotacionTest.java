@@ -7,7 +7,7 @@ import static org.mockito.Mockito.*;
 import com.tallerwebi.dominio.Propuesta;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-import com.tallerwebi.dominio.service.ServicioVotacion;
+import com.tallerwebi.dominio.ServicioVotacion;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.List;
