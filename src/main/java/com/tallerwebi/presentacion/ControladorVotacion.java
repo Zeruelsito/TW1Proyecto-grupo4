@@ -64,7 +64,7 @@ public class ControladorVotacion {
     }
 
     try {
-      servicioVotacion.votar(idPropuesta, idUsuario, esAfirmativo, comentario);
+        servicioVotacion.votar(idUsuario, idPropuesta, esAfirmativo, comentario);
     } catch (PropuestaNoExiste | VotacionCerradaException | UsuarioYaVoto e) {
       return armarVista(new DatosPropuesta(), e.getMessage());
     }
