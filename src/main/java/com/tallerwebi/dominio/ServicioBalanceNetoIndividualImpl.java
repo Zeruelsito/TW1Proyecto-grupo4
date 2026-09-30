@@ -7,8 +7,6 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class ServicioBalanceNetoIndividualImpl implements ServicioBalanceNetoIndividual {
 
-    @Override
-    public void calcularBalance(Usuario usuario) {
-
-    }
+  @Override
+  public void calcularBalance(Usuario usuario) {}
 }

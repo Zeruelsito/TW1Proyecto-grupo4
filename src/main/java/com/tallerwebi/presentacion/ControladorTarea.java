@@ -53,7 +53,7 @@ public class ControladorTarea {
       servicioCreditoTarea.registrarTarea(tarea);
       return new ModelAndView("redirect:/tareas");
     } catch (ValorCreditoInvalidoException e) {
-      model.put(ATRIBUTO_ERROR,"El valor del crédito debe ser mayor a $0.");
+      model.put(ATRIBUTO_ERROR, "El valor del crédito debe ser mayor a $0.");
       cargarDatosDashboardTareas(model, usuarioId);
       return new ModelAndView(VISTA_TAREAS, model);
     }

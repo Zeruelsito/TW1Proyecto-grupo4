@@ -1,5 +1,12 @@
 package com.tallerwebi.presentacion;
 
+import com.tallerwebi.dominio.EstadoPropuesta;
+import com.tallerwebi.dominio.Propuesta;
+import com.tallerwebi.dominio.ServicioVotacion;
+import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
+import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -8,24 +15,16 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
-import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.enums.EstadoPropuesta;
-import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
-import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
-import com.tallerwebi.dominio.service.ServicioVotacion;
-
-import jakarta.servlet.http.HttpServletRequest;
-
-@Controller 
+@Controller
 public class ControladorVotacion {
-    private final ServicioVotacion servicioVotacion;
 
-    public ControladorVotacion(ServicioVotacion servicioVotacion) {
-        this.servicioVotacion = servicioVotacion;
-    }
+  private final ServicioVotacion servicioVotacion;
 
-    @RequestMapping(path = "/propuestas", method = RequestMethod.GET)
+  public ControladorVotacion(ServicioVotacion servicioVotacion) {
+    this.servicioVotacion = servicioVotacion;
+  }
+
+  @RequestMapping(path = "/propuestas", method = RequestMethod.GET)
   public ModelAndView irAPropuestas(HttpServletRequest request) {
     if (obtenerIdUsuario(request) == null) {
       return new ModelAndView("redirect:/login");
@@ -64,7 +63,7 @@ public class ControladorVotacion {
     }
 
     try {
-        servicioVotacion.votar(idUsuario, idPropuesta, esAfirmativo, comentario);
+      servicioVotacion.votar(idUsuario, idPropuesta, esAfirmativo, comentario);
     } catch (PropuestaNoExiste | VotacionCerradaException | UsuarioYaVoto e) {
       return armarVista(new DatosPropuesta(), e.getMessage());
     }
@@ -97,4 +96,3 @@ public class ControladorVotacion {
     return mav;
   }
 }
-

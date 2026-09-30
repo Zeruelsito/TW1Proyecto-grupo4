@@ -1,12 +1,12 @@
 package com.tallerwebi.dominio;
 
-//import java.math.BigDecimal;
-
-import java.time.LocalDateTime;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+//import java.math.BigDecimal;
+
+import java.time.LocalDateTime;
 
 @Entity
 public class Gasto {
@@ -85,7 +85,7 @@ public class Gasto {
   public void setTipoGasto(TipoGasto tipoGasto) {
     this.tipoGasto = tipoGasto;
   }
-  
+
   public LocalDateTime getFecha() {
     return fecha;
   }

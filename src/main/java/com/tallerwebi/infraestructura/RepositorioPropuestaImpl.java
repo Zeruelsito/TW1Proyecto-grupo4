@@ -1,7 +1,7 @@
 package com.tallerwebi.infraestructura;
 
 import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.repository.RepositorioPropuesta;
+import com.tallerwebi.dominio.RepositorioPropuesta;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
