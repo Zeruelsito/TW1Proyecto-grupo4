@@ -1,4 +1,4 @@
-package com.tallerwebi.dominio.repository;
+package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.Voto;
 import java.util.List;
