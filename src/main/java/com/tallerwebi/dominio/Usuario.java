@@ -1,13 +1,13 @@
 package com.tallerwebi.dominio;
 
-import jakarta.persistence.PrePersist;
-import java.time.LocalDateTime;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Entity
 @SuppressWarnings("PMD.TooManyFields")
@@ -99,10 +99,9 @@ public class Usuario {
   }
 
   public Usuario() {}
+
   private LocalDateTime fechaAlta;
   private LocalDateTime fechaBaja;
-
-
 
   public Usuario(String nombre, String email, String password) {
     this.nombre = nombre;
@@ -154,19 +153,17 @@ public class Usuario {
     activo = true;
   }
 
-
   @PrePersist
   void registrarFechaAlta() {
-    if (fechaAlta == null)
-    fechaAlta = LocalDateTime.now();
+    if (fechaAlta == null) fechaAlta = LocalDateTime.now();
   }
 
   public boolean estaDeBaja() {
     return fechaBaja != null;
   }
 
-  public boolean participaEn(LocalDateTime fechaGasto){
-    if(fechaGasto == null){
+  public boolean participaEn(LocalDateTime fechaGasto) {
+    if (fechaGasto == null) {
       return true;
     }
     boolean ingresoAntes = fechaAlta == null || !fechaAlta.isAfter(fechaGasto);
@@ -188,5 +185,13 @@ public class Usuario {
 
   public void setFechaBaja(LocalDateTime fechaBaja) {
     this.fechaBaja = fechaBaja;
+  }
+
+  public String getNombre() {
+    return nombre;
+  }
+
+  public void setNombre(String nombre) {
+    this.nombre = nombre;
   }
 }
