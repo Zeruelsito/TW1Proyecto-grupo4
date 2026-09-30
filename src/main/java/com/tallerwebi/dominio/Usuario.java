@@ -6,10 +6,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import lombok.Getter;
-import lombok.Setter;
 
 @Entity
+@SuppressWarnings("PMD.TooManyFields")
 public class Usuario {
 
   @Id
@@ -24,16 +23,15 @@ public class Usuario {
   private Double ingresoMensual;
   private Double capacidadRelativaPagoMensual;
   private Double cuotaMensual;
-  private Double horasATrabajar;
-  private static Double creditosPorTareas;
   private Double porcentajeSegunCapacidadDePagoMensual;
+  private Double horasTareaARealizar;
 
-  public Double getCuotaMensual() {
-    return cuotaMensual;
+  public Double getHorasTareaARealizar() {
+    return horasTareaARealizar;
   }
 
-  public void setCuotaMensual(Double cuotaMensual) {
-    this.cuotaMensual = cuotaMensual;
+  public void setHorasTareaARealizar(Double horasTareaARealizar) {
+    this.horasTareaARealizar = horasTareaARealizar;
   }
 
   public String getNombre() {
@@ -44,12 +42,16 @@ public class Usuario {
     this.nombre = nombre;
   }
 
-  public Double getIngresoMensual() {
-    return ingresoMensual;
+  public Double getCuotaMensual() {
+    return cuotaMensual;
   }
 
-  public void setIngresoMensual(Double ingresoMensual) {
-    this.ingresoMensual = ingresoMensual;
+  public void setCuotaMensual(Double cuotaMensual) {
+    this.cuotaMensual = cuotaMensual;
+  }
+
+  public Double getIngresoMensual() {
+    return ingresoMensual;
   }
 
   public Double getCapacidadRelativaPagoMensual() {
@@ -60,22 +62,6 @@ public class Usuario {
     this.capacidadRelativaPagoMensual = capacidadRelativaPagoMensual;
   }
 
-  public Double getHorasATrabajar() {
-    return horasATrabajar;
-  }
-
-  public void setHorasATrabajar(Double horasATrabajar) {
-    this.horasATrabajar = horasATrabajar;
-  }
-
-  public static Double getCreditosPorTareas() {
-    return creditosPorTareas;
-  }
-
-  public static void setCreditosPorTareas(Double creditosPorTareas) {
-    Usuario.creditosPorTareas = creditosPorTareas;
-  }
-
   public void setPorcentajeSegunCapacidadDePagoMensual(
     Double porcentajeSegunCapacidadDePagoMensual
   ) {
@@ -83,16 +69,17 @@ public class Usuario {
   }
 
   public Double getPorcentajeSegunCapacidadDePagoMensual() {
+    if (this.porcentajeSegunCapacidadDePagoMensual == null) {
+      return 0.0;
+    }
     double porcentaje = this.porcentajeSegunCapacidadDePagoMensual;
-
     // Redondea para arriba el double y tomma solo los dos decimales despues de la coma
     return BigDecimal.valueOf(porcentaje).setScale(2, RoundingMode.HALF_DOWN).doubleValue();
   }
 
-  public Usuario(String eze, Double ingresoMensual, Double horasATrabajar) {
-    this.nombre = eze;
+  public Usuario(String nombre, Double ingresoMensual) {
+    this.nombre = nombre;
     this.ingresoMensual = ingresoMensual;
-    this.horasATrabajar = horasATrabajar;
   }
 
   public Usuario() {}
