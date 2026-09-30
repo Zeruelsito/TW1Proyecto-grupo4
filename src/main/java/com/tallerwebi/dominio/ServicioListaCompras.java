@@ -1,4 +1,4 @@
-package com.tallerwebi.dominio.service;
+package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.ItemCompra;
 import com.tallerwebi.dominio.enums.EstadoItemCompra;
