@@ -1,8 +1,8 @@
 package com.tallerwebi.infraestructura;
 
 import com.tallerwebi.dominio.ItemCompra;
-import com.tallerwebi.dominio.enums.EstadoItemCompra;
-import com.tallerwebi.dominio.repository.RepositorioItemCompra;
+import com.tallerwebi.dominio.EstadoItemCompra;
+import com.tallerwebi.dominio.RepositorioItemCompra;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
