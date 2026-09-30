@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
  
 import com.tallerwebi.dominio.ServicioListaCompras;
-import com.tallerwebi.dominio.enums.EstadoItemCompra;
+import com.tallerwebi.dominio.EstadoItemCompra;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
-import com.tallerwebi.dominio.repository.RepositorioItemCompra;
+import com.tallerwebi.dominio.RepositorioItemCompra;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
