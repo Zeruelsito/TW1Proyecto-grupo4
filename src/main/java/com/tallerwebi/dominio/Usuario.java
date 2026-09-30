@@ -9,7 +9,6 @@ import jakarta.persistence.Id;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-
 @Entity
 @SuppressWarnings("PMD.TooManyFields")
 public class Usuario {
@@ -18,11 +17,11 @@ public class Usuario {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  private String nombre;
   private String email;
   private String password;
   private String rol;
   private Boolean activo = false;
-  private String nombre;
   private Double ingresoMensual;
   private Double capacidadRelativaPagoMensual;
   private Double cuotaMensual;
@@ -37,14 +36,6 @@ public class Usuario {
 
   public void setHorasTareaARealizar(Double horasTareaARealizar) {
     this.horasTareaARealizar = horasTareaARealizar;
-  }
-
-  public String getNombre() {
-    return nombre;
-  }
-
-  public void setNombre(String nombre) {
-    this.nombre = nombre;
   }
 
   public Double getCuotaMensual() {
@@ -98,7 +89,6 @@ public class Usuario {
       return 0.0;
     }
     double porcentaje = this.porcentajeSegunCapacidadDePagoMensual;
-
     // Redondea para arriba el double y tomma solo los dos decimales despues de la coma
     return BigDecimal.valueOf(porcentaje).setScale(2, RoundingMode.HALF_DOWN).doubleValue();
   }
