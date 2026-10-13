@@ -29,6 +29,8 @@ public class Usuario {
   private static Double creditosPorTareas;
   private Double porcentajeSegunCapacidadDePagoMensual;
   private Double horasTareaARealizar;
+  private LocalDateTime fechaAlta;
+  private LocalDateTime fechaBaja;
 
   public Double getHorasTareaARealizar() {
     return horasTareaARealizar;
@@ -99,9 +101,6 @@ public class Usuario {
   }
 
   public Usuario() {}
-
-  private LocalDateTime fechaAlta;
-  private LocalDateTime fechaBaja;
 
   public Usuario(String nombre, String email, String password) {
     this.nombre = nombre;

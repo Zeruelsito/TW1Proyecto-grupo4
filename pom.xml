@@ -108,6 +108,22 @@
             <version>${playwright.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.mercadopago</groupId>
+            <artifactId>sdk-java</artifactId>
+            <version>3.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>RELEASE</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>dotenv-java</artifactId>
+            <version>3.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
