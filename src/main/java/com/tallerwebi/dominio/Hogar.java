@@ -1,5 +1,6 @@
 package com.tallerwebi.dominio;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -24,8 +25,12 @@ public class Hogar {
   private Double precioHoraTarea;
   private Double pisoMinimoHogar;
 
-  @OneToMany
+  @OneToMany(cascade = CascadeType.ALL)
   private List<CambioParametro> historial;
+
+  public Hogar() {
+    this(null);
+  }
 
   public Hogar(String nombreHogar) {
     this.nombreHogar = nombreHogar;
@@ -59,11 +64,11 @@ public class Hogar {
     this.pisoMinimoHogar = pisoMinimoHogar;
   }
 
-  public Object getId() {
+  public Long getId() {
     return id;
   }
 
-  public Object getNombreHogar() {
+  public String getNombreHogar() {
     return nombreHogar;
   }
 
