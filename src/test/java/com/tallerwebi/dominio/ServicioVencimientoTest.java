@@ -2,6 +2,8 @@ package com.tallerwebi.dominio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /*import com.tallerwebi.dominio.ServicioVencimiento;
 import com.tallerwebi.dominio.ServicioVencimientoImpl;
@@ -15,15 +17,18 @@ public class ServicioVencimientoTest {
 
   @Test
   public void debeDevolverLosVencimientosOrdenadosPorFecha() {
-    ServicioVencimiento servicio = new ServicioVencimientoImpl();
+    RepositorioVencimiento repositorio = mock(RepositorioVencimiento.class);
+    ServicioVencimiento servicio = new ServicioVencimientoImpl(repositorio);
 
     Vencimiento luz = new Vencimiento(1L, "Luz", LocalDate.of(2026, 10, 20));
     Vencimiento internet = new Vencimiento(2L, "Internet", LocalDate.of(2026, 10, 5));
     Vencimiento alquiler = new Vencimiento(3L, "Alquiler", LocalDate.of(2026, 10, 10));
 
-    servicio.registrar(luz);
+    when(repositorio.obtenerTodosOrdenadosPorFecha()).thenReturn(List.of(internet, alquiler, luz));
+
+    /*servicio.registrar(luz);
     servicio.registrar(internet);
-    servicio.registrar(alquiler);
+    servicio.registrar(alquiler); */
 
     List<Vencimiento> resultado = servicio.obtenerOrdenadosPorFecha();
 
@@ -34,7 +39,9 @@ public class ServicioVencimientoTest {
 
   @Test
   public void noDebeRegistrarUnVencimientoSinFecha() {
-    ServicioVencimiento servicio = new ServicioVencimientoImpl();
+    RepositorioVencimiento repositorio = mock(RepositorioVencimiento.class);
+    ServicioVencimiento servicio = new ServicioVencimientoImpl(repositorio);
+
     Vencimiento sinFecha = new Vencimiento(1L, "Luz", null);
 
     assertThrows(VencimientoInvalidoException.class, () -> servicio.registrar(sinFecha));
@@ -42,16 +49,19 @@ public class ServicioVencimientoTest {
 
   @Test
   public void debeDevolverSoloLosVencimientosProximosOrdenados() {
-    ServicioVencimiento servicio = new ServicioVencimientoImpl();
+    RepositorioVencimiento repositorio = mock(RepositorioVencimiento.class);
+    ServicioVencimiento servicio = new ServicioVencimientoImpl(repositorio);
     LocalDate hoy = LocalDate.of(2026, 10, 8);
 
     Vencimiento luz = new Vencimiento(1L, "Luz", LocalDate.of(2026, 10, 20));
     Vencimiento internet = new Vencimiento(2L, "Internet", LocalDate.of(2026, 10, 5));
     Vencimiento alquiler = new Vencimiento(3L, "Alquiler", LocalDate.of(2026, 10, 10));
 
-    servicio.registrar(luz);
+    when(repositorio.obtenerDesde(hoy)).thenReturn(List.of(alquiler, luz));
+
+    /* servicio.registrar(luz);
     servicio.registrar(internet);
-    servicio.registrar(alquiler);
+    servicio.registrar(alquiler); */
 
     List<Vencimiento> resultado = servicio.obtenerProximos(hoy);
 
@@ -62,10 +72,12 @@ public class ServicioVencimientoTest {
 
   @Test
   public void debeIncluirElVencimientoQueVenceHoy() { //osea si cae justo el dia de hoy
-    ServicioVencimiento servicio = new ServicioVencimientoImpl();
+    RepositorioVencimiento repositorio = mock(RepositorioVencimiento.class);
+    ServicioVencimiento servicio = new ServicioVencimientoImpl(repositorio);
     LocalDate hoy = LocalDate.of(2026, 10, 8);
     Vencimiento venceHoy = new Vencimiento(1L, "Gas", hoy);
-    servicio.registrar(venceHoy);
+    when(repositorio.obtenerDesde(hoy)).thenReturn(List.of(venceHoy));
+    // servicio.registrar(venceHoy);
 
     List<Vencimiento> resultado = servicio.obtenerProximos(hoy);
 
