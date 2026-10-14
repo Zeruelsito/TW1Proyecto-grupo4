@@ -94,7 +94,7 @@
 
                             <div class="mb-3">
                                 <label for="pagadorId" class="form-label small fw-semibold">¿Quién pagó?</label>
-                                <select class="form-select rounded-3" id="pagadorId" th:field="*{pagadorId}">
+                                <select class="form-select rounded-3" id="pagadorId" th:field="*{usuarioPagador.id}">
                                     <option th:value="null" hidden selected>Seleccioná quién pagó</option>
                                     <option th:each="usuario : ${integrantes}" 
                                             th:value="${usuario.id}" 
@@ -154,7 +154,7 @@
                                         <th>Descripción</th>
                                         <th>Tipo</th>
                                         <th>Categoría</th>
-                                        <th>Pagador ID</th>
+                                        <th>Pagador</th>
                                         <th class="text-end">Monto</th>
                                     </tr>
                                 </thead>
@@ -172,6 +172,7 @@
                                             <span class="badge kumo-badge-yellow px-2 py-1" th:text="${gastoItem.categoria}">ALIMENTACION</span>
                                         </td>
                                         <td th:text="${gastoItem.pagadorId}">1</td>
+                                        <td th:text="${gastoItem.usuarioPagador != null ? gastoItem.usuarioPagador.nombre : 'Sin asignar'}">Juan</td>
                                         <td class="text-end fw-bold" th:text="${'$' + #numbers.formatDecimal(gastoItem.monto, 1, 'POINT', 2, 'COMMA')}">$0.00</td>
                                     </tr>
                                     <tr th:if="${#lists.isEmpty(listaGastos)}">

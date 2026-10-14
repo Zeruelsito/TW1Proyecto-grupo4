@@ -36,10 +36,14 @@ public class ServicioReporteTest {
 
   @Test
   public void generarReporteDeberiaTraerSoloLosGastosDelMes() {
-    // preparacion
-    Gasto gastoSeptiembre = new Gasto(TipoGasto.FIJO, "Luz", 1000.0, 1L, "SERVICIOS");
+    // preparacion[cite: 6]
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(1L);
+
+    // Actualizado: Pasamos el código y el objeto Usuario en el constructor de Gasto
+    Gasto gastoSeptiembre = new Gasto("G001", TipoGasto.FIJO, "Luz", 1000.0, usuario, "SERVICIOS");
     gastoSeptiembre.setFecha(LocalDateTime.of(2026, 9, 10, 12, 0));
-    Gasto gastoAgosto = new Gasto(TipoGasto.FIJO, "Gas", 500.0, 1L, "SERVICIOS");
+    Gasto gastoAgosto = new Gasto("G002", TipoGasto.FIJO, "Gas", 500.0, usuario, "SERVICIOS");
     gastoAgosto.setFecha(LocalDateTime.of(2026, 8, 10, 12, 0));
 
     when(servicioRegistroGastoMock.obtenerIntegrantes()).thenReturn(List.of());
@@ -49,17 +53,17 @@ public class ServicioReporteTest {
     when(servicioLiquidacionMock.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
       .thenReturn(List.of());
 
-    // ejecucion
+    // ejecucion[cite: 6]
     ReporteMensual reporte = servicioReporte.generarReporte(YearMonth.of(2026, 9));
 
-    // validacion
+    // validacion[cite: 6]
     assertThat(reporte.getGastos().size(), equalTo(1));
     assertThat(reporte.getGastos().get(0).getDescripcion(), equalTo("Luz"));
   }
 
   @Test
   public void exportarCsvDeberiaTenerLasSeccionesDelReporte() {
-    // preparacion
+    // preparacion[cite: 6]
     ReporteMensual reporte = new ReporteMensual(
       YearMonth.of(2026, 9),
       List.of(),
@@ -69,10 +73,10 @@ public class ServicioReporteTest {
       Map.of()
     );
 
-    // ejecucion
+    // ejecucion[cite: 6]
     String csv = servicioReporte.exportarCsv(reporte);
 
-    // validacion
+    // validacion[cite: 6]
     assertThat(csv, containsString("GASTOS"));
     assertThat(csv, containsString("TAREAS"));
     assertThat(csv, containsString("BALANCES POR INTEGRANTE"));
@@ -81,8 +85,12 @@ public class ServicioReporteTest {
 
   @Test
   public void exportarCsvDeberiaMostrarElGastoConElNombreDelPagador() {
-    // preparacion
-    Gasto gasto = new Gasto(TipoGasto.FIJO, "Luz", 1500.0, 1L, "SERVICIOS");
+    // preparacion[cite: 6]
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(1L);
+
+    // Actualizado: Pasamos el código y el objeto Usuario
+    Gasto gasto = new Gasto("G001", TipoGasto.FIJO, "Luz", 1500.0, usuario, "SERVICIOS");
     ReporteMensual reporte = new ReporteMensual(
       YearMonth.of(2026, 9),
       List.of(gasto),
@@ -92,10 +100,10 @@ public class ServicioReporteTest {
       Map.of(1L, "Juan")
     );
 
-    // ejecucion
+    // ejecucion[cite: 6]
     String csv = servicioReporte.exportarCsv(reporte);
 
-    // validacion
+    // validacion[cite: 6]
     assertThat(csv, containsString("Luz;SERVICIOS;Fijo;Juan;1500,00"));
   }
 }

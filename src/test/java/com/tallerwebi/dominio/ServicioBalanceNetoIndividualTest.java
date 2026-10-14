@@ -37,11 +37,12 @@ public class ServicioBalanceNetoIndividualTest {
 
   private List<Gasto> givenUnaListaDeGastosRegistrados() {
     List<Gasto> gastosHechos = new ArrayList<>();
-    Gasto gasto1 = new Gasto(TipoGasto.FIJO, "alquiler", 300000d, 1l, "VARIOS");
-    Gasto gasto2 = new Gasto(TipoGasto.FIJO, "agua", 100000d, 2l, "VARIOS");
-    Gasto gasto3 = new Gasto(TipoGasto.FIJO, "gas", 200000d, 1l, "VARIOS");
-    Gasto gasto4 = new Gasto(TipoGasto.FIJO, "comida", 50000d, 1l, "VARIOS");
-    Gasto gasto5 = new Gasto(TipoGasto.FIJO, "comida", 40000d, 3l, "VARIOS");
+    Usuario usuario1 = new Usuario("Juan", "juan@kumo.com", "1234");
+    Gasto gasto1 = new Gasto("G001", TipoGasto.FIJO, "alquiler", 300000d, usuario1, "VARIOS");
+    Gasto gasto2 = new Gasto("G002", TipoGasto.FIJO, "agua", 100000d, usuario1, "VARIOS");
+    Gasto gasto3 = new Gasto("G003", TipoGasto.FIJO, "gas", 200000d, usuario1, "VARIOS");
+    Gasto gasto4 = new Gasto("G004", TipoGasto.FIJO, "comida", 50000d, usuario1, "VARIOS");
+    Gasto gasto5 = new Gasto("G005", TipoGasto.FIJO, "comida", 40000d, usuario1, "VARIOS");
     gastosHechos.add(gasto1);
     gastosHechos.add(gasto2);
     gastosHechos.add(gasto3);

@@ -25,7 +25,8 @@ public class ServicioHogarImpl implements ServicioHogar {
     }
 
     if (!precioHoraTarea.equals(hogar.getPrecioHoraTarea())) { //si ve q el valor q le pasaron es diferente al de ahora, guarda el valor viejo y setea el nuevo, en teoria deberian poder repetirse operaciones pero me percate tarde de este error.
-      hogar.getHistorial()
+      hogar
+        .getHistorial()
         .add(new CambioParametro("phoraTarea", hogar.getPrecioHoraTarea(), precioHoraTarea));
       hogar.setPrecioHoraTarea(precioHoraTarea);
     }
