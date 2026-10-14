@@ -8,15 +8,45 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ServicioRegistroGastoTest {
 
-  ServicioRegistroGasto servicioRegistroGasto = new ServicioRegistroGastoImpl();
+  private RepositorioGasto repositorioGasto;
+  private RepositorioUsuario repositorioUsuario;
+  private ServicioRegistroGasto servicioRegistroGasto;
+
+  private List<Gasto> gastosEnMemoria;
+
+  @BeforeEach
+  public void init() {
+    // Mockeamos los repositorios que ahora inyecta el servicio
+    repositorioGasto = mock(RepositorioGasto.class);
+    repositorioUsuario = mock(RepositorioUsuario.class);
+
+    servicioRegistroGasto = new ServicioRegistroGastoImpl(repositorioGasto, repositorioUsuario);
+    gastosEnMemoria = new ArrayList<>();
+
+    // Simulamos comportamiento básico para que el registro y listado funcionen en memoria durante el test
+    when(repositorioGasto.obtenerTodos()).thenAnswer(invocation -> gastosEnMemoria);
+    doAnswer(invocation -> {
+        Gasto g = invocation.getArgument(0);
+        gastosEnMemoria.add(g);
+        return null;
+      })
+      .when(repositorioGasto)
+      .guardar(any(Gasto.class));
+  }
 
   @Test
   public void dadoUnGastoValidoCuandoLoRegistroEntoncesSeGuardaEnLaLista() {
@@ -49,6 +79,9 @@ public class ServicioRegistroGastoTest {
 
   @Test
   public void debeObtenerLaListaDeIntegrantesCorrectamente() {
+    List<Usuario> integrantesMock = givenCuatroIntegrantes();
+    when(repositorioUsuario.obtenerIntegrantesDelHogar()).thenReturn(integrantesMock);
+
     List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes();
 
     assertThat(integrantes, hasSize(4));
@@ -58,7 +91,18 @@ public class ServicioRegistroGastoTest {
   @Test
   public void debeSugerirComoProximoPagadorAlIntegranteConMenorMontoAcumulado() {
     // given
-    Gasto gastoMacarena = new Gasto(TipoGasto.OCASIONAL, "Comida", 10000.0, 1L, "Varios");
+    List<Usuario> integrantesMock = givenCuatroIntegrantes();
+    when(repositorioUsuario.obtenerIntegrantesDelHogar()).thenReturn(integrantesMock);
+
+    Usuario macarena = integrantesMock.get(0);
+    Gasto gastoMacarena = new Gasto(
+      "G001",
+      TipoGasto.OCASIONAL,
+      "Comida",
+      10000.0,
+      macarena,
+      "Varios"
+    );
     servicioRegistroGasto.registrarGasto(gastoMacarena);
 
     // when
@@ -71,7 +115,9 @@ public class ServicioRegistroGastoTest {
   @Test
   public void dadaUnaListaDeGastosPuedoObtenerUnaListaFiltradaPorTipo() {
     //given
-    givenUnaListaDeGastosRegistrados();
+    List<Gasto> listaRecurrentes = givenUnaListaDeGastosRegistrados();
+    when(repositorioGasto.obtenerPorTipo(TipoGasto.RECURRENTE)).thenReturn(listaRecurrentes);
+
     //when
     List<Gasto> listaGastosFiltrada = whenFiltroLosGastosPorTipo(TipoGasto.RECURRENTE);
     //then
@@ -88,31 +134,51 @@ public class ServicioRegistroGastoTest {
     return servicioRegistroGasto.obtenerGastosPorTipo(tipo);
   }
 
-  private void givenUnaListaDeGastosRegistrados() {
-    Gasto gasto1 = new Gasto(TipoGasto.FIJO, "Alquiler depto", 400000.0, 2L, "ALQUILER");
-    Gasto gasto2 = new Gasto(TipoGasto.RECURRENTE, "Factura luz", 90000.0, 2L, "SERVICIOS");
-    Gasto gasto3 = new Gasto(TipoGasto.RECURRENTE, "Factura agua", 40000.0, 2L, "SERVICIOS");
-    Gasto gasto4 = new Gasto(TipoGasto.OCASIONAL, "Compras del chino", 15000.0, 2L, "ALIMENTACION");
-    Gasto gasto5 = new Gasto(TipoGasto.OCASIONAL, "Supermercado", 20000.0, 2L, "VARIOS");
-    Gasto gasto6 = new Gasto(TipoGasto.OCASIONAL, "Cambio persiana", 200000.0, 2L, "VARIOS");
-    servicioRegistroGasto.registrarGasto(gasto1);
-    servicioRegistroGasto.registrarGasto(gasto2);
-    servicioRegistroGasto.registrarGasto(gasto3);
-    servicioRegistroGasto.registrarGasto(gasto4);
-    servicioRegistroGasto.registrarGasto(gasto5);
-    servicioRegistroGasto.registrarGasto(gasto6);
+  private List<Gasto> givenUnaListaDeGastosRegistrados() {
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
+    u2.setId(2L);
+
+    Gasto gasto2 = new Gasto("G002", TipoGasto.RECURRENTE, "Factura luz", 90000.0, u2, "SERVICIOS");
+    Gasto gasto3 = new Gasto(
+      "G003",
+      TipoGasto.RECURRENTE,
+      "Factura agua",
+      40000.0,
+      u2,
+      "SERVICIOS"
+    );
+
+    return List.of(gasto2, gasto3);
+  }
+
+  private List<Usuario> givenCuatroIntegrantes() {
+    Usuario u1 = new Usuario("macarena", "macarena@kumo.com", "1111");
+    u1.setId(1L);
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
+    u2.setId(2L);
+    Usuario u3 = new Usuario("oriana", "oriana@kumo.com", "3333");
+    u3.setId(3L);
+    Usuario u4 = new Usuario("dylan", "dylan@kumo.com", "4444");
+    u4.setId(4L);
+    return List.of(u1, u2, u3, u4);
   }
 
   private Gasto givenUnGastoValido() {
-    return new Gasto(TipoGasto.OCASIONAL, "Compras del chino", 25000.0, 2L, "ALIMENTACION");
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
+    u2.setId(2L);
+    return new Gasto("G001", TipoGasto.OCASIONAL, "Compras del chino", 25000.0, u2, "ALIMENTACION");
   }
 
   private Gasto givenUnGastoConMontoInvalido() {
-    return new Gasto(TipoGasto.OCASIONAL, "Compras del chino", -500.0, 2L, "ALIMENTACION");
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
+    u2.setId(2L);
+    return new Gasto("G001", TipoGasto.OCASIONAL, "Compras del chino", -500.0, u2, "ALIMENTACION");
   }
 
   private Gasto givenUnGastoConDescripcionVacia() {
-    return new Gasto(TipoGasto.OCASIONAL, "", 15000.0, 2L, "ALIMENTACION");
+    Usuario u2 = new Usuario("ezequiel", "ezequiel@kumo.com", "2222");
+    u2.setId(2L);
+    return new Gasto("G001", TipoGasto.OCASIONAL, "", 15000.0, u2, "ALIMENTACION");
   }
 
   private void whenRegistroUn(Gasto gasto) {

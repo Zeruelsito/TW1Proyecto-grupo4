@@ -1,11 +1,15 @@
 package com.tallerwebi.dominio;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 //import java.math.BigDecimal;
-
+import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,26 +19,37 @@ public class Gasto {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @Column(unique = true)
+  private String codigo;
+
   private String descripcion;
   private Double monto;
-  private Long pagadorId;
   private String categoria;
+
+  @ManyToOne
+  @JoinColumn(name = "usuario_pagador_id")
+  private Usuario usuarioPagador;
+
+  @Enumerated(EnumType.STRING)
   private TipoGasto tipoGasto;
+
   private LocalDateTime fecha;
 
   public Gasto() {}
 
   public Gasto(
+    String codigo,
     TipoGasto tipoGasto,
     String descripcion,
     Double monto,
-    Long pagadorId,
+    Usuario usuarioPagador,
     String categoria
   ) {
+    this.codigo = codigo;
     this.tipoGasto = tipoGasto;
     this.descripcion = descripcion;
     this.monto = monto;
-    this.pagadorId = pagadorId;
+    this.usuarioPagador = usuarioPagador;
     this.categoria = categoria;
   }
 
@@ -62,12 +77,12 @@ public class Gasto {
     this.monto = monto;
   }
 
-  public Long getPagadorId() {
-    return pagadorId;
+  public Usuario getUsuarioPagador() {
+    return usuarioPagador;
   }
 
-  public void setPagadorId(Long pagadorId) {
-    this.pagadorId = pagadorId;
+  public void setUsuarioPagador(Usuario usuarioPagador) {
+    this.usuarioPagador = usuarioPagador;
   }
 
   public String getCategoria() {
@@ -92,5 +107,9 @@ public class Gasto {
 
   public void setFecha(LocalDateTime fecha) {
     this.fecha = fecha;
+  }
+
+  public String getCodigo() {
+    return codigo;
   }
 }

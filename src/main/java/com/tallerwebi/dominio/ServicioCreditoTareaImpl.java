@@ -2,45 +2,77 @@ package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
+import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
+import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@Transactional
 public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
 
-  private final List<Tarea> repositorioTareasMock = new ArrayList<>();
+  private final RepositorioTarea repositorioTarea;
+  private final RepositorioUsuario repositorioUsuario;
+
+  @Autowired
+  public ServicioCreditoTareaImpl(
+    RepositorioTarea repositorioTarea,
+    RepositorioUsuario repositorioUsuario
+  ) {
+    this.repositorioTarea = repositorioTarea;
+    this.repositorioUsuario = repositorioUsuario;
+  }
 
   @Override
   public void registrarTarea(Tarea tarea) {
     validarHorasDedicadas(tarea.getHorasDedicadas());
 
     tarea.setEstado(EstadoTarea.PENDIENTE);
-
-    if (tarea.getId() == null) {
-      tarea.setId((long) (repositorioTareasMock.size() + 1));
+    if (tarea.getFechaRegistro() == null) {
+      tarea.setFechaRegistro(LocalDateTime.now());
     }
 
-    repositorioTareasMock.add(tarea);
+    repositorioTarea.guardar(tarea);
   }
 
   @Override
   public void completarTareaYGenerarCredito(Long tareaId, Long usuarioId) {
-    Tarea tarea = buscarTareaPorId(tareaId);
+    Tarea tarea = repositorioTarea.buscarPorId(tareaId);
+    if (tarea == null) {
+      throw new TareaNoEncontradaException();
+    }
+
     validarEstadoPendiente(tarea);
 
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null) {
+      throw new UsuarioNoEncontrado();
+    }
+
     tarea.setEstado(EstadoTarea.COMPLETADA);
-    tarea.setUsuarioRealizadorId(usuarioId);
+    tarea.setUsuarioRealizador(usuario); // Seteamos el objeto Usuario directamente
     tarea.setFechaRegistro(LocalDateTime.now());
+
+    repositorioTarea.guardar(tarea);
   }
 
   @Override
   public Double obtenerCreditoAcumuladoPorUsuario(Long usuarioId) {
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null) {
+      return 0.0;
+    }
+
+    List<Tarea> tareasDelUsuario = repositorioTarea.obtenerPorUsuario(usuario);
     double creditoTotal = 0.0;
-    for (Tarea tarea : repositorioTareasMock) {
-      creditoTotal += calcularCreditoDeTarea(tarea, usuarioId);
+
+    for (Tarea tarea : tareasDelUsuario) {
+      if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {
+        creditoTotal += tarea.getValorCredito() != null ? tarea.getValorCredito() : 0.0;
+      }
     }
     return creditoTotal;
   }
@@ -54,10 +86,10 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
 
   @Override
   public List<Tarea> obtenerTodasLasTareas() {
-    return new ArrayList<>(repositorioTareasMock);
+    return repositorioTarea.obtenerTodas();
   }
 
-  /* --- Métodos Auxiliares Privados (PMD Compliant) --- */
+  /* --- Métodos Auxiliares Privados --- */
 
   private void validarHorasDedicadas(Double horas) {
     if (horas == null || horas <= 0) {
@@ -65,28 +97,9 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     }
   }
 
-  private Tarea buscarTareaPorId(Long tareaId) {
-    for (Tarea tarea : repositorioTareasMock) {
-      if (tarea.getId() != null && tarea.getId().equals(tareaId)) {
-        return tarea;
-      }
-    }
-    throw new TareaNoEncontradaException();
-  }
-
   private void validarEstadoPendiente(Tarea tarea) {
     if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {
       throw new TareaYaCompletadaException();
     }
-  }
-
-  private double calcularCreditoDeTarea(Tarea tarea, Long usuarioId) {
-    if (
-      EstadoTarea.COMPLETADA.equals(tarea.getEstado()) &&
-      usuarioId.equals(tarea.getUsuarioRealizadorId())
-    ) {
-      return tarea.getValorCredito() != null ? tarea.getValorCredito() : 0.0;
-    }
-    return 0.0;
   }
 }

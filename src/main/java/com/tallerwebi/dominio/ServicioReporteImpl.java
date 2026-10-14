@@ -110,7 +110,12 @@ public class ServicioReporteImpl implements ServicioReporte {
   private double pagadoPor(Usuario integrante, List<Gasto> gastos) {
     double pagado = 0;
     for (Gasto gasto : gastos) {
-      if (integrante.getId() != null && integrante.getId().equals(gasto.getPagadorId())) {
+      // Modificado: Ahora evaluamos a través del objeto usuarioPagador
+      if (
+        integrante.getId() != null &&
+        gasto.getUsuarioPagador() != null &&
+        integrante.getId().equals(gasto.getUsuarioPagador().getId())
+      ) {
         pagado += gasto.getMonto();
       }
     }
@@ -146,13 +151,18 @@ public class ServicioReporteImpl implements ServicioReporte {
     fila(csv, "GASTOS");
     fila(csv, "Fecha", "Descripcion", "Categoria", "Tipo", "Pagador", "Monto");
     for (Gasto gasto : reporte.getGastos()) {
+      // Modificado: Extraemos el ID del usuario pagador desde la relación ManyToOne
+      Long pagadorId = (gasto.getUsuarioPagador() != null)
+        ? gasto.getUsuarioPagador().getId()
+        : null;
+
       fila(
         csv,
         formatearFecha(gasto.getFecha()),
         gasto.getDescripcion(),
         gasto.getCategoria(),
         gasto.getTipoGasto() != null ? gasto.getTipoGasto().getDescripcion() : "",
-        reporte.nombreDe(gasto.getPagadorId()),
+        reporte.nombreDe(pagadorId), // Sigue recibiendo el Long que espera el reporte
         numero(gasto.getMonto())
       );
     }
