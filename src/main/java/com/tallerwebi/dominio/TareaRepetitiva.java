@@ -18,6 +18,8 @@ public class TareaRepetitiva {
   @ManyToOne
   private Usuario usuarioAsignado;
 
+  public TareaRepetitiva() {}
+
   public TareaRepetitiva(Long id, String titulo) {
     this.id = id;
     this.titulo = titulo;
