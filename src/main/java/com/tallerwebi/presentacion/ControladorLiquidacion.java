@@ -1,7 +1,6 @@
 package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,10 +13,15 @@ import org.springframework.web.servlet.ModelAndView;
 public class ControladorLiquidacion {
 
   private final ServicioLiquidacion servicioLiquidacion;
+  private final ServicioRegistroGasto servicioRegistroGasto; // <-- Inyectamos el servicio
 
   @Autowired
-  public ControladorLiquidacion(ServicioLiquidacion servicioLiquidacion) {
+  public ControladorLiquidacion(
+    ServicioLiquidacion servicioLiquidacion,
+    ServicioRegistroGasto servicioRegistroGasto
+  ) {
     this.servicioLiquidacion = servicioLiquidacion;
+    this.servicioRegistroGasto = servicioRegistroGasto;
   }
 
   @GetMapping("/liquidacion")
@@ -26,24 +30,14 @@ public class ControladorLiquidacion {
 
     Hogar hogar = new Hogar("Hogar Compartido");
 
-    Usuario juan = new Usuario();
-    juan.setId(1L);
-    juan.setNombre("Juan");
+    // Obtenemos los integrantes reales desde la base de datos a través del servicio
+    List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes();
+    hogar.setIntegrantes(integrantes);
 
-    Usuario maria = new Usuario();
-    maria.setId(2L);
-    maria.setNombre("Maria");
+    // Obtenemos los gastos reales persistidos en la base de datos
+    List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos();
 
-    hogar.getIntegrantes().add(juan);
-    hogar.getIntegrantes().add(maria);
-
-    List<Gasto> gastos = new ArrayList<>();
-    Gasto gastoUno = new Gasto();
-    gastoUno.setMonto(10000.0);
-    gastoUno.setPagadorId(1L);
-    gastoUno.setDescripcion("Supermercado");
-    gastos.add(gastoUno);
-
+    // Calculamos las transferencias con los datos reales
     List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
       hogar,
       gastos
@@ -51,7 +45,7 @@ public class ControladorLiquidacion {
 
     modelo.put("transferencias", transferencias);
     modelo.put("hogar", hogar);
-    modelo.put("usuarioLogueado", "Juan");
+    modelo.put("usuarioLogueado", "Juan"); // (O lo podés dejar dinámico si ya manejás sesión)
 
     return new ModelAndView("liquidacion", modelo);
   }

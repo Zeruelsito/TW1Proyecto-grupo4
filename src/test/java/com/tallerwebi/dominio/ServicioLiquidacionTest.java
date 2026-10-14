@@ -79,7 +79,17 @@ public class ServicioLiquidacionTest {
   }
 
   private Gasto givenUnGasto() {
-    Gasto gastoServicio = new Gasto(TipoGasto.OCASIONAL, "gasto x", 10000.0, 1L, "VARIOS");
+    Usuario juan = new Usuario("Juan", "juan@kumo.com", "1234");
+    juan.setId(1L);
+
+    Gasto gastoServicio = new Gasto(
+      "G001",
+      TipoGasto.OCASIONAL,
+      "gasto x",
+      10000.0,
+      juan,
+      "VARIOS"
+    );
     return gastoServicio;
   }
 

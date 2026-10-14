@@ -65,15 +65,15 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   }
 
   private double calcularTotalPagadoPorUsuario(Usuario usuario, List<Gasto> gastos) {
-    if (gastos == null) {
+    if (gastos == null || usuario == null || usuario.getId() == null) {
       return 0.0;
     }
     double totalPagado = 0.0;
     for (Gasto gasto : gastos) {
       if (
-        gasto.getPagadorId() != null &&
-        usuario.getId() != null &&
-        usuario.getId().equals(gasto.getPagadorId())
+        gasto.getUsuarioPagador() != null &&
+        gasto.getUsuarioPagador().getId() != null &&
+        usuario.getId().equals(gasto.getUsuarioPagador().getId()) // <-- Comparamos por ID, mucho más seguro
       ) {
         totalPagado += gasto.getMonto();
       }

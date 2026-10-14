@@ -4,6 +4,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
@@ -18,19 +20,28 @@ public class Tarea {
   private Double horasDedicadas;
   private Double valorCredito;
   private EstadoTarea estado;
-  private Long usuarioRealizadorId;
+
+  @ManyToOne
+  @JoinColumn(name = "usuario_realizador_id")
+  private Usuario usuarioRealizador;
+
   private LocalDateTime fechaRegistro;
 
   public Tarea() {
     this.estado = EstadoTarea.PENDIENTE;
   }
 
-  public Tarea(Long id, String titulo, Double horasDedicadas, Double tarifaPorHora) {
-    this.id = id;
+  public Tarea(
+    String titulo,
+    Double horasDedicadas,
+    Double tarifaPorHora,
+    Usuario usuarioRealizador
+  ) {
     this.titulo = titulo;
     this.horasDedicadas = horasDedicadas;
-    this.valorCredito = horasDedicadas * tarifaPorHora;
+    this.valorCredito = horasDedicadas != null ? horasDedicadas * tarifaPorHora : 0.0;
     this.estado = EstadoTarea.PENDIENTE;
+    this.usuarioRealizador = usuarioRealizador;
     this.fechaRegistro = LocalDateTime.now();
   }
 
@@ -65,7 +76,6 @@ public class Tarea {
 
   public void setHorasDedicadas(Double horasDedicadas) {
     this.horasDedicadas = horasDedicadas;
-    // Si la tarifa de prueba es $1000/h, calculamos automáticamente el valorCredito al recibir las horas:
     if (horasDedicadas != null) {
       Double tarifaPrueba = 1000.0;
       this.valorCredito = horasDedicadas * tarifaPrueba;
@@ -88,12 +98,17 @@ public class Tarea {
     this.estado = estado;
   }
 
-  public Long getUsuarioRealizadorId() {
-    return usuarioRealizadorId;
+  public Usuario getUsuarioRealizador() {
+    return usuarioRealizador;
   }
 
-  public void setUsuarioRealizadorId(Long usuarioRealizadorId) {
-    this.usuarioRealizadorId = usuarioRealizadorId;
+  public void setUsuarioRealizador(Usuario usuarioRealizador) {
+    this.usuarioRealizador = usuarioRealizador;
+  }
+
+  // Helper para mantener compatibilidad con reportes antiguos que esperan el ID numérico
+  public Long getUsuarioRealizadorId() {
+    return usuarioRealizador != null ? usuarioRealizador.getId() : null;
   }
 
   public LocalDateTime getFechaRegistro() {

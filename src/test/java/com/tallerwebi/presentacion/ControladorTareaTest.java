@@ -45,14 +45,14 @@ public class ControladorTareaTest {
 
   @Test
   public void irATareasDebeDevolverLaVistaTareasYElModeloConCreditoAcumulado() {
-    // preparación
+    // preparación[cite: 12]
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(1500.0);
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(new ArrayList<>());
 
-    // ejecución
+    // ejecución[cite: 12]
     ModelAndView modelAndView = controladorTarea.irATareas(requestMock);
 
-    // verificación
+    // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("tareas"));
     ModelMap modelMap = modelAndView.getModelMap();
     assertThat(modelMap.get("creditoAcumulado"), equalTo(1500.0));
@@ -62,31 +62,33 @@ public class ControladorTareaTest {
 
   @Test
   public void crearTareaExitosaDebeRedirigirATareas() {
-    // preparación
-    Tarea tarea = new Tarea(1L, "Limpiar la cocina", 2.0, 1000.0);
+    // preparación - Usamos el nuevo constructor sin ID y lo seteamos aparte[cite: 9, 12]
+    Tarea tarea = new Tarea("Limpiar la cocina", 2.0, 1000.0, null);
+    tarea.setId(1L);
     doNothing().when(servicioCreditoTareaMock).registrarTarea(any(Tarea.class));
 
-    // ejecución
+    // ejecución[cite: 12]
     ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
 
-    // verificación
+    // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
     verify(servicioCreditoTareaMock, times(1)).registrarTarea(tarea);
   }
 
   @Test
   public void crearTareaConCreditoInvalidoDebeMostrarMensajeDeError() {
-    // preparación
-    Tarea tareaInvalida = new Tarea(1L, "Pintar reja", -1.0, 1000.0);
+    // preparación - Usamos el nuevo constructor sin ID[cite: 9, 12]
+    Tarea tareaInvalida = new Tarea("Pintar reja", -1.0, 1000.0, null);
+    tareaInvalida.setId(1L);
     doThrow(new ValorCreditoInvalidoException())
       .when(servicioCreditoTareaMock)
       .registrarTarea(any(Tarea.class));
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
 
-    // ejecución
+    // ejecución[cite: 12]
     ModelAndView modelAndView = controladorTarea.crearTarea(tareaInvalida, requestMock);
 
-    // verificación
+    // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("tareas"));
     assertThat(
       modelAndView.getModelMap().get("error"),
@@ -96,15 +98,15 @@ public class ControladorTareaTest {
 
   @Test
   public void completarTareaExitosaDebeRedirigirATareas() {
-    // preparación
+    // preparación[cite: 12]
     Long tareaId = 5L;
     Long usuarioId = 1L;
     doNothing().when(servicioCreditoTareaMock).completarTareaYGenerarCredito(tareaId, usuarioId);
 
-    // ejecución
+    // ejecución[cite: 12]
     ModelAndView modelAndView = controladorTarea.completarTarea(tareaId, requestMock);
 
-    // verificación
+    // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
     verify(servicioCreditoTareaMock, times(1))
       .completarTareaYGenerarCredito(eq(tareaId), eq(usuarioId));
@@ -112,17 +114,17 @@ public class ControladorTareaTest {
 
   @Test
   public void completarTareaYaCompletadaDebePermanecerEnVistaYMostrarError() {
-    // preparación
+    // preparación[cite: 12]
     Long tareaId = 5L;
     Long usuarioId = 1L;
     doThrow(new TareaYaCompletadaException())
       .when(servicioCreditoTareaMock)
       .completarTareaYGenerarCredito(tareaId, usuarioId);
 
-    // ejecución
+    // ejecución[cite: 12]
     ModelAndView modelAndView = controladorTarea.completarTarea(tareaId, requestMock);
 
-    // verificación
+    // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("tareas"));
     assertThat(
       modelAndView.getModelMap().get("error"),
