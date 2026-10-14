@@ -83,7 +83,7 @@ public class RepositorioHogarTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaGuardarElHistorialDeCambiosJuntoConElHogar() {
+  public void deberiaGuardarElHistorialDeCambiosJuntoConElHogar() { //en conjunto
     Hogar hogar = this.dadoQueTengoUnHogar("departamento palermo");
     hogar.getHistorial().add(new CambioParametro("precio hora", 1000.0, 1500.0));
 
@@ -96,7 +96,7 @@ public class RepositorioHogarTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaPersistirLosCambiosHechosSobreUnHogarYaGuardado() {
+  public void deberiaPersistirLosCambiosHechosSobreUnHogarYaGuardado() { //cambios
     Hogar hogar = this.dadoQueExisteElHogar("departamento palermmo");
     hogar.setPrecioHoraTarea(3000.0);
     hogar.getHistorial().add(new CambioParametro("precio hora", 1600.0, 3000.0));
@@ -150,7 +150,11 @@ public class RepositorioHogarTest {
     return nombres;
   }
 
-  private void entoncesElHistorialTieneUnCAmbio(Hogar hogar,String parametro, double anterior, double nuevo
+  private void entoncesElHistorialTieneUnCAmbio(
+    Hogar hogar,
+    String parametro,
+    double anterior,
+    double nuevo
   ) {
     assertThat(hogar.getHistorial().size(), is(equalTo(1)));
     assertThat(hogar.getHistorial().get(0).getParametro(), is(equalTo(parametro)));

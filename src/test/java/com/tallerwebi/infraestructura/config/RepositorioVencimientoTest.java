@@ -31,7 +31,6 @@ public class RepositorioVencimientoTest {
 
   private RepositorioVencimiento repositorioVencimiento;
 
-  //lo hizo la profe
   @BeforeEach
   public void init() {
     repositorioVencimiento = new RepositorioVencimientoImpl(sessionFactory);
@@ -125,8 +124,8 @@ public class RepositorioVencimientoTest {
     repositorioVencimiento.guardar(vencimiento);
   }
 
-  private Vencimiento thenSeGuardoElVencimiento(Vencimiento esperado) { // busca en la base el vencimiento guardado(esperando) y lo devuelve (vencimiento)
-    String query = "select v from Vencimiento v where v.titulo = :titulo"; //traeme los vencimientos que tengan este titulo
+  private Vencimiento thenSeGuardoElVencimiento(Vencimiento esperado) { //llama
+    String query = "select v from Vencimiento v where v.titulo = :titulo";
     return this.sessionFactory.getCurrentSession()
       .createQuery(query, Vencimiento.class)
       .setParameter("titulo", esperado.getTitulo())

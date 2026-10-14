@@ -23,7 +23,7 @@ public class RepositorioVencimientoImpl implements RepositorioVencimiento {
     sessionFactory.getCurrentSession().persist(vencimiento);
   }
 
-  @Override
+  @Override // del mas antiguo al mas nuevo
   public List<Vencimiento> obtenerTodosOrdenadosPorFecha() {
     return sessionFactory
       .getCurrentSession()
@@ -31,7 +31,7 @@ public class RepositorioVencimientoImpl implements RepositorioVencimiento {
       .getResultList();
   }
 
-  @Override
+  @Override // a partir de tal fecha, incluyendo la misma
   public List<Vencimiento> obtenerDesde(LocalDate fecha) {
     return sessionFactory
       .getCurrentSession()
