@@ -1,16 +1,10 @@
 package com.tallerwebi.dominio;
 
-import com.tallerwebi.dominio.EstadoPropuesta;
-import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.RepositorioPropuesta;
-import com.tallerwebi.dominio.RepositorioVoto;
-import com.tallerwebi.dominio.Voto;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 

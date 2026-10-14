@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.TipoGasto;
+import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import java.util.ArrayList;
@@ -91,23 +92,53 @@ public class ControladorRegistroGastoTest {
   // Given/When/Then
 
   private void givenExistenGastosEnElSistema() {
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(1L);
+
     List<Gasto> listaGastos = new ArrayList<>();
     listaGastos.add(
-      new Gasto(TipoGasto.OCASIONAL, "Compras supermercado", 12000.0, 1L, "ALIMENTACION")
+      new Gasto(
+        "G001",
+        TipoGasto.OCASIONAL,
+        "Compras supermercado",
+        12000.0,
+        usuario,
+        "ALIMENTACION"
+      )
     );
     when(servicioRegistroGasto.obtenerTodosLosGastos()).thenReturn(listaGastos);
   }
 
   private Gasto givenUnGastoValido() {
-    return new Gasto(TipoGasto.RECURRENTE, "Internet y Cable", 20000.0, 2L, "SERVICIOS");
+    Usuario usuario = new Usuario("Ezequiel", "ezequiel@kumo.com", "2222");
+    usuario.setId(2L);
+    return new Gasto(
+      "G002",
+      TipoGasto.RECURRENTE,
+      "Internet y Cable",
+      20000.0,
+      usuario,
+      "SERVICIOS"
+    );
   }
 
   private Gasto givenUnGastoConMontoInvalido() {
-    return new Gasto(TipoGasto.OCASIONAL, "Compras del chino", -500.0, 2L, "ALIMENTACION");
+    Usuario usuario = new Usuario("Ezequiel", "ezequiel@kumo.com", "2222");
+    usuario.setId(2L);
+    return new Gasto(
+      "G003",
+      TipoGasto.OCASIONAL,
+      "Compras del chino",
+      -500.0,
+      usuario,
+      "ALIMENTACION"
+    );
   }
 
   private Gasto givenUnGastoConDescripcionVacia() {
-    return new Gasto(TipoGasto.OCASIONAL, "", 15000.0, 2L, "ALIMENTACION");
+    Usuario usuario = new Usuario("Ezequiel", "ezequiel@kumo.com", "2222");
+    usuario.setId(2L);
+    return new Gasto("G004", TipoGasto.OCASIONAL, "", 15000.0, usuario, "ALIMENTACION");
   }
 
   private ModelAndView whenIrAGastos() {
