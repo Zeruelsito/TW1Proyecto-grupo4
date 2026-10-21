@@ -7,7 +7,6 @@ import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -92,7 +91,7 @@ public class ControladorRegistroGasto {
     mav.addObject("hoy", LocalDateTime.now()); // Pasamos LocalDateTime.now() para la comparación
   }
 
-  @GetMapping("/vencimientos")
+  @RequestMapping("/vencimientos")
   public ModelAndView irAVencimientos(
     @RequestParam(value = "filtro", defaultValue = "todos") String filtro
   ) {
