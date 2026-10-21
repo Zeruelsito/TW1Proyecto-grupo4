@@ -16,6 +16,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
 
   private final RepositorioGasto repositorioGasto;
   private final RepositorioUsuario repositorioUsuario;
+  private static final int DIAS_PROXIMOS = 30;
 
   @Autowired
   public ServicioRegistroGastoImpl(
@@ -109,6 +110,21 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   @Override
   public void eliminarGasto(Long id) {
     repositorioGasto.eliminar(id);
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosPendientes() {
+    return repositorioGasto.obtenerGastosPendientesConVencimiento();
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy) {
+    return repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(DIAS_PROXIMOS));
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy) {
+    return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy);
   }
 
   private Map<Long, Double> calcularTotalesPorUsuario(

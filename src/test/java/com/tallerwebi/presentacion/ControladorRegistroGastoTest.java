@@ -4,6 +4,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,6 +17,8 @@ import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,6 +92,50 @@ public class ControladorRegistroGastoTest {
     thenLaVistaEs("gastos", mav);
     thenElMensajeDeErrorEs("El monto del gasto debe ser mayor a cero.", mav);
   }
+
+
+@Test
+public void dadoElFiltroProximosCuandoConsultoVencimientosEntoncesMuestraLosProximos() {
+  List<Gasto> proximos = List.of(new Gasto("G-1", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS"));
+  when(servicioRegistroGasto.obtenerVencimientosProximos(any(LocalDateTime.class)))
+    .thenReturn(proximos);
+
+  ModelAndView mav = controladorRegistroGasto.irAVencimientos("proximos");
+
+  assertThat(mav.getViewName(), equalTo("vencimientos"));
+  assertEquals(proximos, mav.getModel().get("vencimientos"));
+  assertEquals("proximos", mav.getModel().get("filtro"));
+}
+
+@Test
+public void dadoElFiltroVencidosCuandoConsultoVencimientosEntoncesMuestraLosVencidos() {
+  List<Gasto> vencidos = List.of(new Gasto("G-2", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS"));
+  when(servicioRegistroGasto.obtenerVencimientosVencidos(any(LocalDateTime.class)))
+    .thenReturn(vencidos);
+
+  ModelAndView mav = controladorRegistroGasto.irAVencimientos("vencidos");
+
+  assertEquals(vencidos, mav.getModel().get("vencimientos"));
+  assertEquals("vencidos", mav.getModel().get("filtro"));
+}
+
+@Test
+public void dadoElFiltroTodosCuandoConsultoVencimientosEntoncesMuestraTodosLosPendientes() {
+  List<Gasto> todos = List.of(new Gasto("G-3", TipoGasto.FIJO, "Agua", 2000.0, "SERVICIOS"));
+  when(servicioRegistroGasto.obtenerVencimientosPendientes()).thenReturn(todos);
+
+  ModelAndView mav = controladorRegistroGasto.irAVencimientos("todos");
+
+  assertEquals(todos, mav.getModel().get("vencimientos"));
+  assertEquals("todos", mav.getModel().get("filtro"));
+}
+
+@Test
+public void dadoUnFiltroInvalidoCuandoConsultoVencimientosEntoncesUsaTodos() {
+  ModelAndView mav = controladorRegistroGasto.irAVencimientos("cualquiera");
+
+  assertEquals("todos", mav.getModel().get("filtro"));
+}
 
   // Given/When/Then
 

@@ -13,4 +13,8 @@ public interface ServicioRegistroGasto {
   List<Gasto> obtenerGastosFijosRecurrentes();
   void actualizarGastoFijo(Long id, Double nuevoMonto, LocalDateTime nuevaFechaVencimiento);
   void eliminarGasto(Long id);
+
+  List<Gasto> obtenerVencimientosPendientes();
+  List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy);
+  List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy);
 }
