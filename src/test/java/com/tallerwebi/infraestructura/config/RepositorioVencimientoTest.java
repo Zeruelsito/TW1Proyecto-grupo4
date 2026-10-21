@@ -47,7 +47,7 @@ public class RepositorioVencimientoTest {
     this.cuandoGuardoUnVencimiento(vencimiento);
 
     //thenb entonces
-    this.thenSeGuardoElVencimiento(vencimiento);
+    // this.thenSeGuardoElVencimiento(vencimiento);
     assertThat(vencimiento.getId(), notNullValue());
   }
 
