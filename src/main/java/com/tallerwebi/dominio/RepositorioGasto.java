@@ -1,5 +1,6 @@
 package com.tallerwebi.dominio;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface RepositorioGasto {
@@ -14,4 +15,7 @@ public interface RepositorioGasto {
   void modificar(Gasto gasto);
   List<Gasto> obtenerGastosFijosRecurrentes();
   void eliminar(Long id);
+
+  List<Gasto> obtenerPendientesConVencimientoEntre(LocalDateTime desde, LocalDateTime hasta);
+  List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora);
 }

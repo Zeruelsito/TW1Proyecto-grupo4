@@ -27,27 +27,67 @@
         <div class="col-md-10 px-4">
             <div class="my-3">
                 <h2 class="fw-bold mb-0">Calendario de vencimientos</h2>
-                <p class="text-muted small">Servicios y compromisos del hogar, del más próximo al más lejano.</p>
+                <p class="text-muted small">Gastos pendientes de pago, del más próximo al más lejano.</p>
+            </div>
+
+            <!-- Filtros: todos / próximos (30 días) / vencidos -->
+            <div class="mb-3">
+                <a th:href="@{/vencimientos(filtro='todos')}" class="btn btn-sm rounded-3 px-3"
+                   th:classappend="${filtro == 'todos'} ? 'btn-dark' : 'btn-outline-dark'">Todos</a>
+                <a th:href="@{/vencimientos(filtro='proximos')}" class="btn btn-sm rounded-3 px-3"
+                   th:classappend="${filtro == 'proximos'} ? 'btn-dark' : 'btn-outline-dark'">Próximos (30 días)</a>
+                <a th:href="@{/vencimientos(filtro='vencidos')}" class="btn btn-sm rounded-3 px-3"
+                   th:classappend="${filtro == 'vencidos'} ? 'btn-dark' : 'btn-outline-dark'">Vencidos</a>
             </div>
 
             <div class="kumo-card">
-                <h5 class="fw-bold mb-3"><i class="bi bi-calendar-event me-2"></i>Próximos vencimientos</h5>
+                <h5 class="fw-bold mb-3" th:switch="${filtro}">
+                    <span th:case="'proximos'"><i class="bi bi-calendar-event me-2"></i>Vencen en los próximos 30 días</span>
+                    <span th:case="'vencidos'"><i class="bi bi-exclamation-circle me-2"></i>Ya vencidos</span>
+                    <span th:case="*"><i class="bi bi-calendar-event me-2"></i>Todos los pendientes</span>
+                </h5>
 
-                <p th:if="${#lists.isEmpty(vencimientos)}" class="small text-muted mb-0">
-                    No hay vencimientos próximos.
+                <p th:if="${#lists.isEmpty(vencimientos)}" class="small text-muted mb-0" th:switch="${filtro}">
+                    <span th:case="'proximos'">No hay gastos que venzan en los próximos 30 días.</span>
+                    <span th:case="'vencidos'">No hay gastos vencidos.</span>
+                    <span th:case="*">No hay gastos pendientes con fecha de vencimiento.</span>
                 </p>
 
-                <table class="table align-middle small mb-0" th:unless="${#lists.isEmpty(vencimientos)}">
-                    <thead>
-                        <tr><th>Vencimiento</th><th>Fecha</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="v : ${vencimientos}">
-                            <td class="fw-semibold" th:text="${v.titulo}">Luz</td>
-                            <td th:text="${#temporals.format(v.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="table-responsive" th:unless="${#lists.isEmpty(vencimientos)}">
+                    <table class="table align-middle small mb-0">
+                        <thead>
+                            <tr>
+                                <th>Gasto</th>
+                                <th>Tipo</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th>Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="v : ${vencimientos}">
+                                <td class="fw-semibold" th:text="${v.descripcion}">Luz</td>
+                                <td>
+                                    <span class="badge kumo-badge-green px-2 py-1"
+                                          th:text="${v.tipoGasto != null ? v.tipoGasto.descripcion : 'Sin tipo'}">Recurrente</span>
+                                </td>
+                                <td th:text="${#temporals.format(v.fechaVencimiento, 'dd/MM/yyyy HH:mm')}">01/01/2026 12:00</td>
+                                <td>
+                                    <span th:if="${v.fechaVencimiento.isBefore(hoy)}"
+                                          class="badge bg-danger text-white px-2 py-1 fw-bold">
+                                        <i class="bi bi-exclamation-circle me-1"></i>VENCIDO
+                                    </span>
+                                    <span th:unless="${v.fechaVencimiento.isBefore(hoy)}"
+                                          class="badge bg-success text-white px-2 py-1 fw-bold">
+                                        <i class="bi bi-check-circle me-1"></i>EN FECHA
+                                    </span>
+                                </td>
+                                <td class="fw-bold"
+                                    th:text="${'$' + #numbers.formatDecimal(v.monto, 1, 'POINT', 2, 'COMMA')}">$0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

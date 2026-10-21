@@ -39,12 +39,12 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
 
   @Override
   public int contarAsignadasAUsuario(Usuario usuario) {
-    String query = "select count(t) from TareaRepetitiva t where t.usuarioAsignado = :usuario";
+    String query =
+      "select cast(count(t) as integer) from TareaRepetitiva t where t.usuarioAsignado = :usuario";
     return sessionFactory
       .getCurrentSession()
-      .createQuery(query, Long.class)
+      .createQuery(query, Integer.class)
       .setParameter("usuario", usuario)
-      .getSingleResult()
-      .intValue();
+      .getSingleResult();
   }
 }

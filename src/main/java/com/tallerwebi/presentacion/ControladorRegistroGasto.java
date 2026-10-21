@@ -5,7 +5,9 @@ import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -88,5 +90,29 @@ public class ControladorRegistroGasto {
       servicioRegistroGasto.obtenerSugerenciaProximoPagador()
     );
     mav.addObject("hoy", LocalDateTime.now()); // Pasamos LocalDateTime.now() para la comparación
+  }
+
+  @GetMapping("/vencimientos")
+  public ModelAndView irAVencimientos(
+    @RequestParam(value = "filtro", defaultValue = "todos") String filtro
+  ) {
+    LocalDateTime ahora = LocalDateTime.now();
+
+    List<Gasto> vencimientos =
+      switch (filtro) {
+        case "proximos" -> servicioRegistroGasto.obtenerVencimientosProximos(ahora);
+        case "vencidos" -> servicioRegistroGasto.obtenerVencimientosVencidos(ahora);
+        default -> servicioRegistroGasto.obtenerVencimientosPendientes();
+      };
+
+    String filtroAplicado = "proximos".equals(filtro) || "vencidos".equals(filtro)
+      ? filtro
+      : "todos";
+
+    ModelAndView mav = new ModelAndView("vencimientos");
+    mav.addObject("vencimientos", vencimientos);
+    mav.addObject("filtro", filtroAplicado);
+    mav.addObject("hoy", ahora);
+    return mav;
   }
 }

@@ -11,6 +11,7 @@ import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.infraestructura.config.HibernateInfraestructuraTestConfig;
 import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -168,6 +169,63 @@ public class RepositorioGastoTest {
     Double monto = repositorioGasto.obtenerMontoPorCodigo("G999");
 
     assertThat(monto, equalTo(12500.0));
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void deberiaObtenerSoloLosPendientesQueVencenEnLosProximos30DiasOrdenadosPorFecha() {
+    // LocalDateTime hoy = LocalDateTime.of(2026, 10, 19, 12, 0);
+    LocalDateTime hoy = LocalDateTime.now();
+    Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(usuario);
+
+    givenUnGastoConVencimiento("G-101", hoy.plusDays(20), false, usuario); // entra
+    givenUnGastoConVencimiento("G-102", hoy.plusDays(5), false, usuario); // entra (primero)
+    givenUnGastoConVencimiento("G-103", hoy.plusDays(31), false, usuario); // afuera: muy lejos
+    givenUnGastoConVencimiento("G-104", hoy.minusDays(1), false, usuario); // afuera: vencido
+    givenUnGastoConVencimiento("G-105", hoy.plusDays(3), true, usuario); // afuera: ya pagado
+    givenUnGastoConVencimiento("G-106", null, false, usuario); // afuera: sin fecha
+
+    List<Gasto> resultado = repositorioGasto.obtenerPendientesConVencimientoEntre(
+      hoy,
+      hoy.plusDays(30)
+    );
+
+    assertThat(resultado.size(), equalTo(2));
+    assertThat(resultado.get(0).getCodigo(), equalTo("G-102"));
+    assertThat(resultado.get(1).getCodigo(), equalTo("G-101"));
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void deberiaObtenerSoloLosPendientesYaVencidos() {
+    LocalDateTime hoy = LocalDateTime.now();
+    Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(usuario);
+
+    givenUnGastoConVencimiento("G-201", hoy.minusDays(2), false, usuario); // entra
+    givenUnGastoConVencimiento("G-202", hoy.minusDays(1), true, usuario); // afuera: pagado
+    givenUnGastoConVencimiento("G-203", hoy.plusDays(1), false, usuario); // afuera: futuro
+
+    List<Gasto> resultado = repositorioGasto.obtenerPendientesVencidosAntesDe(hoy);
+
+    assertThat(resultado.size(), equalTo(1));
+    assertThat(resultado.get(0).getCodigo(), equalTo("G-201"));
+  }
+
+  private Gasto givenUnGastoConVencimiento(
+    String codigo,
+    LocalDateTime vencimiento,
+    boolean pagado,
+    Usuario usuario
+  ) {
+    Gasto gasto = new Gasto(codigo, TipoGasto.FIJO, "Servicio", 1000.0, usuario, "SERVICIOS");
+    gasto.setFechaVencimiento(vencimiento);
+    gasto.setPagado(pagado);
+    sessionFactory.getCurrentSession().persist(gasto);
+    return gasto;
   }
 
   private Gasto givenUnGasto(String codigo, Double monto, Usuario usuario) {

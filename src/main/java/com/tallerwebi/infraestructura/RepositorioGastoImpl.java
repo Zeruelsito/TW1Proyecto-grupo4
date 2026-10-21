@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.RepositorioGasto;
 import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,5 +101,31 @@ public class RepositorioGastoImpl implements RepositorioGasto {
     if (gasto != null) {
       sessionFactory.getCurrentSession().remove(gasto);
     }
+  }
+
+  @Override
+  public List<Gasto> obtenerPendientesConVencimientoEntre(
+    LocalDateTime desde,
+    LocalDateTime hasta
+  ) {
+    String query =
+      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento BETWEEN :desde AND :hasta ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, Gasto.class)
+      .setParameter("desde", desde)
+      .setParameter("hasta", hasta)
+      .getResultList();
+  }
+
+  @Override
+  public List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora) {
+    String query =
+      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento < :ahora ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, Gasto.class)
+      .setParameter("ahora", ahora)
+      .getResultList();
   }
 }
