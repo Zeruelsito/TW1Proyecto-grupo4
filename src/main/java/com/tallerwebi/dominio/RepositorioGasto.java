@@ -16,6 +16,6 @@ public interface RepositorioGasto {
   List<Gasto> obtenerGastosFijosRecurrentes();
   void eliminar(Long id);
 
-List<Gasto> obtenerPendientesConVencimientoEntre(LocalDateTime desde, LocalDateTime hasta);
-List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora);
+  List<Gasto> obtenerPendientesConVencimientoEntre(LocalDateTime desde, LocalDateTime hasta);
+  List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora);
 }

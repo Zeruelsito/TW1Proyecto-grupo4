@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -201,49 +200,46 @@ public class ServicioRegistroGastoTest {
     verify(repositorioGasto, times(1)).modificar(gasto);
   }
 
+  @Test
+  public void dadoQueHayGastosPendientesConVencimientoCuandoLosPidoEntoncesDevuelveLosDelRepositorio() {
+    // given
+    Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
+    luz.setFechaVencimiento(LocalDateTime.now().plusDays(5));
+    when(repositorioGasto.obtenerGastosPendientesConVencimiento()).thenReturn(List.of(luz));
 
+    // when
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosPendientes();
 
-
+    // then
+    assertThat(resultado, hasSize(1));
+    assertThat(resultado.get(0).getDescripcion(), equalTo("Luz"));
+  }
 
   @Test
-public void dadoQueHayGastosPendientesConVencimientoCuandoLosPidoEntoncesDevuelveLosDelRepositorio() {
-  // given
-  Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
-  luz.setFechaVencimiento(LocalDateTime.now().plusDays(5));
-  when(repositorioGasto.obtenerGastosPendientesConVencimiento()).thenReturn(List.of(luz));
+  public void dadaUnaFechaCuandoPidoLosVencimientosProximosEntoncesConsultaLosProximos30Dias() {
+    LocalDateTime hoy = LocalDateTime.now();
+    Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
+    when(repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30)))
+      .thenReturn(List.of(luz));
 
-  // when
-  List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosPendientes();
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosProximos(hoy);
 
-  // then
-  assertThat(resultado, hasSize(1));
-  assertThat(resultado.get(0).getDescripcion(), equalTo("Luz"));
-}
+    assertThat(resultado, hasSize(1));
+    verify(repositorioGasto).obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30));
+  }
 
-@Test
-public void dadaUnaFechaCuandoPidoLosVencimientosProximosEntoncesConsultaLosProximos30Dias() {
-  LocalDateTime hoy = LocalDateTime.now();
-  Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
-  when(repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30))).thenReturn(List.of(luz));
+  @Test
+  public void dadaUnaFechaCuandoPidoLosVencimientosVencidosEntoncesConsultaLosAnterioresAEsaFecha() {
+    LocalDateTime hoy = LocalDateTime.now();
+    //LocalDateTime hoy = LocalDateTime.of(2026, 10, 19, 10, 0);
+    Gasto gas = new Gasto("G-011", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS");
+    when(repositorioGasto.obtenerPendientesVencidosAntesDe(hoy)).thenReturn(List.of(gas));
 
-  List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosProximos(hoy);
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosVencidos(hoy);
 
-  assertThat(resultado, hasSize(1));
-  verify(repositorioGasto).obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30));
-}
-
-@Test
-public void dadaUnaFechaCuandoPidoLosVencimientosVencidosEntoncesConsultaLosAnterioresAEsaFecha() {
-  LocalDateTime hoy = LocalDateTime.now();
-  //LocalDateTime hoy = LocalDateTime.of(2026, 10, 19, 10, 0);
-  Gasto gas = new Gasto("G-011", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS");
-  when(repositorioGasto.obtenerPendientesVencidosAntesDe(hoy)).thenReturn(List.of(gas));
-
-  List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosVencidos(hoy);
-
-  assertThat(resultado, hasSize(1));
-  verify(repositorioGasto).obtenerPendientesVencidosAntesDe(hoy);
-}
+    assertThat(resultado, hasSize(1));
+    verify(repositorioGasto).obtenerPendientesVencidosAntesDe(hoy);
+  }
 
   private void thenObtengoUnaListaFiltrada(List<Gasto> listaFiltrada) {
     assertThat(listaFiltrada.size(), equalTo(2));
