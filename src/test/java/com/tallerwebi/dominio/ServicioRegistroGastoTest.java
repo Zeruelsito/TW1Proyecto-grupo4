@@ -9,12 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.notNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,6 +126,79 @@ public class ServicioRegistroGastoTest {
     List<Gasto> listaGastosFiltrada = whenFiltroLosGastosPorTipo(TipoGasto.RECURRENTE);
     //then
     thenObtengoUnaListaFiltrada(listaGastosFiltrada);
+  }
+
+  @Test
+  public void queSePuedaObtenerGastosFijosRecurrentes() {
+    // given
+    List<Gasto> listaFijosRecurrentes = givenUnaListaDeGastosRegistrados();
+    when(repositorioGasto.obtenerGastosFijosRecurrentes()).thenReturn(listaFijosRecurrentes);
+
+    // when
+    List<Gasto> resultado = servicioRegistroGasto.obtenerGastosFijosRecurrentes();
+
+    // then
+    assertThat(resultado, equalTo(listaFijosRecurrentes));
+    assertThat(resultado, hasSize(2));
+    verify(repositorioGasto, times(1)).obtenerGastosFijosRecurrentes();
+  }
+
+  @Test
+  public void queSePuedaActualizarGastoFijo() {
+    // given
+    Long id = 1L;
+    Gasto gasto = new Gasto("G001", TipoGasto.FIJO, "Alquiler", 50000.0, null, "ALQUILER");
+    gasto.setId(id);
+    gasto.setPagado(true);
+
+    when(repositorioGasto.buscarPorId(id)).thenReturn(gasto);
+
+    // when
+    LocalDateTime nuevaFecha = LocalDateTime.now();
+    servicioRegistroGasto.actualizarGastoFijo(id, 60000.0, nuevaFecha);
+
+    // then
+    assertThat(gasto.getMonto(), equalTo(60000.0));
+    assertThat(gasto.getPagado(), equalTo(false)); // Se resetea a pendiente para el nuevo ciclo
+    assertThat(gasto.getFechaVencimiento(), equalTo(nuevaFecha));
+    verify(repositorioGasto, times(1)).modificar(gasto);
+  }
+
+  @Test
+  public void queSePuedaEliminarGasto() {
+    // given
+    Long id = 1L;
+
+    // when
+    servicioRegistroGasto.eliminarGasto(id);
+
+    // then
+    verify(repositorioGasto, times(1)).eliminar(id);
+  }
+
+  @Test
+  public void queSePuedaMarcarGastoComoPagado() {
+    // given
+    Long gastoId = 1L;
+    Long usuarioId = 2L;
+
+    Gasto gasto = new Gasto("G001", TipoGasto.RECURRENTE, "Luz", 15000.0, null, "SERVICIOS");
+    gasto.setId(gastoId);
+    gasto.setPagado(false);
+
+    List<Usuario> integrantesMock = givenCuatroIntegrantes();
+    Usuario usuario = integrantesMock.get(1); // ezequiel
+
+    when(repositorioGasto.buscarPorId(gastoId)).thenReturn(gasto);
+    when(repositorioUsuario.buscarPorId(usuarioId)).thenReturn(usuario);
+
+    // when
+    servicioRegistroGasto.marcarComoPagado(gastoId, usuarioId);
+
+    // then
+    assertThat(gasto.getPagado(), equalTo(true));
+    assertThat(gasto.getUsuarioPagador(), equalTo(usuario));
+    verify(repositorioGasto, times(1)).modificar(gasto);
   }
 
   private void thenObtengoUnaListaFiltrada(List<Gasto> listaFiltrada) {

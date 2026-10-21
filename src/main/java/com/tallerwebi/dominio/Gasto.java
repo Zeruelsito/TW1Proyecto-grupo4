@@ -25,6 +25,7 @@ public class Gasto {
   private String descripcion;
   private Double monto;
   private String categoria;
+  private Boolean pagado;
 
   @ManyToOne
   @JoinColumn(name = "usuario_pagador_id")
@@ -34,6 +35,7 @@ public class Gasto {
   private TipoGasto tipoGasto;
 
   private LocalDateTime fecha;
+  private LocalDateTime fechaVencimiento;
 
   public Gasto() {}
 
@@ -51,6 +53,24 @@ public class Gasto {
     this.monto = monto;
     this.usuarioPagador = usuarioPagador;
     this.categoria = categoria;
+    this.pagado = false;
+    this.fecha = LocalDateTime.now();
+  }
+
+  public Gasto(
+    String codigo,
+    TipoGasto tipoGasto,
+    String descripcion,
+    Double monto,
+    String categoria
+  ) {
+    this.codigo = codigo;
+    this.tipoGasto = tipoGasto;
+    this.descripcion = descripcion;
+    this.monto = monto;
+    this.categoria = categoria;
+    this.pagado = false;
+    this.fecha = LocalDateTime.now();
   }
 
   public Long getId() {
@@ -111,5 +131,21 @@ public class Gasto {
 
   public String getCodigo() {
     return codigo;
+  }
+
+  public Boolean getPagado() {
+    return pagado;
+  }
+
+  public void setPagado(Boolean pagado) {
+    this.pagado = pagado;
+  }
+
+  public LocalDateTime getFechaVencimiento() {
+    return fechaVencimiento;
+  }
+
+  public void setFechaVencimiento(LocalDateTime fechaVencimiento) {
+    this.fechaVencimiento = fechaVencimiento;
   }
 }

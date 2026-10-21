@@ -38,15 +38,40 @@ public class RepositorioGastoTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaGuardarYBuscarPorCodigo() {
+  public void queSePuedaGuardarUnGasto() {
+    // given
     Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
-    givenUnGasto("G001", 1500.0, usuario);
 
-    //when
+    Gasto gasto = new Gasto("G001", TipoGasto.OCASIONAL, "Cena", 1500.0, usuario, "ALIMENTACION");
+
+    // when
+    repositorioGasto.guardar(gasto);
+
+    // then
+    Gasto recuperado = sessionFactory.getCurrentSession().get(Gasto.class, gasto.getId());
+    assertNotNull(recuperado);
+    assertEquals("Cena", recuperado.getDescripcion());
+    assertEquals(1500.0, recuperado.getMonto());
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void queSePuedaBuscarUnGastoPorCodigo() {
+    // given
+    Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(usuario);
+
+    Gasto gasto = new Gasto("G001", TipoGasto.OCASIONAL, "Cena", 1500.0, usuario, "ALIMENTACION");
+    repositorioGasto.guardar(gasto);
+
+    // when
     Gasto recuperado = repositorioGasto.buscarPorCodigo("G001");
 
+    // then
     assertNotNull(recuperado);
+    assertEquals("G001", recuperado.getCodigo());
     assertEquals("Cena", recuperado.getDescripcion());
     assertEquals(1500.0, recuperado.getMonto());
   }
@@ -154,7 +179,7 @@ public class RepositorioGastoTest {
       usuario,
       "ALIMENTACION"
     );
-    repositorioGasto.guardar(gastoNuevo);
+    sessionFactory.getCurrentSession().persist(gastoNuevo);
     return gastoNuevo;
   }
 }

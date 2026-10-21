@@ -4,14 +4,18 @@ import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 @Controller
 public class ControladorRegistroGasto {
+
+  private static final String REDIRECT_GASTOS = "redirect:/gastos";
 
   private final ServicioRegistroGasto servicioRegistroGasto;
 
@@ -22,12 +26,7 @@ public class ControladorRegistroGasto {
   @RequestMapping(path = "/gastos", method = RequestMethod.GET)
   public ModelAndView irAGastos() {
     ModelAndView mav = new ModelAndView("gastos");
-    mav.addObject("listaGastos", servicioRegistroGasto.obtenerTodosLosGastos());
-    mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes());
-    mav.addObject(
-      "sugerenciaProximoPagador",
-      servicioRegistroGasto.obtenerSugerenciaProximoPagador()
-    );
+    cargarDatosGenerales(mav);
     mav.addObject("gasto", new Gasto());
     return mav;
   }
@@ -38,7 +37,7 @@ public class ControladorRegistroGasto {
 
     try {
       this.servicioRegistroGasto.registrarGasto(gasto);
-      mav.setViewName("redirect:/gastos");
+      mav.setViewName(REDIRECT_GASTOS);
       return mav;
     } catch (DescripcionGastoVaciaException e) {
       mav.addObject("mensajeError", "La descripción del gasto no puede estar vacía.");
@@ -47,13 +46,47 @@ public class ControladorRegistroGasto {
     }
 
     mav.setViewName("gastos");
+    cargarDatosGenerales(mav);
+    mav.addObject("gasto", gasto);
+    return mav;
+  }
+
+  @RequestMapping(path = "/gastos/pagar", method = RequestMethod.POST)
+  public ModelAndView pagarGasto(
+    @RequestParam("gastoId") Long gastoId, // Recibimos Long en lugar de String
+    @RequestParam("pagadorId") Long pagadorId
+  ) {
+    this.servicioRegistroGasto.marcarComoPagado(gastoId, pagadorId);
+    return new ModelAndView(REDIRECT_GASTOS);
+  }
+
+  @RequestMapping(path = "/gastos/actualizar-fijo", method = RequestMethod.POST)
+  public ModelAndView actualizarGastoFijo(
+    @RequestParam("id") Long id,
+    @RequestParam("monto") Double monto,
+    @RequestParam("fechaVencimiento") String fechaVencimientoStr
+  ) {
+    LocalDateTime nuevaFecha = (fechaVencimientoStr != null && !fechaVencimientoStr.isEmpty())
+      ? LocalDateTime.parse(fechaVencimientoStr)
+      : null;
+    this.servicioRegistroGasto.actualizarGastoFijo(id, monto, nuevaFecha);
+    return new ModelAndView(REDIRECT_GASTOS);
+  }
+
+  @RequestMapping(path = "/gastos/eliminar", method = RequestMethod.POST)
+  public ModelAndView eliminarGasto(@RequestParam("id") Long id) {
+    this.servicioRegistroGasto.eliminarGasto(id);
+    return new ModelAndView(REDIRECT_GASTOS);
+  }
+
+  private void cargarDatosGenerales(ModelAndView mav) {
     mav.addObject("listaGastos", servicioRegistroGasto.obtenerTodosLosGastos());
+    mav.addObject("gastosFijosRecurrentes", servicioRegistroGasto.obtenerGastosFijosRecurrentes());
     mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes());
     mav.addObject(
       "sugerenciaProximoPagador",
       servicioRegistroGasto.obtenerSugerenciaProximoPagador()
     );
-    mav.addObject("gasto", gasto);
-    return mav;
+    mav.addObject("hoy", LocalDateTime.now()); // Pasamos LocalDateTime.now() para la comparación
   }
 }
