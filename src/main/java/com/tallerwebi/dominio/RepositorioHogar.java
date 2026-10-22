@@ -7,9 +7,7 @@ public interface RepositorioHogar {
 
   List<Hogar> obtenerHogaresDeUsuario(String email);
 
-  List<Hogar> obtenerHogares();
-
-  Hogar obtenerHogarPorId(Long hogarId);
-
   void guardar(Hogar hogar);
+  Hogar buscarPorId(Long id);
+  List<Hogar> obtenerTodos();
 }

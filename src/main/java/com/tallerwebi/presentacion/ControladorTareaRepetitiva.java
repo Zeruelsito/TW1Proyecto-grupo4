@@ -55,5 +55,6 @@ public class ControladorTareaRepetitiva {
       mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes());
       return mav;
     }
+    //refactorizar con un metodo privdao 48-49 y 54-55
   }
 }

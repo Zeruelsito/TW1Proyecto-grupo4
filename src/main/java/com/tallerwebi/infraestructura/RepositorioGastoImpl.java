@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.RepositorioGasto;
 import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,11 @@ public class RepositorioGastoImpl implements RepositorioGasto {
       .createQuery(hql, Gasto.class)
       .setParameter("codigo", codigo)
       .uniqueResult();
+  }
+
+  @Override
+  public Gasto buscarPorId(Long id) {
+    return sessionFactory.getCurrentSession().get(Gasto.class, id);
   }
 
   @Override
@@ -68,6 +74,58 @@ public class RepositorioGastoImpl implements RepositorioGasto {
       .getCurrentSession()
       .createQuery(hql, Gasto.class)
       .setParameter("tipo", tipo)
+      .getResultList();
+  }
+
+  @Override
+  public List<Gasto> obtenerGastosPendientesConVencimiento() {
+    String hql =
+      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento IS NOT NULL ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory.getCurrentSession().createQuery(hql, Gasto.class).getResultList();
+  }
+
+  @Override
+  public void modificar(Gasto gasto) {
+    sessionFactory.getCurrentSession().merge(gasto);
+  }
+
+  @Override
+  public List<Gasto> obtenerGastosFijosRecurrentes() {
+    String hql = "FROM Gasto g WHERE g.tipoGasto = 'FIJO' OR g.tipoGasto = 'RECURRENTE'";
+    return sessionFactory.getCurrentSession().createQuery(hql, Gasto.class).getResultList();
+  }
+
+  @Override
+  public void eliminar(Long id) {
+    Gasto gasto = buscarPorId(id);
+    if (gasto != null) {
+      sessionFactory.getCurrentSession().remove(gasto);
+    }
+  }
+
+  @Override
+  public List<Gasto> obtenerPendientesConVencimientoEntre(
+    LocalDateTime desde,
+    LocalDateTime hasta
+  ) {
+    String query =
+      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento BETWEEN :desde AND :hasta ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, Gasto.class)
+      .setParameter("desde", desde)
+      .setParameter("hasta", hasta)
+      .getResultList();
+  }
+
+  @Override
+  public List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora) {
+    String query =
+      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento < :ahora ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, Gasto.class)
+      .setParameter("ahora", ahora)
       .getResultList();
   }
 }

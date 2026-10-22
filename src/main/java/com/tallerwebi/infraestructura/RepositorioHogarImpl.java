@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class RepositorioHogarImpl implements RepositorioHogar {
 
-  SessionFactory sessionFactory;
+  private SessionFactory sessionFactory;
 
   @Autowired
   public RepositorioHogarImpl(SessionFactory sessionFactory) {
@@ -21,26 +21,25 @@ public class RepositorioHogarImpl implements RepositorioHogar {
   public Hogar obtenerHogarPorNombre(String nombre) {
     String query = "from Hogar h where h.nombreHogar = :nombre";
     return sessionFactory
-      .getCurrentSession()
-      .createQuery(query, Hogar.class)
-      .setParameter("nombre", nombre)
-      .uniqueResult();
+            .getCurrentSession()
+            .createQuery(query, Hogar.class)
+            .setParameter("nombre", nombre)
+            .uniqueResult();
+  }
+
+  @Override
+  public void guardar(Hogar hogar) {
+    sessionFactory.getCurrentSession().persist(hogar);
   }
 
   @Override
   public List<Hogar> obtenerHogaresDeUsuario(String email) {
     String query = "FROM Hogar h WHERE h.usuarioCreador.email = :email";
     return sessionFactory
-      .getCurrentSession()
-      .createQuery(query, Hogar.class)
-      .setParameter("email", email)
-      .getResultList();
-  }
-
-  @Override
-  public List<Hogar> obtenerHogares() {
-    String query = "FROM Hogar h";
-    return sessionFactory.getCurrentSession().createQuery(query, Hogar.class).getResultList();
+            .getCurrentSession()
+            .createQuery(query, Hogar.class)
+            .setParameter("email", email)
+            .getResultList();
   }
 
   @Override
@@ -48,14 +47,17 @@ public class RepositorioHogarImpl implements RepositorioHogar {
     String hql = "FROM Hogar h WHERE h.id = :id";
 
     return sessionFactory
-      .getCurrentSession()
-      .createQuery(hql, Hogar.class)
-      .setParameter("id", hogarId)
-      .uniqueResult(); // Retorna un solo objeto o null si no existe
+            .getCurrentSession()
+            .createQuery(hql, Hogar.class)
+            .setParameter("id", hogarId)
+            .uniqueResult(); // Retorna un solo objeto o null si no existe
   }
 
   @Override
-  public void guardar(Hogar hogar) {
-    sessionFactory.getCurrentSession().persist(hogar);
+  public List<Hogar> obtenerTodos() {
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery("from Hogar order by id", Hogar.class)
+      .getResultList();
   }
 }

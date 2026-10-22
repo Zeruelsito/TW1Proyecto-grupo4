@@ -16,6 +16,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
 
   private final RepositorioGasto repositorioGasto;
   private final RepositorioUsuario repositorioUsuario;
+  private static final int DIAS_PROXIMOS = 30;
 
   @Autowired
   public ServicioRegistroGastoImpl(
@@ -71,6 +72,59 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     Long idProximoPagador = obtenerIdConMenorMonto(integrantes, totalPorUsuario);
 
     return buscarNombrePorId(integrantes, idProximoPagador);
+  }
+
+  @Override
+  public void marcarComoPagado(Long gastoId, Long usuarioId) {
+    Gasto gasto = repositorioGasto.buscarPorId(gastoId);
+    if (gasto != null) {
+      gasto.setPagado(true);
+      Usuario pagador = repositorioUsuario.buscarPorId(usuarioId);
+      gasto.setUsuarioPagador(pagador);
+      repositorioGasto.modificar(gasto);
+    }
+  }
+
+  @Override
+  public List<Gasto> obtenerGastosFijosRecurrentes() {
+    return repositorioGasto.obtenerGastosFijosRecurrentes();
+  }
+
+  @Override
+  public void actualizarGastoFijo(Long id, Double nuevoMonto, LocalDateTime nuevaFechaVencimiento) {
+    Gasto gasto = repositorioGasto.buscarPorId(id);
+    if (gasto != null) {
+      if (nuevoMonto != null && nuevoMonto > 0) {
+        gasto.setMonto(nuevoMonto);
+      }
+      if (nuevaFechaVencimiento != null) {
+        gasto.setFechaVencimiento(nuevaFechaVencimiento);
+        // Si actualizamos la fecha al nuevo mes, podemos volver a ponerlo como pendiente de pago
+        gasto.setPagado(false);
+        gasto.setUsuarioPagador(null);
+      }
+      repositorioGasto.modificar(gasto);
+    }
+  }
+
+  @Override
+  public void eliminarGasto(Long id) {
+    repositorioGasto.eliminar(id);
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosPendientes() {
+    return repositorioGasto.obtenerGastosPendientesConVencimiento();
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy) {
+    return repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(DIAS_PROXIMOS));
+  }
+
+  @Override
+  public List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy) {
+    return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy);
   }
 
   private Map<Long, Double> calcularTotalesPorUsuario(
