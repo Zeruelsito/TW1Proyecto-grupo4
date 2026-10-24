@@ -22,18 +22,16 @@
             <div>
                 <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
                 <ul class="nav flex-column mt-4">
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link active" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
         </div>
