@@ -21,6 +21,9 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
                     <li class="nav-item"><a class="nav-link active" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
         </div>
@@ -66,6 +69,15 @@
                             </div>
                             <button type="submit" class="btn btn-dark w-100 rounded-3 py-2">Guardar parámetros</button>
                         </form>
+                    </div>
+
+                    <!-- Baja de integrante -->
+                    <div class="kumo-card mt-4">
+                        <h5 class="fw-bold mb-1"><i class="bi bi-person-dash me-2"></i>Integrantes</h5>
+                        <p class="text-muted small mb-3">Dar de baja a un integrante y recalcular las cuotas del hogar.</p>
+                        <a th:href="@{/hogar/baja}" class="btn btn-outline-danger w-100 rounded-3 py-2">
+                            <i class="bi bi-person-dash me-2"></i>Dar de baja integrante
+                        </a>
                     </div>
                 </div>
 

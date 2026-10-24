@@ -1,6 +1,7 @@
 package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
+import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import jakarta.transaction.Transactional;
@@ -22,6 +23,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
 
   private static final int CUOTA = 0;
   private static final int HORAS = 1;
+  private static final double MARGEN_SALDO = 0.01;
 
   private final RepositorioUsuario repositorioUsuario;
   private final RepositorioGasto repositorioGasto;
@@ -91,10 +93,9 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   @Override
   public void confirmarBaja(Long usuarioId) {
     Usuario saliente = validarSaliente(usuarioId);
-    List<Usuario> restantes = sinElSaliente(
-      repositorioUsuario.obtenerIntegrantesDelHogar(),
-      saliente
-    );
+    List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar();
+    validarSinSaldoPendiente(saliente, integrantes);
+    List<Usuario> restantes = sinElSaliente(integrantes, saliente);
 
     saliente.setFechaBaja(LocalDateTime.now());
     repositorioUsuario.modificar(saliente);
@@ -108,6 +109,15 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
       usuario.setCuotaMensual(valorDe(nuevas, usuario.getId(), CUOTA));
       usuario.setHorasTareaARealizar(valorDe(nuevas, usuario.getId(), HORAS));
       repositorioUsuario.modificar(usuario);
+    }
+  }
+
+  /** No se puede dar de baja a alguien que todavía debe plata o al que le deben plata. */
+  private void validarSinSaldoPendiente(Usuario saliente, List<Usuario> integrantes) {
+    Map<String, Double> balances = calcularBalances(integrantes, repositorioGasto.obtenerTodos());
+    double saldo = balances.getOrDefault(nombreDe(saliente), 0.0);
+    if (Math.abs(saldo) > MARGEN_SALDO) {
+      throw new IntegranteConSaldoPendienteException();
     }
   }
 

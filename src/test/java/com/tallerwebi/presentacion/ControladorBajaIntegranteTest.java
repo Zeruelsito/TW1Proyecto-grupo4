@@ -7,6 +7,7 @@ import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.ServicioBajaIntegrante;
 import com.tallerwebi.dominio.SimulacionBaja;
+import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import java.util.List;
@@ -90,6 +91,25 @@ public class ControladorBajaIntegranteTest {
     assertThat(
       modelAndView.getModel().get("error").toString(),
       equalToIgnoringCase("Ese integrante ya fue dado de baja.")
+    );
+  }
+
+  @Test
+  public void confirmarConSaldoPendienteDeberiaMostrarErrorYLaSimulacion() {
+    // preparacion
+    SimulacionBaja simulacion = mock(SimulacionBaja.class);
+    when(servicioBajaMock.simularBaja(1L)).thenReturn(simulacion);
+    doThrow(new IntegranteConSaldoPendienteException()).when(servicioBajaMock).confirmarBaja(1L);
+
+    // ejecucion
+    ModelAndView modelAndView = controladorBaja.confirmar(1L);
+
+    // validacion
+    assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
+    assertThat(modelAndView.getModel().get("simulacion"), equalTo(simulacion));
+    assertThat(
+      modelAndView.getModel().get("error").toString(),
+      equalToIgnoringCase("No se puede dar de baja: el integrante todavía tiene saldo pendiente.")
     );
   }
 }
