@@ -23,7 +23,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
 
   private static final int CUOTA = 0;
   private static final int HORAS = 1;
-  private static final double MARGEN_SALDO = 0.01;
 
   private final RepositorioUsuario repositorioUsuario;
   private final RepositorioGasto repositorioGasto;
@@ -94,7 +93,10 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   public void confirmarBaja(Long usuarioId) {
     Usuario saliente = validarSaliente(usuarioId);
     List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar();
-    validarSinSaldoPendiente(saliente, integrantes);
+    SimulacionBaja simulacion = simularBaja(usuarioId);
+    if (simulacion.isSaldoPendiente()) {
+      throw new IntegranteConSaldoPendienteException();
+    }
     List<Usuario> restantes = sinElSaliente(integrantes, saliente);
 
     saliente.setFechaBaja(LocalDateTime.now());
@@ -109,15 +111,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
       usuario.setCuotaMensual(valorDe(nuevas, usuario.getId(), CUOTA));
       usuario.setHorasTareaARealizar(valorDe(nuevas, usuario.getId(), HORAS));
       repositorioUsuario.modificar(usuario);
-    }
-  }
-
-  /** No se puede dar de baja a alguien que todavía debe plata o al que le deben plata. */
-  private void validarSinSaldoPendiente(Usuario saliente, List<Usuario> integrantes) {
-    Map<String, Double> balances = calcularBalances(integrantes, repositorioGasto.obtenerTodos());
-    double saldo = balances.getOrDefault(nombreDe(saliente), 0.0);
-    if (Math.abs(saldo) > MARGEN_SALDO) {
-      throw new IntegranteConSaldoPendienteException();
     }
   }
 
