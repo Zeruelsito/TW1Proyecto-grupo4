@@ -6,9 +6,13 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
+import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import java.time.LocalDateTime;
@@ -157,5 +161,49 @@ public class ServicioBajaIntegranteTest {
     verify(repositorioUsuarioMock, times(1)).modificar(juan);
     verify(repositorioUsuarioMock, times(1)).modificar(maria);
     verify(repositorioUsuarioMock, times(1)).modificar(pedro);
+  }
+
+  @Test
+  public void noDeberiaPermitirDarDeBajaAUnIntegranteQueTodaviaDebePlata() {
+    // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
+    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
+    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+
+    // ejecucion y validacion
+    assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
+    assertThat(juan.getFechaBaja(), nullValue());
+    verify(repositorioUsuarioMock, times(0)).modificar(any());
+  }
+
+  @Test
+  public void noDeberiaPermitirDarDeBajaAUnIntegranteAlQueLeDebenPlata() {
+    // preparacion: Juan pagó 30000 entre 3 -> le deben 20000
+    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, juan, "Comida");
+    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+
+    // ejecucion y validacion
+    assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
+  }
+
+  @Test
+  public void conSaldoPendienteLaSimulacionDeberiaIndicarlo() {
+    // preparacion
+    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
+    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+
+    // ejecucion
+    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
+
+    // validacion
+    assertTrue(simulacion.isSaldoPendiente());
+  }
+
+  @Test
+  public void sinSaldoPendienteLaSimulacionNoDeberiaBloquearLaBaja() {
+    // ejecucion
+    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
+
+    // validacion
+    assertFalse(simulacion.isSaldoPendiente());
   }
 }
