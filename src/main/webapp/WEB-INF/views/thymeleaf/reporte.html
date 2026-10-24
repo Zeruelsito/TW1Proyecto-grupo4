@@ -73,7 +73,7 @@
                                 <td th:text="${gasto.descripcion}">Supermercado</td>
                                 <td th:text="${gasto.categoria}">ALIMENTACION</td>
                                 <td th:text="${gasto.tipoGasto != null ? gasto.tipoGasto.descripcion : '-'}">Ocasional</td>
-                                <td th:text="${reporte.nombreDe(gasto.pagadorId)}">macarena</td>
+                                <td th:text="${reporte.nombreDe(gasto.usuarioPagador != null ? gasto.usuarioPagador.id : null)}">macarena</td>
                                 <td class="text-end" th:text="${'$' + #numbers.formatDecimal(gasto.monto, 1, 'POINT', 2, 'COMMA')}">$0,00</td>
                             </tr>
                             <tr th:if="${#lists.isEmpty(reporte.gastos)}">
