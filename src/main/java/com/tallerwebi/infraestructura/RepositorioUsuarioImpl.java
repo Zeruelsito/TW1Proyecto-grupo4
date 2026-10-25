@@ -69,10 +69,13 @@ public class RepositorioUsuarioImpl implements RepositorioUsuario {
   }
 
   @Override
-  public List<Usuario> obtenerIntegrantesDelHogar() {
+  public List<Usuario> obtenerIntegrantesDelHogar(Long hogarId) {
+    String hql =
+      "SELECT u FROM Hogar h JOIN h.integrantes u WHERE h.id = :hogarId AND u.fechaBaja IS NULL ORDER BY u.id";
     return sessionFactory
       .getCurrentSession()
-      .createQuery("from Usuario where fechaBaja is null order by id", Usuario.class)
+      .createQuery(hql, Usuario.class)
+      .setParameter("hogarId", hogarId)
       .getResultList();
   }
 }

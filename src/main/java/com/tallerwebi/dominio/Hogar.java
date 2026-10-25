@@ -24,6 +24,7 @@ public class Hogar {
 
   private Double precioHoraTarea;
   private Double pisoMinimoHogar;
+  private String pin;
 
   @OneToMany(cascade = CascadeType.ALL)
   private List<CambioParametro> historial;
@@ -38,6 +39,15 @@ public class Hogar {
     this.precioHoraTarea = 0.0;
     this.pisoMinimoHogar = 0.0;
     this.historial = new ArrayList<>();
+  }
+
+  public Hogar(String nombreHogar, String pin) {
+    this.nombreHogar = nombreHogar;
+    this.integrantes = new ArrayList<>();
+    this.precioHoraTarea = 5000.0;
+    this.pisoMinimoHogar = 50000.0;
+    this.historial = new ArrayList<>();
+    this.pin = pin;
   }
 
   public List<Usuario> getIntegrantes() {
@@ -82,5 +92,13 @@ public class Hogar {
 
   public void setHistorial(List<CambioParametro> historial) {
     this.historial = historial;
+  }
+
+  public String getPin() {
+    return pin;
+  }
+
+  public void setPin(String pin) {
+    this.pin = pin;
   }
 }

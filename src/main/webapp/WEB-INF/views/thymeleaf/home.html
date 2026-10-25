@@ -1,41 +1,179 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-  <title>Taller Web I</title>
-
-  <!-- Boostrap core css -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-
-  <!-- custom style -->
-  <link rel="stylesheet" th:href="@{/css/main.css}" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumo - Convivencia Organizada</title>
+    <!-- Bootstrap 5 CSS & Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Font Awesome Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
 </head>
 
-<body>
+<body class="p-3 bg-light">
 
-  <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-    <a class="navbar-brand" href="#">UNLAM</a>
-  </nav>
+    <div class="container-fluid">
+        <!-- Header Bar / Navbar Superior -->
+        <header class="d-flex justify-content-between align-items-center py-3 px-4 kumo-card mb-4 rounded-4 shadow-sm">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-3 fw-bold text-dark tracking-tight">KUMO</span>
+                <span class="badge kumo-badge-purple rounded-pill px-3 py-1 small fw-semibold d-inline-flex align-items-center gap-1">
+                    <i class="fa-solid fa-cloud me-1 text-primary"></i> Nube
+                </span>
+            </div>
+            
+            <nav class="d-flex gap-4">
+                <a href="#sobre-kumo" class="text-decoration-none text-muted fw-medium small hover-dark">¿Qué es Kumo?</a>
+                <a href="#soluciones" class="text-decoration-none text-muted fw-medium small hover-dark">Problemas que resolvemos</a>
+                <a href="#funciones" class="text-decoration-none text-muted fw-medium small hover-dark">Módulos</a>
+            </nav>
+        </header>
 
-  <main role="main" class="container">
-    <div class="container">
-      <h1>Bienvenidos a Taller Web 1</h1>
+        <!-- Bento Hero Principal -->
+        <section class="row g-4 mb-4" id="sobre-kumo">
+            <!-- Hero Card Grande -->
+            <div class="col-lg-8">
+                <div class="kumo-card kumo-badge-pink p-4 p-md-5 d-flex flex-column justify-content-between h-100 rounded-4">
+                    <div>
+                        <span class="badge bg-white text-danger rounded-pill px-3 py-2 fw-bold text-uppercase mb-3 shadow-sm">
+                            <i class="bi bi-house-heart me-1"></i> Convivencia sin fricciones
+                        </span>
+                        <h1 class="display-4 fw-extrabold text-dark mb-3">
+                            Llevá tu hogar con la ligereza de una nube.
+                        </h1>
+                        <p class="fs-5 text-secondary mb-4 col-lg-10">
+                            Olvidate de las discusiones por quién pagó las expensas o a quién le toca limpiar. Kumo calcula la distribución justa de gastos y valora el trabajo doméstico.
+                        </p>
+                    </div>
 
-      <a href="login.html" class="btn btn-lg btn-primary btn-block">Volver</a>
+                    <div class="d-flex flex-wrap gap-3 pt-3">
+                        <a th:href="@{/nuevo-usuario}" class="btn btn-dark btn-lg rounded-3 px-4 py-3 fw-bold shadow-sm">
+                            Empezar gratis <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a th:href="@{/login}" class="btn btn-outline-dark btn-lg rounded-3 px-4 py-3 fw-semibold">
+                            Ya tengo cuenta
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Side Cards -->
+            <div class="col-lg-4 d-flex flex-column gap-4">
+                <!-- Card ¿Qué significa Kumo? -->
+                <div class="kumo-card kumo-badge-purple p-4 h-100 d-flex flex-column justify-content-between rounded-4">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-bold text-uppercase small text-primary">El Origen</span>
+                            <i class="fa-solid fa-cloud fs-4 text-primary"></i>
+                        </div>
+                        <h4 class="fw-bold text-dark">¿Qué es KUMO?</h4>
+                        <p class="small text-muted mb-0 mt-2">
+                            En japonés, <strong>Kumo (雲)</strong> significa <i>nube</i>. Diseñamos este espacio para transmitir calma, transparencia y equilibrio en la gestión diaria de casas compartidas, parejas y roommates.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-2 border-top border-primary-subtle d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill text-primary"></i>
+                        <span class="small fw-semibold text-dark">Ecosistema modular y colaborativo</span>
+                    </div>
+                </div>
+
+                <!-- Card Sugerencia Inteligente Preview -->
+                <div class="kumo-card kumo-badge-green p-4 h-100 d-flex flex-column justify-content-between rounded-4">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-uppercase small text-success">Sugerencia Smart</span>
+                            <i class="bi bi-magic fs-4 text-success"></i>
+                        </div>
+                        <h5 class="fw-bold mb-1">Liquidación equitativa</h5>
+                        <p class="small text-muted mb-0">
+                            Sugerencias automáticas de quién debería pagar el próximo gasto según el aporte real de cada uno.
+                        </p>
+                    </div>
+                    <div class="mt-3 bg-white p-3 rounded-3 shadow-sm d-flex justify-content-between align-items-center">
+                        <span class="small fw-semibold text-dark">Próximo pagador:</span>
+                        <span class="badge bg-success text-white px-3 py-1 rounded-pill fw-bold">Sugerido por Kumo</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección: Problemas que resolvemos (Grid Bento Pastel) -->
+        <section id="soluciones" class="mb-5 pt-3">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold display-6">¿Qué problemas resolvemos?</h2>
+                <p class="text-muted">Chau planillas complejas de Excel y malos entendidos al final del mes.</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Problema 1: Tareas del hogar invisibles -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="kumo-card p-4 h-100 border-0 shadow-sm rounded-4">
+                        <div class="rounded-circle bg-danger-subtle text-danger p-3 d-inline-flex mb-3">
+                            <i class="bi bi-heart-pulse fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Trabajo doméstico reconocido</h5>
+                        <p class="small text-muted mb-0">
+                            Lavar, cocinar y limpiar también valen. Kumo convierte las horas dedicadas a tareas en crédito monetario que se descuenta de tu cuota de gastos.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Problema 2: Desequilibrio de ingresos -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="kumo-card p-4 h-100 border-0 shadow-sm rounded-4">
+                        <div class="rounded-circle bg-warning-subtle text-warning p-3 d-inline-flex mb-3">
+                            <i class="bi bi-pie-chart fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Capacidad de pago proporcional</h5>
+                        <p class="small text-muted mb-0">
+                            No todos ganan lo mismo. Podés configurar pisos mínimos e ingresos para repartir los gastos de forma proporcional y no restrictiva.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Problema 3: Vencimientos olvidados -->
+                <div class="col-md-6 col-lg-4">
+                    <div class="kumo-card p-4 h-100 border-0 shadow-sm rounded-4">
+                        <div class="rounded-circle bg-info-subtle text-info p-3 d-inline-flex mb-3">
+                            <i class="bi bi-calendar-check fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark">Control de vencimientos</h5>
+                        <p class="small text-muted mb-0">
+                            Mantené un calendario claro con los gastos fijos a vencer (alquiler, luz, internet) para no pagar recargos por mora jamás.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Banner Inferior de Llamado a la Acción -->
+        <section class="kumo-card bg-dark text-white p-5 rounded-4 mb-4 text-center d-flex flex-column align-items-center justify-content-center">
+            <h2 class="fw-bold mb-2">¿Listo para organizar tu hogar?</h2>
+            <p class="text-white-50 col-md-8 mb-4">
+                Sumate a Kumo, invitá a tus integrantes y empezá a disfrutar de una convivencia ordenada y equilibrada desde hoy.
+            </p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a th:href="@{/nuevo-usuario}" class="btn btn-light btn-lg rounded-3 px-4 py-2 fw-bold text-dark">
+                    Crear mi cuenta gratis
+                </a>
+                <a th:href="@{/login}" class="btn btn-outline-light btn-lg rounded-3 px-4 py-2 fw-semibold">
+                    Iniciar sesión
+                </a>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center py-3 text-muted small">
+            <p class="mb-0">KUMO © 2026 — Proyecto Taller Web I · UNLaM</p>
+        </footer>
+
     </div>
-  </main>
-  <!-- /.container -->
 
-  <!-- Boostrap core js -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-    crossorigin="anonymous"></script>
-
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

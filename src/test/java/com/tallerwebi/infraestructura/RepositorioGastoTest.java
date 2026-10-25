@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.tallerwebi.dominio.Gasto;
+import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.RepositorioGasto;
 import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
@@ -44,7 +45,11 @@ public class RepositorioGastoTest {
     Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
 
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
+
     Gasto gasto = new Gasto("G001", TipoGasto.OCASIONAL, "Cena", 1500.0, usuario, "ALIMENTACION");
+    gasto.setHogar(hogar);
 
     // when
     repositorioGasto.guardar(gasto);
@@ -54,6 +59,7 @@ public class RepositorioGastoTest {
     assertNotNull(recuperado);
     assertEquals("Cena", recuperado.getDescripcion());
     assertEquals(1500.0, recuperado.getMonto());
+    assertNotNull(recuperado.getHogar());
   }
 
   @Test
@@ -64,7 +70,11 @@ public class RepositorioGastoTest {
     Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
 
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
+
     Gasto gasto = new Gasto("G001", TipoGasto.OCASIONAL, "Cena", 1500.0, usuario, "ALIMENTACION");
+    gasto.setHogar(hogar);
     repositorioGasto.guardar(gasto);
 
     // when
@@ -83,36 +93,26 @@ public class RepositorioGastoTest {
   public void deberiaObtenerElNombreDelUsuarioPagadorDelGasto() {
     Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
-    Gasto gasto = givenUnGasto("G001", 10000.0, usuario);
-    //when
+
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
+
+    Gasto gasto = givenUnGasto("G001", 10000.0, usuario, hogar);
+    // when
     String nombreObtenido = repositorioGasto.obtenerNombreDeUsuarioPagadorPorCodigoGasto("G001");
-    //then
+    // then
     assertThat(nombreObtenido, equalTo("Macarena"));
   }
 
   @Test
   @Transactional
   @Rollback
-  public void dadoUnUsuarioDeberiaObtenerUnaListaDeSusGastos() {
-    Usuario usuario = new Usuario("Macarena", "maca@kumo.com", "1234");
-    sessionFactory.getCurrentSession().persist(usuario);
-    Usuario usuario2 = new Usuario("Ezequiel", "eze@kumo.com", "5678");
-    sessionFactory.getCurrentSession().persist(usuario2);
-    Gasto gasto = givenUnGasto("G001", 10000.0, usuario);
-    Gasto gasto2 = givenUnGasto("G002", 5000.0, usuario);
-    Gasto gasto3 = givenUnGasto("G003", 20000.0, usuario);
-    Gasto gasto4 = givenUnGasto("G004", 40000.0, usuario2);
-    //when
-    //List<Gasto> gastosDeUsuario = repositorioGasto.obtenerListaDeGastosPorUsuario(usuario);
-
-  }
-
-  @Test
-  @Transactional
-  @Rollback
-  public void deberiaPoderGuardarYObtenerTodosLosGastos() {
+  public void deberiaPoderGuardarYObtenerTodosLosGastosPorHogar() {
     Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
+
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
 
     Gasto gasto = new Gasto(
       "G001",
@@ -122,9 +122,10 @@ public class RepositorioGastoTest {
       usuario,
       "ALIMENTACION"
     );
+    gasto.setHogar(hogar);
     repositorioGasto.guardar(gasto);
 
-    List<Gasto> gastos = repositorioGasto.obtenerTodos();
+    List<Gasto> gastos = repositorioGasto.obtenerTodosPorHogar(hogar.getId());
     assertThat(gastos.size(), equalTo(1));
     assertThat(gastos.get(0).getDescripcion(), equalTo("Supermercado"));
   }
@@ -132,9 +133,12 @@ public class RepositorioGastoTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaObtenerGastosFiltradosPorTipo() {
+  public void deberiaObtenerGastosFiltradosPorTipoYHogar() {
     Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
+
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
 
     Gasto gastoOcasional = new Gasto(
       "G001",
@@ -144,12 +148,18 @@ public class RepositorioGastoTest {
       usuario,
       "VARIOS"
     );
+    gastoOcasional.setHogar(hogar);
+
     Gasto gastoFijo = new Gasto("G002", TipoGasto.FIJO, "Alquiler", 50000.0, usuario, "VIVIENDA");
+    gastoFijo.setHogar(hogar);
 
     sessionFactory.getCurrentSession().persist(gastoOcasional);
     sessionFactory.getCurrentSession().persist(gastoFijo);
 
-    List<Gasto> gastosOcasionales = repositorioGasto.obtenerPorTipo(TipoGasto.OCASIONAL);
+    List<Gasto> gastosOcasionales = repositorioGasto.obtenerPorTipo(
+      TipoGasto.OCASIONAL,
+      hogar.getId()
+    );
 
     assertThat(gastosOcasionales.size(), equalTo(1));
     assertThat(gastosOcasionales.get(0).getCodigo(), equalTo("G001"));
@@ -163,7 +173,11 @@ public class RepositorioGastoTest {
     Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
 
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
+
     Gasto gasto = new Gasto("G999", TipoGasto.OCASIONAL, "Internet", 12500.0, usuario, "SERVICIOS");
+    gasto.setHogar(hogar);
     sessionFactory.getCurrentSession().persist(gasto);
 
     Double monto = repositorioGasto.obtenerMontoPorCodigo("G999");
@@ -174,22 +188,25 @@ public class RepositorioGastoTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaObtenerSoloLosPendientesQueVencenEnLosProximos30DiasOrdenadosPorFecha() {
-    // LocalDateTime hoy = LocalDateTime.of(2026, 10, 19, 12, 0);
+  public void deberiaObtenerSoloLosPendientesQueVencenEnLosProximos30DiasOrdenadosPorFechaPorHogar() {
     LocalDateTime hoy = LocalDateTime.now();
     Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
 
-    givenUnGastoConVencimiento("G-101", hoy.plusDays(20), false, usuario); // entra
-    givenUnGastoConVencimiento("G-102", hoy.plusDays(5), false, usuario); // entra (primero)
-    givenUnGastoConVencimiento("G-103", hoy.plusDays(31), false, usuario); // afuera: muy lejos
-    givenUnGastoConVencimiento("G-104", hoy.minusDays(1), false, usuario); // afuera: vencido
-    givenUnGastoConVencimiento("G-105", hoy.plusDays(3), true, usuario); // afuera: ya pagado
-    givenUnGastoConVencimiento("G-106", null, false, usuario); // afuera: sin fecha
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
+
+    givenUnGastoConVencimiento("G-101", hoy.plusDays(20), false, usuario, hogar); // entra
+    givenUnGastoConVencimiento("G-102", hoy.plusDays(5), false, usuario, hogar); // entra (primero)
+    givenUnGastoConVencimiento("G-103", hoy.plusDays(31), false, usuario, hogar); // afuera: muy lejos
+    givenUnGastoConVencimiento("G-104", hoy.minusDays(1), false, usuario, hogar); // afuera: vencido
+    givenUnGastoConVencimiento("G-105", hoy.plusDays(3), true, usuario, hogar); // afuera: ya pagado
+    givenUnGastoConVencimiento("G-106", null, false, usuario, hogar); // afuera: sin fecha
 
     List<Gasto> resultado = repositorioGasto.obtenerPendientesConVencimientoEntre(
       hoy,
-      hoy.plusDays(30)
+      hoy.plusDays(30),
+      hogar.getId()
     );
 
     assertThat(resultado.size(), equalTo(2));
@@ -200,16 +217,19 @@ public class RepositorioGastoTest {
   @Test
   @Transactional
   @Rollback
-  public void deberiaObtenerSoloLosPendientesYaVencidos() {
+  public void deberiaObtenerSoloLosPendientesYaVencidosPorHogar() {
     LocalDateTime hoy = LocalDateTime.now();
     Usuario usuario = new Usuario("Maria", "maria@kumo.com", "1234");
     sessionFactory.getCurrentSession().persist(usuario);
 
-    givenUnGastoConVencimiento("G-201", hoy.minusDays(2), false, usuario); // entra
-    givenUnGastoConVencimiento("G-202", hoy.minusDays(1), true, usuario); // afuera: pagado
-    givenUnGastoConVencimiento("G-203", hoy.plusDays(1), false, usuario); // afuera: futuro
+    Hogar hogar = new Hogar("Casa Test");
+    sessionFactory.getCurrentSession().persist(hogar);
 
-    List<Gasto> resultado = repositorioGasto.obtenerPendientesVencidosAntesDe(hoy);
+    givenUnGastoConVencimiento("G-201", hoy.minusDays(2), false, usuario, hogar); // entra
+    givenUnGastoConVencimiento("G-202", hoy.minusDays(1), true, usuario, hogar); // afuera: pagado
+    givenUnGastoConVencimiento("G-203", hoy.plusDays(1), false, usuario, hogar); // afuera: futuro
+
+    List<Gasto> resultado = repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, hogar.getId());
 
     assertThat(resultado.size(), equalTo(1));
     assertThat(resultado.get(0).getCodigo(), equalTo("G-201"));
@@ -219,16 +239,18 @@ public class RepositorioGastoTest {
     String codigo,
     LocalDateTime vencimiento,
     boolean pagado,
-    Usuario usuario
+    Usuario usuario,
+    Hogar hogar
   ) {
     Gasto gasto = new Gasto(codigo, TipoGasto.FIJO, "Servicio", 1000.0, usuario, "SERVICIOS");
     gasto.setFechaVencimiento(vencimiento);
     gasto.setPagado(pagado);
+    gasto.setHogar(hogar);
     sessionFactory.getCurrentSession().persist(gasto);
     return gasto;
   }
 
-  private Gasto givenUnGasto(String codigo, Double monto, Usuario usuario) {
+  private Gasto givenUnGasto(String codigo, Double monto, Usuario usuario, Hogar hogar) {
     Gasto gastoNuevo = new Gasto(
       codigo,
       TipoGasto.OCASIONAL,
@@ -237,6 +259,7 @@ public class RepositorioGastoTest {
       usuario,
       "ALIMENTACION"
     );
+    gastoNuevo.setHogar(hogar);
     sessionFactory.getCurrentSession().persist(gastoNuevo);
     return gastoNuevo;
   }

@@ -15,6 +15,7 @@ import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,10 +28,13 @@ public class ServicioBajaIntegranteTest {
   private RepositorioGasto repositorioGastoMock;
   private ServicioHogar servicioHogarMock;
   private ServicioCreditoTarea servicioCreditoTareaMock;
+  private HttpSession sessionMock;
+
   private Usuario juan;
   private Usuario maria;
   private Usuario pedro;
   private Hogar hogar;
+  private static final Long HOGAR_ID = 1L;
 
   @BeforeEach
   public void init() {
@@ -38,6 +42,8 @@ public class ServicioBajaIntegranteTest {
     repositorioGastoMock = mock(RepositorioGasto.class);
     servicioHogarMock = mock(ServicioHogar.class);
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    sessionMock = mock(HttpSession.class);
+
     servicioBaja =
       new ServicioBajaIntegranteImpl(
         repositorioUsuarioMock,
@@ -45,7 +51,8 @@ public class ServicioBajaIntegranteTest {
         new ServicioLiquidacionImpl(),
         new ServicioCalculosGastoImpl(),
         servicioHogarMock,
-        servicioCreditoTareaMock
+        servicioCreditoTareaMock,
+        sessionMock
       );
 
     juan = new Usuario("Juan", 300000.0);
@@ -56,13 +63,17 @@ public class ServicioBajaIntegranteTest {
     pedro.setId(3L);
 
     hogar = new Hogar("Hogar 1");
+    hogar.setId(HOGAR_ID);
     hogar.setPisoMinimoHogar(200000.0);
     hogar.setPrecioHoraTarea(5000.0);
 
+    // Configuramos la sesión para que devuelva el HOGAR_ID
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(HOGAR_ID);
+
     when(repositorioUsuarioMock.buscarPorId(1L)).thenReturn(juan);
-    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar())
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(HOGAR_ID))
       .thenReturn(List.of(juan, maria, pedro));
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of());
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of());
     when(servicioHogarMock.obtenerHogar()).thenReturn(hogar);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
   }
@@ -81,7 +92,7 @@ public class ServicioBajaIntegranteTest {
   public void siElQueSeVaNoPagoNadaDeberiaPagarleSuParteAlQuePago() {
     // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
     Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
 
     // ejecucion
     SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
@@ -98,7 +109,7 @@ public class ServicioBajaIntegranteTest {
   public void losGastosFijosDeberianRepartirseEntreLosQueQuedan() {
     // preparacion: 90000 de fijos -> 30000 entre 3, 45000 entre 2
     Gasto alquiler = new Gasto("G2", TipoGasto.FIJO, "Alquiler", 90000.0, maria, "Casa");
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(alquiler));
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(alquiler));
 
     // ejecucion
     SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
@@ -143,7 +154,7 @@ public class ServicioBajaIntegranteTest {
   @Test
   public void darDeBajaAlUltimoIntegranteDeberiaLanzarExcepcion() {
     // preparacion
-    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar()).thenReturn(List.of(juan));
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(List.of(juan));
 
     // ejecucion y validacion
     assertThrows(HogarSinIntegrantesException.class, () -> servicioBaja.confirmarBaja(1L));
@@ -167,7 +178,7 @@ public class ServicioBajaIntegranteTest {
   public void noDeberiaPermitirDarDeBajaAUnIntegranteQueTodaviaDebePlata() {
     // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
     Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
 
     // ejecucion y validacion
     assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
@@ -179,7 +190,7 @@ public class ServicioBajaIntegranteTest {
   public void noDeberiaPermitirDarDeBajaAUnIntegranteAlQueLeDebenPlata() {
     // preparacion: Juan pagó 30000 entre 3 -> le deben 20000
     Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, juan, "Comida");
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
 
     // ejecucion y validacion
     assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
@@ -189,7 +200,7 @@ public class ServicioBajaIntegranteTest {
   public void conSaldoPendienteLaSimulacionDeberiaIndicarlo() {
     // preparacion
     Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodos()).thenReturn(List.of(gasto));
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
 
     // ejecucion
     SimulacionBaja simulacion = servicioBaja.simularBaja(1L);

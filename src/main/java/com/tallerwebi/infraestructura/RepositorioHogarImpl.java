@@ -23,15 +23,31 @@ public class RepositorioHogarImpl implements RepositorioHogar {
   }
 
   @Override
+  public void actualizar(Hogar hogar) {
+    sessionFactory.getCurrentSession().merge(hogar);
+  }
+
+  @Override
   public Hogar buscarPorId(Long id) {
     return sessionFactory.getCurrentSession().get(Hogar.class, id);
   }
 
   @Override
-  public List<Hogar> obtenerTodos() {
+  public List<Hogar> obtenerHogaresDeUsuario(Long usuarioId) {
+    String hql = "SELECT h FROM Hogar h JOIN h.integrantes u WHERE u.id = :usuarioId";
     return sessionFactory
-      .getCurrentSession()
-      .createQuery("from Hogar order by id", Hogar.class)
+      .getCurrentSession() // O entityManager si usan JPA puro
+      .createQuery(hql, Hogar.class)
+      .setParameter("usuarioId", usuarioId)
+      .getResultList();
+  }
+
+  @Override
+  public List<Hogar> obtenerTodos() {
+    String hql = "FROM Hogar";
+    return sessionFactory
+      .getCurrentSession() // O entityManager si usan JPA puro
+      .createQuery(hql, Hogar.class)
       .getResultList();
   }
 }

@@ -71,12 +71,25 @@ public class RepositorioHogarTest {
   @Transactional
   @Rollback
   public void deberiaObtenerTodosLosHogaresOrdenadosPorId() {
-    this.dadoQueExisteElHogar("casa");
-    this.dadoQueExisteElHogar("departamento");
+    // Creamos un usuario de prueba para asociarlo
+    com.tallerwebi.dominio.Usuario usuario = new com.tallerwebi.dominio.Usuario();
+    usuario.setEmail("test@unlam.edu.ar");
+    usuario.setPassword("test");
+    sessionFactory.getCurrentSession().persist(usuario);
 
-    List<Hogar> obtenidos = this.cuandoObtengoTodosLosHogares();
+    // Creamos los hogares y los asociamos al usuario
+    Hogar hogar1 = this.dadoQueExisteElHogar("casa");
+    hogar1.getIntegrantes().add(usuario);
+    sessionFactory.getCurrentSession().merge(hogar1);
 
-    //then
+    Hogar hogar2 = this.dadoQueExisteElHogar("departamento");
+    hogar2.getIntegrantes().add(usuario);
+    sessionFactory.getCurrentSession().merge(hogar2);
+
+    // Obtenemos los hogares usando el ID del usuario creado
+    List<Hogar> obtenidos = repositorioHogar.obtenerHogaresDeUsuario(usuario.getId());
+
+    // then
     assertThat(obtenerNombres(obtenidos), contains("casa", "departamento"));
   }
 
@@ -136,10 +149,6 @@ public class RepositorioHogarTest {
 
   private Hogar cuandoBuscoElHogarPorId(Long id) {
     return repositorioHogar.buscarPorId(id);
-  }
-
-  private List<Hogar> cuandoObtengoTodosLosHogares() {
-    return repositorioHogar.obtenerTodos();
   }
 
   private List<String> obtenerNombres(List<Hogar> hogares) {

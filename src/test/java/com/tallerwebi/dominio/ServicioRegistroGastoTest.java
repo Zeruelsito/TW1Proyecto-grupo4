@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -27,21 +28,25 @@ public class ServicioRegistroGastoTest {
 
   private RepositorioGasto repositorioGasto;
   private RepositorioUsuario repositorioUsuario;
+  private RepositorioHogar repositorioHogar;
   private ServicioRegistroGasto servicioRegistroGasto;
 
   private List<Gasto> gastosEnMemoria;
+  private static final Long HOGAR_ID = 1L;
 
   @BeforeEach
   public void init() {
-    // Mockeamos los repositorios que ahora inyecta el servicio
     repositorioGasto = mock(RepositorioGasto.class);
     repositorioUsuario = mock(RepositorioUsuario.class);
+    repositorioHogar = mock(RepositorioHogar.class);
 
-    servicioRegistroGasto = new ServicioRegistroGastoImpl(repositorioGasto, repositorioUsuario);
+    servicioRegistroGasto =
+      new ServicioRegistroGastoImpl(repositorioGasto, repositorioUsuario, repositorioHogar);
     gastosEnMemoria = new ArrayList<>();
 
-    // Simulamos comportamiento básico para que el registro y listado funcionen en memoria durante el test
-    when(repositorioGasto.obtenerTodos()).thenAnswer(invocation -> gastosEnMemoria);
+    // Simulamos comportamiento adaptado al hogarId
+    when(repositorioGasto.obtenerTodosPorHogar(eq(HOGAR_ID)))
+      .thenAnswer(invocation -> gastosEnMemoria);
     doAnswer(invocation -> {
         Gasto g = invocation.getArgument(0);
         gastosEnMemoria.add(g);
@@ -53,27 +58,20 @@ public class ServicioRegistroGastoTest {
 
   @Test
   public void dadoUnGastoValidoCuandoLoRegistroEntoncesSeGuardaEnLaLista() {
-    //preparacion - given
     Gasto gastoValido = givenUnGastoValido();
-    //ejecucion - when
     whenRegistroUn(gastoValido);
-    //validacion - then
     thenElGastoSeGuardaEnLaLista(gastoValido);
   }
 
   @Test
   public void dadoUnGastoConMontoInvalidoCuandoLoRegistroEntoncesLanzaExcepcion() {
-    // given
     Gasto gastoConMontoInvalido = givenUnGastoConMontoInvalido();
-    // when - then
     assertThrows(MontoGastoInvalidoException.class, () -> whenRegistroUn(gastoConMontoInvalido));
   }
 
   @Test
   public void dadoUnGastoConDescripcionVaciaCuandoLoRegistroEntoncesLanzaExcepcion() {
-    // given
     Gasto gastoConDescripcionVacia = givenUnGastoConDescripcionVacia();
-    // when - then
     assertThrows(
       DescripcionGastoVaciaException.class,
       () -> whenRegistroUn(gastoConDescripcionVacia)
@@ -83,9 +81,10 @@ public class ServicioRegistroGastoTest {
   @Test
   public void debeObtenerLaListaDeIntegrantesCorrectamente() {
     List<Usuario> integrantesMock = givenCuatroIntegrantes();
-    when(repositorioUsuario.obtenerIntegrantesDelHogar()).thenReturn(integrantesMock);
+    // CORREGIDO: Se pasa HOGAR_ID al método del repositorio
+    when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
 
-    List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes();
+    List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes(HOGAR_ID);
 
     assertThat(integrantes, hasSize(4));
     assertThat(integrantes.get(0).getEmail(), containsString("macarena"));
@@ -93,9 +92,9 @@ public class ServicioRegistroGastoTest {
 
   @Test
   public void debeSugerirComoProximoPagadorAlIntegranteConMenorMontoAcumulado() {
-    // given
     List<Usuario> integrantesMock = givenCuatroIntegrantes();
-    when(repositorioUsuario.obtenerIntegrantesDelHogar()).thenReturn(integrantesMock);
+    // CORREGIDO: Se pasa HOGAR_ID al método del repositorio
+    when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
 
     Usuario macarena = integrantesMock.get(0);
     Gasto gastoMacarena = new Gasto(
@@ -106,45 +105,38 @@ public class ServicioRegistroGastoTest {
       macarena,
       "Varios"
     );
-    servicioRegistroGasto.registrarGasto(gastoMacarena);
+    servicioRegistroGasto.registrarGasto(gastoMacarena, HOGAR_ID);
 
-    // when
-    String sugerencia = servicioRegistroGasto.obtenerSugerenciaProximoPagador();
+    String sugerencia = servicioRegistroGasto.obtenerSugerenciaProximoPagador(HOGAR_ID);
 
-    // then
     assertThat(sugerencia, equalToIgnoringCase("ezequiel"));
   }
 
   @Test
   public void dadaUnaListaDeGastosPuedoObtenerUnaListaFiltradaPorTipo() {
-    //given
     List<Gasto> listaRecurrentes = givenUnaListaDeGastosRegistrados();
-    when(repositorioGasto.obtenerPorTipo(TipoGasto.RECURRENTE)).thenReturn(listaRecurrentes);
+    when(repositorioGasto.obtenerPorTipo(TipoGasto.RECURRENTE, HOGAR_ID))
+      .thenReturn(listaRecurrentes);
 
-    //when
     List<Gasto> listaGastosFiltrada = whenFiltroLosGastosPorTipo(TipoGasto.RECURRENTE);
-    //then
     thenObtengoUnaListaFiltrada(listaGastosFiltrada);
   }
 
   @Test
   public void queSePuedaObtenerGastosFijosRecurrentes() {
-    // given
     List<Gasto> listaFijosRecurrentes = givenUnaListaDeGastosRegistrados();
-    when(repositorioGasto.obtenerGastosFijosRecurrentes()).thenReturn(listaFijosRecurrentes);
+    when(repositorioGasto.obtenerGastosFijosRecurrentes(HOGAR_ID))
+      .thenReturn(listaFijosRecurrentes);
 
-    // when
-    List<Gasto> resultado = servicioRegistroGasto.obtenerGastosFijosRecurrentes();
+    List<Gasto> resultado = servicioRegistroGasto.obtenerGastosFijosRecurrentes(HOGAR_ID);
 
-    // then
     assertThat(resultado, equalTo(listaFijosRecurrentes));
     assertThat(resultado, hasSize(2));
-    verify(repositorioGasto, times(1)).obtenerGastosFijosRecurrentes();
+    verify(repositorioGasto, times(1)).obtenerGastosFijosRecurrentes(HOGAR_ID);
   }
 
   @Test
   public void queSePuedaActualizarGastoFijo() {
-    // given
     Long id = 1L;
     Gasto gasto = new Gasto("G001", TipoGasto.FIJO, "Alquiler", 50000.0, null, "ALQUILER");
     gasto.setId(id);
@@ -152,32 +144,24 @@ public class ServicioRegistroGastoTest {
 
     when(repositorioGasto.buscarPorId(id)).thenReturn(gasto);
 
-    // when
     LocalDateTime nuevaFecha = LocalDateTime.now();
     servicioRegistroGasto.actualizarGastoFijo(id, 60000.0, nuevaFecha);
 
-    // then
     assertThat(gasto.getMonto(), equalTo(60000.0));
-    assertThat(gasto.getPagado(), equalTo(false)); // Se resetea a pendiente para el nuevo ciclo
+    assertThat(gasto.getPagado(), equalTo(false));
     assertThat(gasto.getFechaVencimiento(), equalTo(nuevaFecha));
     verify(repositorioGasto, times(1)).modificar(gasto);
   }
 
   @Test
   public void queSePuedaEliminarGasto() {
-    // given
     Long id = 1L;
-
-    // when
     servicioRegistroGasto.eliminarGasto(id);
-
-    // then
     verify(repositorioGasto, times(1)).eliminar(id);
   }
 
   @Test
   public void queSePuedaMarcarGastoComoPagado() {
-    // given
     Long gastoId = 1L;
     Long usuarioId = 2L;
 
@@ -186,15 +170,13 @@ public class ServicioRegistroGastoTest {
     gasto.setPagado(false);
 
     List<Usuario> integrantesMock = givenCuatroIntegrantes();
-    Usuario usuario = integrantesMock.get(1); // ezequiel
+    Usuario usuario = integrantesMock.get(1);
 
     when(repositorioGasto.buscarPorId(gastoId)).thenReturn(gasto);
     when(repositorioUsuario.buscarPorId(usuarioId)).thenReturn(usuario);
 
-    // when
     servicioRegistroGasto.marcarComoPagado(gastoId, usuarioId);
 
-    // then
     assertThat(gasto.getPagado(), equalTo(true));
     assertThat(gasto.getUsuarioPagador(), equalTo(usuario));
     verify(repositorioGasto, times(1)).modificar(gasto);
@@ -202,43 +184,50 @@ public class ServicioRegistroGastoTest {
 
   @Test
   public void dadoQueHayGastosPendientesConVencimientoCuandoLosPidoEntoncesDevuelveLosDelRepositorio() {
-    // given
     Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
     luz.setFechaVencimiento(LocalDateTime.now().plusDays(5));
-    when(repositorioGasto.obtenerGastosPendientesConVencimiento()).thenReturn(List.of(luz));
+    when(repositorioGasto.obtenerGastosPendientesConVencimiento(HOGAR_ID)).thenReturn(List.of(luz));
 
-    // when
-    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosPendientes();
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosPendientes(HOGAR_ID);
 
-    // then
     assertThat(resultado, hasSize(1));
     assertThat(resultado.get(0).getDescripcion(), equalTo("Luz"));
   }
 
   @Test
-  public void dadaUnaFechaCuandoPidoLosVencimientosProximosEntoncesConsultaLosProximos30Dias() {
+  public void dadaUnaFechaКогдаPidoLosVencimientosProximosEntoncesConsultaLosProximos30Dias() {
     LocalDateTime hoy = LocalDateTime.now();
     Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
-    when(repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30)))
+    when(
+      repositorioGasto.obtenerPendientesConVencimientoEntre(
+        eq(hoy),
+        any(LocalDateTime.now().getClass()),
+        eq(HOGAR_ID)
+      )
+    )
       .thenReturn(List.of(luz));
 
-    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosProximos(hoy);
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosProximos(hoy, HOGAR_ID);
 
     assertThat(resultado, hasSize(1));
-    verify(repositorioGasto).obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(30));
+    verify(repositorioGasto)
+      .obtenerPendientesConVencimientoEntre(
+        eq(hoy),
+        any(LocalDateTime.now().getClass()),
+        eq(HOGAR_ID)
+      );
   }
 
   @Test
   public void dadaUnaFechaCuandoPidoLosVencimientosVencidosEntoncesConsultaLosAnterioresAEsaFecha() {
     LocalDateTime hoy = LocalDateTime.now();
-    //LocalDateTime hoy = LocalDateTime.of(2026, 10, 19, 10, 0);
     Gasto gas = new Gasto("G-011", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS");
-    when(repositorioGasto.obtenerPendientesVencidosAntesDe(hoy)).thenReturn(List.of(gas));
+    when(repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, HOGAR_ID)).thenReturn(List.of(gas));
 
-    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosVencidos(hoy);
+    List<Gasto> resultado = servicioRegistroGasto.obtenerVencimientosVencidos(hoy, HOGAR_ID);
 
     assertThat(resultado, hasSize(1));
-    verify(repositorioGasto).obtenerPendientesVencidosAntesDe(hoy);
+    verify(repositorioGasto).obtenerPendientesVencidosAntesDe(hoy, HOGAR_ID);
   }
 
   private void thenObtengoUnaListaFiltrada(List<Gasto> listaFiltrada) {
@@ -248,7 +237,7 @@ public class ServicioRegistroGastoTest {
   }
 
   private List<Gasto> whenFiltroLosGastosPorTipo(TipoGasto tipo) {
-    return servicioRegistroGasto.obtenerGastosPorTipo(tipo);
+    return servicioRegistroGasto.obtenerGastosPorTipo(tipo, HOGAR_ID);
   }
 
   private List<Gasto> givenUnaListaDeGastosRegistrados() {
@@ -299,11 +288,11 @@ public class ServicioRegistroGastoTest {
   }
 
   private void whenRegistroUn(Gasto gasto) {
-    servicioRegistroGasto.registrarGasto(gasto);
+    servicioRegistroGasto.registrarGasto(gasto, HOGAR_ID);
   }
 
   private void thenElGastoSeGuardaEnLaLista(Gasto gastoValido) {
-    List<Gasto> listaGastos = servicioRegistroGasto.obtenerTodosLosGastos();
+    List<Gasto> listaGastos = servicioRegistroGasto.obtenerTodosLosGastos(HOGAR_ID);
     assertNotNull(listaGastos, "La lista de gastos no debería ser nula");
     assertEquals(1, listaGastos.size(), "Debería haber exactamente 1 gasto registrado");
     assertEquals(gastoValido.getDescripcion(), listaGastos.get(0).getDescripcion());

@@ -1,57 +1,113 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <title>Taller Web I</title>
-
-    <!-- Boostrap core css -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-
-    <!-- custom style -->
-    <link rel="stylesheet" th:href="@{/css/main.css}" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumo - Iniciar Sesión</title>
+    <!-- Bootstrap 5 CSS & Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+    <style>
+        /* Estilos decorativos de fondo dinámico intermedio */
+        body.kumo-auth-bg {
+            background-color: #f8f9fa;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-shape-1 {
+            position: absolute;
+            top: -8%;
+            left: -8%;
+            width: 420px;
+            height: 420px;
+            background: rgba(255, 140, 175, 0.45); /* Rosa intermedio */
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+        }
+        .bg-shape-2 {
+            position: absolute;
+            bottom: -8%;
+            right: -8%;
+            width: 460px;
+            height: 460px;
+            background: rgba(190, 145, 255, 0.42); /* Lavanda suave pero presente */
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+        }
+        .bg-shape-3 {
+            position: absolute;
+            top: 38%;
+            right: 15%;
+            width: 310px;
+            height: 310px;
+            background: rgba(120, 235, 190, 0.38); /* Menta fresco */
+            border-radius: 50%;
+            filter: blur(50px);
+            z-index: -1;
+        }
+    </style>
 </head>
 
-<body>
+<body class="d-flex align-items-center justify-content-center min-vh-100 kumo-auth-bg p-3">
 
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-        <a class="navbar-brand" href="#">UNLAM</a>
-    </nav>
+    <!-- Formas flotantes de fondo -->
+    <div class="bg-shape-1"></div>
+    <div class="bg-shape-2"></div>
+    <div class="bg-shape-3"></div>
 
-    <main role="main" class="container">
+    <div class="container" style="max-width: 420px; z-index: 1;">
+        <!-- Logo / Encabezado -->
+        <div class="text-center mb-4">
+            <h1 class="fw-bold text-dark display-5 mb-1 tracking-tight">KUMO</h1>
+            <p class="text-muted fw-medium small">Tu hogar y tus cuentas organizadas en un solo lugar.</p>
+        </div>
 
-        <div class="container">
-            <div id="loginbox" style="margin-top:50px;"
-                class="mainbox col-md-6 col-md-offset-3 col-sm-8 col-sm-offset-2">
-                <form action="#" th:action="@{/validar-login}" method="POST" th:object="${datosLogin}">
-                    <h3 class="form-signin-heading">Taller Web I</h3>
-                    <hr class="colorgraph"><br>
+        <!-- Tarjeta de Login -->
+        <div class="kumo-card p-4 shadow-sm rounded-4 border-0 bg-white bg-opacity-80 backdrop-blur">
+            <h4 class="fw-bold mb-3"><i class="bi bi-box-arrow-in-right me-2 text-primary"></i>Iniciar Sesión</h4>
 
-                    <input th:field="*{email}" id="email" type="email" class="form-control" required />
-                    <input th:field="*{password}" type="password" id="password" class="form-control" required />
+            <form th:action="@{/validar-login}" method="POST" th:object="${datosLogin}">
+                <div class="mb-3">
+                    <label for="email" class="form-label small fw-semibold">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                        <input th:field="*{email}" id="email" type="email" class="form-control rounded-end-3 border-start-0" placeholder="tu@email.com" required autocomplete="email" />
+                    </div>
+                </div>
 
-                    <button id="btn-login" class="btn btn-lg btn-primary btn-block" Type="Submit"
-                        disabled>Login</button>
+                <div class="mb-3">
+                    <label for="password" class="form-label small fw-semibold">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                        <input th:field="*{password}" type="password" id="password" class="form-control rounded-end-3 border-start-0" placeholder="••••••••" required autocomplete="current-password" />
+                    </div>
+                </div>
 
-                    <p th:if="${error != null}" class="alert alert-danger" th:text="'Error ' + ${error}">
-                    </p>
-                </form>
-                <a id="btn-register" href="nuevo-usuario">Registrarme</a>
+                <!-- Banner de Error -->
+                <div th:if="${error != null}" class="alert alert-danger rounded-3 small py-2 mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <span th:text="${error}">Error al iniciar sesión</span>
+                </div>
+
+                <button id="btn-login" class="btn btn-dark w-100 rounded-3 py-2 fw-semibold mt-2 shadow-sm" type="submit">
+                    Ingresar al Dashboard
+                </button>
+            </form>
+
+            <div class="text-center mt-3 pt-3 border-top">
+                <span class="small text-muted">¿No tenés una cuenta?</span>
+                <a id="btn-register" th:href="@{/nuevo-usuario}" class="small fw-semibold text-decoration-none ms-1 text-primary">Registrarme</a>
             </div>
         </div>
-    </main>
-    <!-- /.container -->
+    </div>
 
-    <!-- Boostrap core js -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-        crossorigin="anonymous"></script>
-
-    <script type="module" th:src="@{js/login.js}"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" th:src="@{/js/login.js}"></script>
 </body>
 
 </html>

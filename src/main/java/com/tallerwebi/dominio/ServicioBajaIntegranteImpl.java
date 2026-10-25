@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
+import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,6 +32,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   private final ServicioCalculosGasto servicioCalculosGasto;
   private final ServicioHogar servicioHogar;
   private final ServicioCreditoTarea servicioCreditoTarea;
+  private final HttpSession session; // <-- Inyectamos la sesión para obtener el hogarId actual
 
   @Autowired
   public ServicioBajaIntegranteImpl(
@@ -39,7 +41,8 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     ServicioLiquidacion servicioLiquidacion,
     ServicioCalculosGasto servicioCalculosGasto,
     ServicioHogar servicioHogar,
-    ServicioCreditoTarea servicioCreditoTarea
+    ServicioCreditoTarea servicioCreditoTarea,
+    HttpSession session
   ) {
     this.repositorioUsuario = repositorioUsuario;
     this.repositorioGasto = repositorioGasto;
@@ -47,19 +50,34 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     this.servicioCalculosGasto = servicioCalculosGasto;
     this.servicioHogar = servicioHogar;
     this.servicioCreditoTarea = servicioCreditoTarea;
+    this.session = session;
+  }
+
+  // Método auxiliar para obtener el hogarId actual de la sesión
+  private Long obtenerHogarIdActual() {
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    if (hogarId == null) {
+      // Fallback por seguridad o si el hogar viene directo del servicioHogar
+      Hogar hogarActivo = servicioHogar.obtenerHogar();
+      if (hogarActivo != null) {
+        hogarId = hogarActivo.getId();
+      }
+    }
+    return hogarId;
   }
 
   @Override
   public List<Usuario> obtenerIntegrantesActivos() {
-    return repositorioUsuario.obtenerIntegrantesDelHogar();
+    return repositorioUsuario.obtenerIntegrantesDelHogar(obtenerHogarIdActual());
   }
 
   @Override
   public SimulacionBaja simularBaja(Long usuarioId) {
-    Usuario saliente = validarSaliente(usuarioId);
-    List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar();
+    Long hogarId = obtenerHogarIdActual();
+    Usuario saliente = validarSaliente(usuarioId, hogarId);
+    List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
     List<Usuario> restantes = sinElSaliente(integrantes, saliente);
-    List<Gasto> gastos = repositorioGasto.obtenerTodos();
+    List<Gasto> gastos = repositorioGasto.obtenerTodosPorHogar(hogarId);
 
     Map<String, Double> balances = calcularBalances(integrantes, gastos);
     String nombreSaliente = nombreDe(saliente);
@@ -92,9 +110,10 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
 
   @Override
   public void confirmarBaja(Long usuarioId) {
-    Usuario saliente = validarSaliente(usuarioId);
-    List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar();
-    validarSinSaldoPendiente(saliente, integrantes);
+    Long hogarId = obtenerHogarIdActual();
+    Usuario saliente = validarSaliente(usuarioId, hogarId);
+    List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
+    validarSinSaldoPendiente(saliente, integrantes, hogarId);
     List<Usuario> restantes = sinElSaliente(integrantes, saliente);
 
     saliente.setFechaBaja(LocalDateTime.now());
@@ -113,15 +132,18 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   /** No se puede dar de baja a alguien que todavía debe plata o al que le deben plata. */
-  private void validarSinSaldoPendiente(Usuario saliente, List<Usuario> integrantes) {
-    Map<String, Double> balances = calcularBalances(integrantes, repositorioGasto.obtenerTodos());
+  private void validarSinSaldoPendiente(Usuario saliente, List<Usuario> integrantes, Long hogarId) {
+    Map<String, Double> balances = calcularBalances(
+      integrantes,
+      repositorioGasto.obtenerTodosPorHogar(hogarId)
+    );
     double saldo = balances.getOrDefault(nombreDe(saliente), 0.0);
     if (Math.abs(saldo) > MARGEN_SALDO) {
       throw new IntegranteConSaldoPendienteException();
     }
   }
 
-  private Usuario validarSaliente(Long usuarioId) {
+  private Usuario validarSaliente(Long usuarioId, Long hogarId) {
     Usuario saliente = usuarioId == null ? null : repositorioUsuario.buscarPorId(usuarioId);
     if (saliente == null) {
       throw new UsuarioNoEncontrado();
@@ -129,7 +151,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     if (saliente.estaDeBaja()) {
       throw new UsuarioYaDadoDeBajaException();
     }
-    if (sinElSaliente(repositorioUsuario.obtenerIntegrantesDelHogar(), saliente).isEmpty()) {
+    if (sinElSaliente(repositorioUsuario.obtenerIntegrantesDelHogar(hogarId), saliente).isEmpty()) {
       throw new HogarSinIntegrantesException();
     }
     return saliente;
@@ -240,7 +262,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     Map<Long, Double[]> antes = new HashMap<>();
     Map<Long, Double[]> despues = new HashMap<>();
     if (cuotasCalculables) {
-      // Un escenario completo por vez, porque ServicioCalculosGasto guarda estado interno.
       antes = calcularCuotasSobreCopias(integrantes, hogar);
       despues = calcularCuotasSobreCopias(restantes, hogar);
     }
@@ -290,7 +311,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     return copias;
   }
 
-  /** Nadie supera el piso mínimo: todos aportan el piso y no hay brecha de horas. */
   private void asignarPisoATodos(List<Usuario> copias, Double piso) {
     for (Usuario copia : copias) {
       copia.setCuotaMensual(piso);

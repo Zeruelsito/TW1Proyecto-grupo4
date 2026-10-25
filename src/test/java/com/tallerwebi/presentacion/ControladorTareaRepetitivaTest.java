@@ -4,6 +4,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -15,6 +16,7 @@ import com.tallerwebi.dominio.TareaRepetitiva;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
+import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +28,20 @@ public class ControladorTareaRepetitivaTest {
   private ServicioTareaRepetitiva servicioTareaRepetitiva;
   private ServicioRegistroGasto servicioRegistroGasto;
   private ControladorTareaRepetitiva controladorTareaRepetitiva;
+  private HttpSession sessionMock;
+
+  private static final Long HOGAR_ID = 1L;
 
   @BeforeEach
   public void init() {
     servicioTareaRepetitiva = mock(ServicioTareaRepetitiva.class);
     servicioRegistroGasto = mock(ServicioRegistroGasto.class);
+    sessionMock = mock(HttpSession.class);
+
     controladorTareaRepetitiva =
       new ControladorTareaRepetitiva(servicioTareaRepetitiva, servicioRegistroGasto);
+
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(HOGAR_ID);
   }
 
   @Test
@@ -64,7 +73,7 @@ public class ControladorTareaRepetitivaTest {
     List<Usuario> integrantes = new ArrayList<>();
     integrantes.add(new Usuario("ori", "o1@email.com", "3333"));
     integrantes.add(new Usuario("ori2", "o2@email.com", "4444"));
-    when(servicioRegistroGasto.obtenerIntegrantes()).thenReturn(integrantes);
+    when(servicioRegistroGasto.obtenerIntegrantes(anyLong())).thenReturn(integrantes);
     return integrantes;
   }
 
@@ -99,7 +108,7 @@ public class ControladorTareaRepetitivaTest {
 
   private void givenElHogarNoTieneIntegrantes(Long tareaId) {
     List<Usuario> integrantes = new ArrayList<>();
-    when(servicioRegistroGasto.obtenerIntegrantes()).thenReturn(integrantes);
+    when(servicioRegistroGasto.obtenerIntegrantes(anyLong())).thenReturn(integrantes);
     doThrow(new HogarSinIntegrantesException())
       .when(servicioTareaRepetitiva)
       .asignarEquitativamente(tareaId, integrantes);
@@ -117,7 +126,7 @@ public class ControladorTareaRepetitivaTest {
   }
 
   private ModelAndView whenRotoLaTarea(Long tareaId) {
-    return controladorTareaRepetitiva.rotarTarea(tareaId);
+    return controladorTareaRepetitiva.rotarTarea(tareaId, sessionMock);
   }
 
   private void thenSeAsignoLaTareaYRedirige(
@@ -138,11 +147,11 @@ public class ControladorTareaRepetitivaTest {
 
     List<Usuario> integrantes = new ArrayList<>();
     integrantes.add(new Usuario("ori", "o1@email.com", "3333"));
-    when(servicioRegistroGasto.obtenerIntegrantes()).thenReturn(integrantes);
+    when(servicioRegistroGasto.obtenerIntegrantes(anyLong())).thenReturn(integrantes);
   }
 
   private ModelAndView whenIrATareasRepetitivas() {
-    return controladorTareaRepetitiva.irATareasRepetitivas();
+    return controladorTareaRepetitiva.irATareasRepetitivas(sessionMock);
   }
 
   private void thenLaVistaEs(String nombreEsperadoDeVista, ModelAndView mav) {

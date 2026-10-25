@@ -2,16 +2,22 @@ package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import com.tallerwebi.dominio.excepcion.ParametroInvalidoException;
+import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@Transactional
 public class ServicioHogarImpl implements ServicioHogar {
 
   private final List<Hogar> hogares = new ArrayList<>();
   private Hogar hogar = new Hogar("Hogar 1"); //le saque el final
+
+  @Autowired
+  private RepositorioHogar repositorioHogar;
 
   @Override
   public void actualizarParametros(Double precioHoraTarea, Double pisoMinimoHogar) {
@@ -70,7 +76,39 @@ public class ServicioHogarImpl implements ServicioHogar {
   }
 
   @Override
-  public List<Hogar> obtenerHogares() {
-    return new ArrayList<>(hogares);
+  public List<Hogar> obtenerHogares(Long usuarioId) {
+    List<Hogar> hogares = repositorioHogar.obtenerHogaresDeUsuario(usuarioId);
+    for (Hogar hogar : hogares) {
+      org.hibernate.Hibernate.initialize(hogar.getIntegrantes());
+    }
+    return hogares;
+  }
+
+  @Override
+  public void crearHogar(Hogar hogar) {
+    repositorioHogar.guardar(hogar);
+  }
+
+  @Override
+  public boolean unirseAHogar(String nombreHogar, String pin, Usuario usuario) {
+    List<Hogar> todosLosHogares = repositorioHogar.obtenerTodos();
+    for (Hogar h : todosLosHogares) {
+      if (
+        h.getNombreHogar() != null &&
+        h.getNombreHogar().equalsIgnoreCase(nombreHogar) &&
+        pin.equals(h.getPin())
+      ) {
+        boolean yaEsIntegrante = h
+          .getIntegrantes()
+          .stream()
+          .anyMatch(u -> u.getId().equals(usuario.getId()));
+        if (!yaEsIntegrante) {
+          h.getIntegrantes().add(usuario);
+          repositorioHogar.actualizar(h);
+        }
+        return true;
+      }
+    }
+    return false;
   }
 }

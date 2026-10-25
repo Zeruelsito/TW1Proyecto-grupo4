@@ -1,5 +1,6 @@
 package com.tallerwebi.dominio;
 
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -24,25 +25,48 @@ public class ServicioReporteImpl implements ServicioReporte {
   private final ServicioRegistroGasto servicioRegistroGasto;
   private final ServicioCreditoTarea servicioCreditoTarea;
   private final ServicioLiquidacion servicioLiquidacion;
+  private final ServicioHogar servicioHogar;
+  private final HttpSession session;
 
   @Autowired
   public ServicioReporteImpl(
     ServicioRegistroGasto servicioRegistroGasto,
     ServicioCreditoTarea servicioCreditoTarea,
-    ServicioLiquidacion servicioLiquidacion
+    ServicioLiquidacion servicioLiquidacion,
+    ServicioHogar servicioHogar,
+    HttpSession session
   ) {
     this.servicioRegistroGasto = servicioRegistroGasto;
     this.servicioCreditoTarea = servicioCreditoTarea;
     this.servicioLiquidacion = servicioLiquidacion;
+    this.servicioHogar = servicioHogar;
+    this.session = session;
+  }
+
+  // Método auxiliar para obtener el hogarId actual de la sesión
+  private Long obtenerHogarIdActual() {
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    if (hogarId == null) {
+      Hogar hogarActivo = servicioHogar.obtenerHogar();
+      if (hogarActivo != null) {
+        hogarId = hogarActivo.getId();
+      }
+    }
+    return hogarId;
   }
 
   @Override
   public ReporteMensual generarReporte(YearMonth mes) {
-    List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes();
-    List<Gasto> gastos = filtrarGastosDelMes(mes);
+    Long hogarId = obtenerHogarIdActual();
+
+    List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes(hogarId);
+    List<Gasto> gastos = filtrarGastosDelMes(mes, hogarId);
     List<Tarea> tareas = filtrarTareasDelMes(mes);
 
-    Hogar hogar = new Hogar("Hogar Compartido");
+    Hogar hogar = servicioHogar.obtenerHogar();
+    if (hogar == null) {
+      hogar = new Hogar("Hogar Compartido");
+    }
     hogar.setIntegrantes(integrantes);
 
     return new ReporteMensual(
@@ -55,9 +79,9 @@ public class ServicioReporteImpl implements ServicioReporte {
     );
   }
 
-  private List<Gasto> filtrarGastosDelMes(YearMonth mes) {
+  private List<Gasto> filtrarGastosDelMes(YearMonth mes, Long hogarId) {
     List<Gasto> delMes = new ArrayList<>();
-    for (Gasto gasto : servicioRegistroGasto.obtenerTodosLosGastos()) {
+    for (Gasto gasto : servicioRegistroGasto.obtenerTodosLosGastos(hogarId)) {
       if (esDelMes(gasto.getFecha(), mes)) {
         delMes.add(gasto);
       }
@@ -110,7 +134,6 @@ public class ServicioReporteImpl implements ServicioReporte {
   private double pagadoPor(Usuario integrante, List<Gasto> gastos) {
     double pagado = 0;
     for (Gasto gasto : gastos) {
-      // Modificado: Ahora evaluamos a través del objeto usuarioPagador
       if (
         integrante.getId() != null &&
         gasto.getUsuarioPagador() != null &&
@@ -151,7 +174,6 @@ public class ServicioReporteImpl implements ServicioReporte {
     fila(csv, "GASTOS");
     fila(csv, "Fecha", "Descripcion", "Categoria", "Tipo", "Pagador", "Monto");
     for (Gasto gasto : reporte.getGastos()) {
-      // Modificado: Extraemos el ID del usuario pagador desde la relación ManyToOne
       Long pagadorId = (gasto.getUsuarioPagador() != null)
         ? gasto.getUsuarioPagador().getId()
         : null;
@@ -162,7 +184,7 @@ public class ServicioReporteImpl implements ServicioReporte {
         gasto.getDescripcion(),
         gasto.getCategoria(),
         gasto.getTipoGasto() != null ? gasto.getTipoGasto().getDescripcion() : "",
-        reporte.nombreDe(pagadorId), // Sigue recibiendo el Long que espera el reporte
+        reporte.nombreDe(pagadorId),
         numero(gasto.getMonto())
       );
     }
