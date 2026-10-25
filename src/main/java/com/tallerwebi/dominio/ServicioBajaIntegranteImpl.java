@@ -113,7 +113,10 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     Long hogarId = obtenerHogarIdActual();
     Usuario saliente = validarSaliente(usuarioId, hogarId);
     List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
-    validarSinSaldoPendiente(saliente, integrantes, hogarId);
+    SimulacionBaja simulacion = simularBaja(usuarioId);
+    if (simulacion.isSaldoPendiente()) {
+      throw new IntegranteConSaldoPendienteException();
+    }
     List<Usuario> restantes = sinElSaliente(integrantes, saliente);
 
     saliente.setFechaBaja(LocalDateTime.now());
@@ -128,18 +131,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
       usuario.setCuotaMensual(valorDe(nuevas, usuario.getId(), CUOTA));
       usuario.setHorasTareaARealizar(valorDe(nuevas, usuario.getId(), HORAS));
       repositorioUsuario.modificar(usuario);
-    }
-  }
-
-  /** No se puede dar de baja a alguien que todavía debe plata o al que le deben plata. */
-  private void validarSinSaldoPendiente(Usuario saliente, List<Usuario> integrantes, Long hogarId) {
-    Map<String, Double> balances = calcularBalances(
-      integrantes,
-      repositorioGasto.obtenerTodosPorHogar(hogarId)
-    );
-    double saldo = balances.getOrDefault(nombreDe(saliente), 0.0);
-    if (Math.abs(saldo) > MARGEN_SALDO) {
-      throw new IntegranteConSaldoPendienteException();
     }
   }
 
