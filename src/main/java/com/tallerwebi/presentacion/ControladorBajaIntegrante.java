@@ -3,6 +3,7 @@ package com.tallerwebi.presentacion;
 import com.tallerwebi.dominio.ServicioBajaIntegrante;
 import com.tallerwebi.dominio.SimulacionBaja;
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
+import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,11 +54,16 @@ public class ControladorBajaIntegrante {
     try {
       servicioBajaIntegrante.confirmarBaja(usuarioId);
     } catch (RuntimeException excepcion) {
-      ModelAndView mav = vistaBase();
-      mav.addObject("error", mensajeDeError(excepcion));
-      return mav;
+      return simulacionConError(usuarioId, mensajeDeError(excepcion));
     }
     return new ModelAndView("redirect:/hogar/baja?confirmada=true");
+  }
+
+  /** Vuelve a mostrar la simulación del integrante (si se puede) junto con el mensaje de error. */
+  private ModelAndView simulacionConError(Long usuarioId, String error) {
+    ModelAndView mav = simular(usuarioId);
+    mav.addObject("error", error);
+    return mav;
   }
 
   private ModelAndView vistaBase() {
@@ -75,6 +81,9 @@ public class ControladorBajaIntegrante {
     }
     if (excepcion instanceof HogarSinIntegrantesException) {
       return "No se puede dar de baja al último integrante del hogar.";
+    }
+    if (excepcion instanceof IntegranteConSaldoPendienteException) {
+      return "No se puede dar de baja: el integrante todavía tiene saldo pendiente.";
     }
     throw excepcion;
   }

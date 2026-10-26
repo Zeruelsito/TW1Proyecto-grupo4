@@ -59,4 +59,8 @@ public class SimulacionBaja {
   public boolean isDebeCobrar() {
     return balanceFinal != null && balanceFinal > 0;
   }
+
+  public boolean isSaldoPendiente() {
+    return balanceFinal != null && Math.abs(balanceFinal) > 0.01;
+  }
 }

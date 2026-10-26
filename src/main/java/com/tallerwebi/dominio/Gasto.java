@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
+@SuppressWarnings("PMD.TooManyFields")
 public class Gasto {
 
   @Id
@@ -21,6 +22,10 @@ public class Gasto {
 
   @Column(unique = true)
   private String codigo;
+
+  @ManyToOne
+  @JoinColumn(name = "hogar_id")
+  private Hogar hogar;
 
   private String descripcion;
   private Double monto;
@@ -147,5 +152,13 @@ public class Gasto {
 
   public void setFechaVencimiento(LocalDateTime fechaVencimiento) {
     this.fechaVencimiento = fechaVencimiento;
+  }
+
+  public Hogar getHogar() {
+    return hogar;
+  }
+
+  public void setHogar(Hogar hogar) {
+    this.hogar = hogar;
   }
 }

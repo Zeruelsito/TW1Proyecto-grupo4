@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 public class RepositorioGastoImpl implements RepositorioGasto {
 
   SessionFactory sessionFactory;
+  private static final String CAMPO_HOGAR_ID = "hogarId";
 
   @Autowired
   public RepositorioGastoImpl(SessionFactory sessionFactory) {
@@ -62,26 +63,35 @@ public class RepositorioGastoImpl implements RepositorioGasto {
   }
 
   @Override
-  public List<Gasto> obtenerTodos() {
-    String hql = "from Gasto";
-    return sessionFactory.getCurrentSession().createQuery(hql, Gasto.class).getResultList();
-  }
-
-  @Override
-  public List<Gasto> obtenerPorTipo(TipoGasto tipo) {
-    String hql = "from Gasto g where g.tipoGasto = :tipo";
+  public List<Gasto> obtenerTodosPorHogar(Long hogarId) {
+    String hql = "from Gasto g WHERE g.hogar.id = :hogarId";
     return sessionFactory
       .getCurrentSession()
       .createQuery(hql, Gasto.class)
-      .setParameter("tipo", tipo)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
       .getResultList();
   }
 
   @Override
-  public List<Gasto> obtenerGastosPendientesConVencimiento() {
+  public List<Gasto> obtenerPorTipo(TipoGasto tipo, Long hogarId) {
+    String hql = "FROM Gasto g WHERE g.tipoGasto = :tipo AND g.hogar.id = :hogarId";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(hql, Gasto.class)
+      .setParameter("tipo", tipo)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
+      .getResultList();
+  }
+
+  @Override
+  public List<Gasto> obtenerGastosPendientesConVencimiento(Long hogarId) {
     String hql =
-      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento IS NOT NULL ORDER BY g.fechaVencimiento ASC";
-    return sessionFactory.getCurrentSession().createQuery(hql, Gasto.class).getResultList();
+      "FROM Gasto g WHERE g.hogar.id = :hogarId AND g.pagado = false AND g.fechaVencimiento IS NOT NULL ORDER BY g.fechaVencimiento ASC";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(hql, Gasto.class)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
+      .getResultList();
   }
 
   @Override
@@ -90,9 +100,14 @@ public class RepositorioGastoImpl implements RepositorioGasto {
   }
 
   @Override
-  public List<Gasto> obtenerGastosFijosRecurrentes() {
-    String hql = "FROM Gasto g WHERE g.tipoGasto = 'FIJO' OR g.tipoGasto = 'RECURRENTE'";
-    return sessionFactory.getCurrentSession().createQuery(hql, Gasto.class).getResultList();
+  public List<Gasto> obtenerGastosFijosRecurrentes(Long hogarId) {
+    String hql =
+      "FROM Gasto g WHERE g.hogar.id = :hogarId AND (g.tipoGasto = 'FIJO' OR g.tipoGasto = 'RECURRENTE')";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(hql, Gasto.class)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
+      .getResultList();
   }
 
   @Override
@@ -106,25 +121,28 @@ public class RepositorioGastoImpl implements RepositorioGasto {
   @Override
   public List<Gasto> obtenerPendientesConVencimientoEntre(
     LocalDateTime desde,
-    LocalDateTime hasta
+    LocalDateTime hasta,
+    Long hogarId
   ) {
     String query =
-      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento BETWEEN :desde AND :hasta ORDER BY g.fechaVencimiento ASC";
+      "FROM Gasto g WHERE g.hogar.id = :hogarId AND g.pagado = false AND g.fechaVencimiento BETWEEN :desde AND :hasta ORDER BY g.fechaVencimiento ASC";
     return sessionFactory
       .getCurrentSession()
       .createQuery(query, Gasto.class)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
       .setParameter("desde", desde)
       .setParameter("hasta", hasta)
       .getResultList();
   }
 
   @Override
-  public List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora) {
+  public List<Gasto> obtenerPendientesVencidosAntesDe(LocalDateTime ahora, Long hogarId) {
     String query =
-      "FROM Gasto g WHERE g.pagado = false AND g.fechaVencimiento < :ahora ORDER BY g.fechaVencimiento ASC";
+      "FROM Gasto g WHERE g.hogar.id = :hogarId AND g.pagado = false AND g.fechaVencimiento < :ahora ORDER BY g.fechaVencimiento ASC";
     return sessionFactory
       .getCurrentSession()
       .createQuery(query, Gasto.class)
+      .setParameter(CAMPO_HOGAR_ID, hogarId)
       .setParameter("ahora", ahora)
       .getResultList();
   }

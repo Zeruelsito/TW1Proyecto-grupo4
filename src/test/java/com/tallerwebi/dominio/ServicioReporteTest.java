@@ -5,8 +5,10 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.List;
@@ -20,17 +22,26 @@ public class ServicioReporteTest {
   private ServicioRegistroGasto servicioRegistroGastoMock;
   private ServicioCreditoTarea servicioCreditoTareaMock;
   private ServicioLiquidacion servicioLiquidacionMock;
+  private ServicioHogar servicioHogarMock;
+  private HttpSession sessionMock;
+
+  private static final Long HOGAR_ID = 1L;
 
   @BeforeEach
   public void init() {
     servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
     servicioLiquidacionMock = mock(ServicioLiquidacion.class);
+    servicioHogarMock = mock(ServicioHogar.class);
+    sessionMock = mock(HttpSession.class);
+
     servicioReporte =
       new ServicioReporteImpl(
         servicioRegistroGastoMock,
         servicioCreditoTareaMock,
-        servicioLiquidacionMock
+        servicioLiquidacionMock,
+        servicioHogarMock,
+        sessionMock
       );
   }
 
@@ -40,14 +51,19 @@ public class ServicioReporteTest {
     Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
     usuario.setId(1L);
 
-    // Actualizado: Pasamos el código y el objeto Usuario en el constructor de Gasto
+    Hogar hogar = new Hogar("Casa Test");
+    hogar.setId(HOGAR_ID);
+
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(HOGAR_ID);
+    when(servicioHogarMock.obtenerHogar()).thenReturn(hogar);
+
     Gasto gastoSeptiembre = new Gasto("G001", TipoGasto.FIJO, "Luz", 1000.0, usuario, "SERVICIOS");
     gastoSeptiembre.setFecha(LocalDateTime.of(2026, 9, 10, 12, 0));
     Gasto gastoAgosto = new Gasto("G002", TipoGasto.FIJO, "Gas", 500.0, usuario, "SERVICIOS");
     gastoAgosto.setFecha(LocalDateTime.of(2026, 8, 10, 12, 0));
 
-    when(servicioRegistroGastoMock.obtenerIntegrantes()).thenReturn(List.of());
-    when(servicioRegistroGastoMock.obtenerTodosLosGastos())
+    when(servicioRegistroGastoMock.obtenerIntegrantes(anyLong())).thenReturn(List.of());
+    when(servicioRegistroGastoMock.obtenerTodosLosGastos(anyLong()))
       .thenReturn(List.of(gastoSeptiembre, gastoAgosto));
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(List.of());
     when(servicioLiquidacionMock.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
@@ -89,7 +105,6 @@ public class ServicioReporteTest {
     Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
     usuario.setId(1L);
 
-    // Actualizado: Pasamos el código y el objeto Usuario
     Gasto gasto = new Gasto("G001", TipoGasto.FIJO, "Luz", 1500.0, usuario, "SERVICIOS");
     ReporteMensual reporte = new ReporteMensual(
       YearMonth.of(2026, 9),

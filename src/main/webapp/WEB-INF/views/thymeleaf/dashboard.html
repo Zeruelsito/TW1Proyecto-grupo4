@@ -9,32 +9,39 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+    <style>
+        /* Estilo personalizado para destacar la opción activa del Dashboard en la barra lateral */
+        .nav-link.dashboard-active {
+            background-color: rgba(255, 182, 193, 0.45) !important;
+            color: #212529 !important;
+            font-weight: 600;
+            border-radius: 0.75rem;
+        }
+    </style>
 </head>
 <body class="p-3">
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Navigation (Igual a tareas.html) -->
+        <!-- Sidebar Navigation Unificado -->
         <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
             <div>
                 <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
-                <ul class="nav flex-column mt-4">
-                    <li class="nav-item">
-                        <a class="nav-link active" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidacion</a>
-                    </li>
+                <ul class="nav flex-column mt-4 gap-1">
+                    <li class="nav-item"><a class="nav-link dashboard-active px-3 py-2" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
             <div class="px-3">
-                <a href="#" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+                <a th:href="@{/login}" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
             </div>
         </div>
 
@@ -43,8 +50,10 @@
             <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
-                    <h2 class="fw-bold mb-0">Hola de nuevo!</h2>
-                    <p class="text-muted small mb-0">Asi estan las cosas hoy en tu hogar.</p>
+                    <h2 class="fw-bold mb-0">
+                        Hola <span th:text="${nombreUsuario != null ? nombreUsuario : 'Usuario'}">Usuario</span>!
+                    </h2>
+                    <p class="text-muted small mb-0">Así están las cosas hoy en tu hogar.</p>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <a th:href="@{/gastos}" class="btn btn-dark rounded-3 px-3 py-2 d-flex align-items-center gap-2">
@@ -52,17 +61,64 @@
                     </a>
                     <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
                         <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
-                            <span th:text="${usuarioLogueado != null ? #strings.substring(usuarioLogueado, 0, 1) : 'U'}">U</span>
+                            <span th:text="${nombreUsuario != null ? #strings.substring(nombreUsuario, 0, 1) : 'U'}">U</span>
                         </div>
-                        <span class="fw-medium small" th:text="${usuarioLogueado != null ? usuarioLogueado : 'Mi Casa'}">Mi Casa</span>
+                        <span class="fw-medium small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Bento Grid Principal -->
-            <div class="row g-4 mb-4">
+            <!-- Bento Box Grande: Si el usuario NO pertenece a ningún hogar -->
+            <div class="row mb-4" th:if="${hogaresUsuario == null or #lists.isEmpty(hogaresUsuario)}">
+                <div class="col-12">
+                    <div class="kumo-card kumo-badge-pink p-5 rounded-4 shadow-sm text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-house-exclamation fs-1 text-danger"></i>
+                        </div>
+                        <h3 class="fw-bold mb-2">¡Aún no formás parte de ningún hogar!</h3>
+                        <p class="text-muted col-md-8 mx-auto mb-4">
+                            Para empezar a gestionar tus cuentas, gastos y tareas en comunidad con Kumo, podés crear un nuevo hogar o unirte al de tus compañeros ingresando un PIN.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <button type="button" class="btn btn-dark rounded-3 px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCrearHogar">
+                                <i class="bi bi-house-add me-2"></i> Crear un Hogar
+                            </button>
+                            <button type="button" class="btn btn-outline-dark rounded-3 px-4 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalUnirseHogar">
+                                <i class="bi bi-box-arrow-in-right me-2"></i> Unirme a un Hogar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- Bento Card 1: Sugerencia Inteligente -->
+            <!-- Bento Box Reducido y Discreto: Si el usuario SÍ pertenece a algún hogar -->
+            <div class="row mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
+                <div class="col-12">
+                    <div class="kumo-card kumo-badge-blue p-3 rounded-4 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-white p-2 text-info shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; min-width: 42px;">
+                                <i class="bi bi-houses fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-dark">Gestión de Hogares</h6>
+                                <p class="small text-muted mb-0">¿Querés crear otro espacio de gastos o unirte al hogar de otro grupo?</p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-dark rounded-3 px-3 py-2 fw-semibold shadow-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalCrearHogar">
+                                <i class="bi bi-house-add me-1"></i> Crear Hogar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark rounded-3 px-3 py-2 fw-semibold text-nowrap" data-bs-toggle="modal" data-bs-target="#modalUnirseHogar">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Unirse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Grid Principal (Visible solo si pertenece a un hogar) -->
+            <div class="row g-4 mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
+                <!-- Bento Card 1 -->
                 <div class="col-md-6 col-lg-4">
                     <div class="kumo-card kumo-badge-pink d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -70,10 +126,8 @@
                                 <span class="badge bg-white text-danger rounded-pill px-3 py-2 fw-semibold">Sugerencia Smart</span>
                                 <i class="bi bi-magic fs-5 text-danger"></i>
                             </div>
-                            <h6 class="text-muted fw-semibold mt-3 mb-1">Proximo a pagar:</h6>
-                            <h3 class="fw-bold text-danger mb-0" th:text="${sugerenciaProximoPagador != null ? sugerenciaProximoPagador : 'Sin datos'}">
-                                Sofia
-                            </h3>
+                            <h6 class="text-muted fw-semibold mt-3 mb-1">Próximo a pagar:</h6>
+                            <h3 class="fw-bold text-danger mb-0" th:text="${sugerenciaProximoPagador != null ? sugerenciaProximoPagador : 'Sin datos'}">Sofía</h3>
                             <p class="small text-muted mb-0 mt-2">Es quien registra menor monto aportado este mes.</p>
                         </div>
                         <div class="pt-4">
@@ -82,7 +136,7 @@
                     </div>
                 </div>
 
-                <!-- Bento Card 2: Total Gastos del Mes -->
+                <!-- Bento Card 2 -->
                 <div class="col-md-6 col-lg-4">
                     <div class="kumo-card kumo-badge-purple d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -91,12 +145,8 @@
                                 <i class="bi bi-wallet2 fs-5 text-primary"></i>
                             </div>
                             <h6 class="text-muted fw-semibold mt-3 mb-1">Total Gastado</h6>
-                            <h3 class="fw-bold text-primary mb-0" th:text="${totalGastosMes != null ? '$' + #numbers.formatDecimal(totalGastosMes, 1, 'POINT', 2, 'COMMA') : '$0,00'}">
-                                $45.200,00
-                            </h3>
-                            <p class="small text-muted mb-0 mt-2" th:text="${cantidadGastos != null ? cantidadGastos + ' gastos registrados este mes' : '0 gastos registrados'}">
-                                12 gastos registrados este mes
-                            </p>
+                            <h3 class="fw-bold text-primary mb-0" th:text="${totalGastosMes != null ? '$' + #numbers.formatDecimal(totalGastosMes, 1, 'POINT', 2, 'COMMA') : '$0,00'}">$45.200,00</h3>
+                            <p class="small text-muted mb-0 mt-2" th:text="${cantidadGastos != null ? cantidadGastos + ' gastos registrados este mes' : '0 gastos registrados'}">12 gastos</p>
                         </div>
                         <div class="pt-4">
                             <a th:href="@{/gastos}" class="btn btn-sm btn-outline-primary w-100 rounded-3 fw-semibold">Ver detalle completo</a>
@@ -104,30 +154,31 @@
                     </div>
                 </div>
 
-                <!-- Bento Card 3: Acceso Directo a Tareas -->
+                <!-- Bento Card 3 -->
                 <div class="col-md-12 col-lg-4">
                     <div class="kumo-card kumo-badge-blue d-flex flex-column justify-content-between h-100 p-4">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="badge bg-white text-info rounded-pill px-3 py-2 fw-semibold">Tareas Domesticas</span>
+                                <span class="badge bg-white text-info rounded-pill px-3 py-2 fw-semibold">Tareas Domésticas</span>
                                 <i class="bi bi-check2-square fs-5 text-info"></i>
                             </div>
                             <h6 class="text-muted fw-semibold mt-3 mb-1">Trabajo del Hogar</h6>
-                            <p class="small text-muted mt-2">Registro horas de trabajo domestico para acumular credito monetario descontable en la liquidacion.</p>
+                            <p class="small text-muted mt-2">Registro horas de trabajo doméstico para acumular crédito monetario descontable en la liquidación.</p>
                         </div>
                         <div class="pt-4">
                             <a th:href="@{/tareas}" class="btn btn-sm btn-outline-info w-100 rounded-3 fw-semibold">Ir al panel de Tareas</a>
                         </div>
                     </div>
                 </div>
+            </div>
 
-            <div class="row pt-3 pb-3">
+            <!-- Lista de Miembros -->
+            <div class="row pt-3 pb-3" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="fw-bold mb-0">Lista de Miembros</h5>
                         </div>
-
                         <div class="table-responsive">
                             <table class="table table-borderless align-middle mb-0">
                                 <thead class="table-light">
@@ -143,8 +194,8 @@
                                     <td class="fw-semibold" th:text="${usuario.cuotaMensual}"></td>
                                     <td class="fw-semibold" th:text="${usuario.horasTareaARealizar}"></td>
                                 </tr>
-                                <tr th:if="${usuarios == null or #lists.isEmpty(usuarios)}" class="text-center py-3">
-                                    <p class="small text-muted mb-0">No hay usuarios registrados.</p>
+                                <tr th:if="${usuarios == null or #lists.isEmpty(usuarios)}">
+                                    <td colspan="3" class="text-center small text-muted py-3">No hay usuarios registrados.</td>
                                 </tr>
                                 </tbody>
                             </table>
@@ -153,21 +204,20 @@
                 </div>
             </div>
 
-            <!-- Seccion Secundaria: ultimos Movimientos -->
-            <div class="row">
+            <!-- Actividad Reciente -->
+            <div class="row mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="fw-bold mb-0">Actividad Reciente</h5>
                             <a th:href="@{/gastos}" class="small text-decoration-none fw-semibold">Ver todos</a>
                         </div>
-
                         <div class="table-responsive">
                             <table class="table table-borderless align-middle mb-0">
                                 <thead class="table-light">
                                 <tr class="text-muted small text-uppercase">
-                                    <th>Descripcion</th>
-                                    <th>Categoria</th>
+                                    <th>Descripción</th>
+                                    <th>Categoría</th>
                                     <th class="text-end">Monto</th>
                                 </tr>
                                 </thead>
@@ -194,7 +244,65 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL: Crear Hogar (Formato Bento Box) -->
+<div class="modal fade" id="modalCrearHogar" tabindex="-1" aria-labelledby="modalCrearHogarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalCrearHogarLabel"><i class="bi bi-house-add me-2 text-primary"></i>Crear Nuevo Hogar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form th:action="@{/crear-hogar}" method="POST">
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Definí un nombre y un PIN único para que tus compañeros puedan sumarse después.</p>
+                    <div class="mb-3">
+                        <label for="nombreHogar" class="form-label small fw-semibold">Nombre del Hogar</label>
+                        <input type="text" class="form-control rounded-3" id="nombreHogar" name="nombreHogar" placeholder="Ej: Depto Palermo" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="pin" class="form-label small fw-semibold">PIN de seguridad (String)</label>
+                        <input type="text" class="form-control rounded-3" id="pin" name="pin" placeholder="Ej: kumo2026" required />
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-semibold shadow-sm">Crear Hogar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<!-- MODAL: Unirse a Hogar (Formato Bento Box) -->
+<div class="modal fade" id="modalUnirseHogar" tabindex="-1" aria-labelledby="modalUnirseHogarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalUnirseHogarLabel"><i class="bi bi-box-arrow-in-right me-2 text-success"></i>Unirse a un Hogar</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form th:action="@{/unirse-hogar}" method="POST">
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Ingresá el nombre exacto del hogar y el PIN provisto por el administrador para sumarte.</p>
+                    <div class="mb-3">
+                        <label for="nombreHogarUnirse" class="form-label small fw-semibold">Nombre del Hogar</label>
+                        <input type="text" class="form-control rounded-3" id="nombreHogarUnirse" name="nombreHogar" placeholder="Ej: Hogar Principal" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="pinUnirse" class="form-label small fw-semibold">PIN del Hogar</label>
+                        <input type="text" class="form-control rounded-3" id="pinUnirse" name="pin" placeholder="PIN de acceso" required />
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-semibold shadow-sm">Unirme al Hogar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

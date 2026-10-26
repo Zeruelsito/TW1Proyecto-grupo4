@@ -5,4 +5,5 @@ import java.util.List;
 public interface ServicioUsuario {
   void registrarUsuario(Usuario usuario);
   List<Usuario> obtenerTodos();
+  Usuario obtenerUsuarioPorId(Long id);
 }

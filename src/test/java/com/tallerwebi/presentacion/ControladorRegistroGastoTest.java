@@ -6,6 +6,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -17,6 +19,7 @@ import com.tallerwebi.dominio.TipoGasto;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,10 +31,12 @@ public class ControladorRegistroGastoTest {
 
   private ServicioRegistroGasto servicioRegistroGasto;
   private ControladorRegistroGasto controladorRegistroGasto;
+  private HttpSession sessionMock;
 
   @BeforeEach
   public void init() {
     servicioRegistroGasto = mock(ServicioRegistroGasto.class);
+    sessionMock = mock(HttpSession.class);
     controladorRegistroGasto = new ControladorRegistroGasto(servicioRegistroGasto);
   }
 
@@ -66,7 +71,7 @@ public class ControladorRegistroGastoTest {
     Gasto gastoInvalido = givenUnGastoConDescripcionVacia();
     doThrow(new DescripcionGastoVaciaException())
       .when(servicioRegistroGasto)
-      .registrarGasto(gastoInvalido);
+      .registrarGasto(eq(gastoInvalido), anyLong());
 
     // when
     ModelAndView mav = whenRegistroUn(gastoInvalido);
@@ -82,7 +87,7 @@ public class ControladorRegistroGastoTest {
     Gasto gastoInvalido = givenUnGastoConMontoInvalido();
     doThrow(new MontoGastoInvalidoException())
       .when(servicioRegistroGasto)
-      .registrarGasto(gastoInvalido);
+      .registrarGasto(eq(gastoInvalido), anyLong());
 
     // when
     ModelAndView mav = whenRegistroUn(gastoInvalido);
@@ -95,10 +100,10 @@ public class ControladorRegistroGastoTest {
   @Test
   public void dadoElFiltroProximosCuandoConsultoVencimientosEntoncesMuestraLosProximos() {
     List<Gasto> proximos = List.of(new Gasto("G-1", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS"));
-    when(servicioRegistroGasto.obtenerVencimientosProximos(any(LocalDateTime.class)))
+    when(servicioRegistroGasto.obtenerVencimientosProximos(any(LocalDateTime.class), anyLong()))
       .thenReturn(proximos);
 
-    ModelAndView mav = controladorRegistroGasto.irAVencimientos("proximos");
+    ModelAndView mav = controladorRegistroGasto.irAVencimientos("proximos", sessionMock);
 
     assertThat(mav.getViewName(), equalTo("vencimientos"));
     assertEquals(proximos, mav.getModel().get("vencimientos"));
@@ -108,10 +113,10 @@ public class ControladorRegistroGastoTest {
   @Test
   public void dadoElFiltroVencidosCuandoConsultoVencimientosEntoncesMuestraLosVencidos() {
     List<Gasto> vencidos = List.of(new Gasto("G-2", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS"));
-    when(servicioRegistroGasto.obtenerVencimientosVencidos(any(LocalDateTime.class)))
+    when(servicioRegistroGasto.obtenerVencimientosVencidos(any(LocalDateTime.class), anyLong()))
       .thenReturn(vencidos);
 
-    ModelAndView mav = controladorRegistroGasto.irAVencimientos("vencidos");
+    ModelAndView mav = controladorRegistroGasto.irAVencimientos("vencidos", sessionMock);
 
     assertEquals(vencidos, mav.getModel().get("vencimientos"));
     assertEquals("vencidos", mav.getModel().get("filtro"));
@@ -120,9 +125,9 @@ public class ControladorRegistroGastoTest {
   @Test
   public void dadoElFiltroTodosCuandoConsultoVencimientosEntoncesMuestraTodosLosPendientes() {
     List<Gasto> todos = List.of(new Gasto("G-3", TipoGasto.FIJO, "Agua", 2000.0, "SERVICIOS"));
-    when(servicioRegistroGasto.obtenerVencimientosPendientes()).thenReturn(todos);
+    when(servicioRegistroGasto.obtenerVencimientosPendientes(anyLong())).thenReturn(todos);
 
-    ModelAndView mav = controladorRegistroGasto.irAVencimientos("todos");
+    ModelAndView mav = controladorRegistroGasto.irAVencimientos("todos", sessionMock);
 
     assertEquals(todos, mav.getModel().get("vencimientos"));
     assertEquals("todos", mav.getModel().get("filtro"));
@@ -130,7 +135,7 @@ public class ControladorRegistroGastoTest {
 
   @Test
   public void dadoUnFiltroInvalidoCuandoConsultoVencimientosEntoncesUsaTodos() {
-    ModelAndView mav = controladorRegistroGasto.irAVencimientos("cualquiera");
+    ModelAndView mav = controladorRegistroGasto.irAVencimientos("cualquiera", sessionMock);
 
     assertEquals("todos", mav.getModel().get("filtro"));
   }
@@ -152,7 +157,7 @@ public class ControladorRegistroGastoTest {
         "ALIMENTACION"
       )
     );
-    when(servicioRegistroGasto.obtenerTodosLosGastos()).thenReturn(listaGastos);
+    when(servicioRegistroGasto.obtenerTodosLosGastos(anyLong())).thenReturn(listaGastos);
   }
 
   private Gasto givenUnGastoValido() {
@@ -188,11 +193,11 @@ public class ControladorRegistroGastoTest {
   }
 
   private ModelAndView whenIrAGastos() {
-    return controladorRegistroGasto.irAGastos();
+    return controladorRegistroGasto.irAGastos(sessionMock);
   }
 
   private ModelAndView whenRegistroUn(Gasto gasto) {
-    return controladorRegistroGasto.registrarGasto(gasto);
+    return controladorRegistroGasto.registrarGasto(gasto, sessionMock);
   }
 
   private void thenLaVistaEs(String nombreEsperadoDeVista, ModelAndView mav) {
@@ -205,7 +210,7 @@ public class ControladorRegistroGastoTest {
   }
 
   private void thenSeLlamaAlServicioYRedirige(Gasto gastoValido, ModelAndView mav) {
-    verify(servicioRegistroGasto).registrarGasto(gastoValido);
+    verify(servicioRegistroGasto).registrarGasto(eq(gastoValido), anyLong());
     assertThat(mav.getViewName(), equalTo("redirect:/gastos"));
   }
 

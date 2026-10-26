@@ -12,6 +12,7 @@ import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import com.tallerwebi.dominio.excepcion.ParametroInvalidoException;
+import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,11 +22,13 @@ import org.springframework.web.servlet.ModelAndView;
 public class ControladorHogarTest {
 
   private ServicioHogar servicioHogar;
+  private HttpSession session;
   private ControladorHogar controladorHogar;
 
   @BeforeEach
   public void init() {
     servicioHogar = mock(ServicioHogar.class);
+    session = mock(HttpSession.class);
     controladorHogar = new ControladorHogar(servicioHogar);
   }
 
@@ -36,8 +39,10 @@ public class ControladorHogarTest {
     List<Hogar> hogares = givenExistenHogares();
     List<CambioParametro> historial = givenExisteHistorial();
 
+    when(session.getAttribute("usuarioId")).thenReturn(1L);
+
     // when
-    ModelAndView mav = controladorHogar.irAHogar();
+    ModelAndView mav = controladorHogar.irAHogar(session);
 
     // then
     thenLaVistaEs("hogar", mav);
@@ -73,7 +78,7 @@ public class ControladorHogarTest {
   @Test
   public void cuandoCambioDeHogarEntoncesLlamaAlServicioYRedirigeAHogar() {
     // when
-    ModelAndView mav = controladorHogar.cambiarHogar(2L);
+    ModelAndView mav = controladorHogar.cambiarHogar(2L, session);
 
     // then
     verify(servicioHogar).seleccionarHogar(2L);
@@ -86,7 +91,7 @@ public class ControladorHogarTest {
     doThrow(new HogarNoEncontradoException()).when(servicioHogar).seleccionarHogar(99L);
 
     // when
-    ModelAndView mav = controladorHogar.cambiarHogar(99L);
+    ModelAndView mav = controladorHogar.cambiarHogar(99L, session);
 
     // then
     thenLaVistaEs("redirect:/hogar", mav);
@@ -101,7 +106,7 @@ public class ControladorHogarTest {
   private List<Hogar> givenExistenHogares() {
     List<Hogar> hogares = new ArrayList<>();
     hogares.add(new Hogar("Hogar 2"));
-    when(servicioHogar.obtenerHogares()).thenReturn(hogares);
+    when(servicioHogar.obtenerHogares(1L)).thenReturn(hogares);
     return hogares;
   }
 

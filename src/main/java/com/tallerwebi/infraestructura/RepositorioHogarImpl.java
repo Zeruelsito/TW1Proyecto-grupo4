@@ -7,7 +7,7 @@ import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-@Repository
+@Repository("repositorioHogar")
 public class RepositorioHogarImpl implements RepositorioHogar {
 
   private SessionFactory sessionFactory;
@@ -18,46 +18,36 @@ public class RepositorioHogarImpl implements RepositorioHogar {
   }
 
   @Override
-  public Hogar obtenerHogarPorNombre(String nombre) {
-    String query = "from Hogar h where h.nombreHogar = :nombre";
-    return sessionFactory
-            .getCurrentSession()
-            .createQuery(query, Hogar.class)
-            .setParameter("nombre", nombre)
-            .uniqueResult();
-  }
-
-  @Override
   public void guardar(Hogar hogar) {
     sessionFactory.getCurrentSession().persist(hogar);
   }
 
   @Override
-  public List<Hogar> obtenerHogaresDeUsuario(String email) {
-    String query = "FROM Hogar h WHERE h.usuarioCreador.email = :email";
-    return sessionFactory
-            .getCurrentSession()
-            .createQuery(query, Hogar.class)
-            .setParameter("email", email)
-            .getResultList();
+  public void actualizar(Hogar hogar) {
+    sessionFactory.getCurrentSession().merge(hogar);
   }
 
   @Override
-  public Hogar obtenerHogarPorId(Long hogarId) {
-    String hql = "FROM Hogar h WHERE h.id = :id";
+  public Hogar buscarPorId(Long id) {
+    return sessionFactory.getCurrentSession().get(Hogar.class, id);
+  }
 
+  @Override
+  public List<Hogar> obtenerHogaresDeUsuario(Long usuarioId) {
+    String hql = "SELECT h FROM Hogar h JOIN h.integrantes u WHERE u.id = :usuarioId";
     return sessionFactory
-            .getCurrentSession()
-            .createQuery(hql, Hogar.class)
-            .setParameter("id", hogarId)
-            .uniqueResult(); // Retorna un solo objeto o null si no existe
+      .getCurrentSession() // O entityManager si usan JPA puro
+      .createQuery(hql, Hogar.class)
+      .setParameter("usuarioId", usuarioId)
+      .getResultList();
   }
 
   @Override
   public List<Hogar> obtenerTodos() {
+    String hql = "FROM Hogar";
     return sessionFactory
-      .getCurrentSession()
-      .createQuery("from Hogar order by id", Hogar.class)
+      .getCurrentSession() // O entityManager si usan JPA puro
+      .createQuery(hql, Hogar.class)
       .getResultList();
   }
 }

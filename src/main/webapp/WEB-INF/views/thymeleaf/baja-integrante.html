@@ -21,13 +21,16 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
                     <li class="nav-item"><a class="nav-link active" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
         </div>
 
         <div class="col-md-10 px-4">
             <div class="my-3">
-                <a th:href="@{/hogar}" class="small text-muted text-decoration-none"><i class="bi bi-arrow-left"></i> Volver a Hogar</a>
+                <a th:href="@{/hogar}" class="btn btn-outline-dark btn-sm rounded-3"><i class="bi bi-arrow-left me-1"></i> Volver a Hogar</a>
                 <h2 class="fw-bold mb-0 mt-2">Baja de integrante</h2>
                 <p class="text-muted small">Simulá la salida de un integrante: su liquidación final y cómo quedan las cuotas del resto.</p>
             </div>
@@ -64,13 +67,19 @@
                             <span th:unless="${simulacion.debePagar or simulacion.debeCobrar}" class="text-muted">Está al día, no hay saldo pendiente.</span>
                         </p>
                         <table class="table align-middle small mb-0" th:unless="${#lists.isEmpty(simulacion.liquidacionFinal)}">
-                            <thead><tr><th>Paga</th><th></th><th>Recibe</th><th class="text-end">Monto</th></tr></thead>
+                            <thead><tr><th>Paga</th><th></th><th>Recibe</th><th class="text-end">Monto</th><th class="text-end">Acción</th></tr></thead>
                             <tbody>
                             <tr th:each="t : ${simulacion.liquidacionFinal}">
                                 <td class="fw-semibold" th:text="${t.emisor}">Juan</td>
                                 <td><i class="bi bi-arrow-right"></i></td>
                                 <td class="fw-semibold" th:text="${t.receptor}">María</td>
                                 <td class="text-end fw-bold" th:text="'$' + ${#numbers.formatDecimal(t.monto, 1, 2)}">$1000</td>
+                                <td class="text-end">
+                                    <!-- Botón solo visual: el registro del pago todavía no está implementado -->
+                                    <button type="button" class="btn btn-sm btn-success rounded-3" title="Próximamente">
+                                        <i class="bi bi-cash-coin me-1"></i>Registrar pago
+                                    </button>
+                                </td>
                             </tr>
                             </tbody>
                         </table>
@@ -118,13 +127,64 @@
                     </div>
 
                     <!-- Confirmación -->
-                    <form th:action="@{/hogar/baja/confirmar}" method="post">
-                        <input type="hidden" name="usuarioId" th:value="${simulacion.usuarioSaliente.id}">
-                        <button type="submit" class="btn btn-danger rounded-3 py-2 px-4">
+                    <!-- Con saldo pendiente: la baja queda bloqueada hasta registrar los pagos -->
+                    <div th:if="${simulacion.saldoPendiente}">
+                        <div class="alert alert-danger small rounded-3">
+                            <i class="bi bi-lock-fill me-1"></i>
+                            No se puede dar de baja a <strong th:text="${simulacion.usuarioSaliente.nombre}">Juan</strong>
+                            porque todavía tiene saldo pendiente. Tiene que saldar la liquidación final para poder darse de baja.
+                        </div>
+                        <button type="button" class="btn btn-danger rounded-3 py-2 px-4" disabled>
                             <i class="bi bi-person-x me-2"></i>Confirmar baja de <span th:text="${simulacion.usuarioSaliente.nombre}">Juan</span>
                         </button>
-                        <span class="small text-muted ms-2">Esto registra la salida y actualiza las cuotas.</span>
-                    </form>
+                    </div>
+
+                    <!-- Sin saldo pendiente: se puede confirmar (con advertencia) -->
+                    <div th:unless="${simulacion.saldoPendiente}">
+                    <div class="alert alert-warning small rounded-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Lo de arriba es solo una simulación. El botón de abajo <strong>da de baja al integrante de verdad</strong>.
+                    </div>
+                    <button type="button" class="btn btn-danger rounded-3 py-2 px-4"
+                            data-bs-toggle="modal" data-bs-target="#modalConfirmarBaja">
+                        <i class="bi bi-person-x me-2"></i>Confirmar baja de <span th:text="${simulacion.usuarioSaliente.nombre}">Juan</span>
+                    </button>
+                    <span class="small text-muted ms-2">Esto registra la salida y actualiza las cuotas.</span>
+
+                    <!-- Modal de advertencia: la baja es real -->
+                    <div class="modal fade" id="modalConfirmarBaja" tabindex="-1" aria-labelledby="modalConfirmarBajaTitulo" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content rounded-4">
+                                <div class="modal-header border-0">
+                                    <h5 class="modal-title fw-bold text-danger" id="modalConfirmarBajaTitulo">
+                                        <i class="bi bi-exclamation-octagon-fill me-2"></i>¡Atención! Esto no es un simulacro
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="mb-2">
+                                        Vas a dar de baja <strong>en serio</strong> a
+                                        <strong th:text="${simulacion.usuarioSaliente.nombre}">Juan</strong>.
+                                    </p>
+                                    <ul class="small text-muted mb-0">
+                                        <li>Se registra su salida del hogar.</li>
+                                        <li>Se recalculan las cuotas del resto de los integrantes.</li>
+                                        <li>No se puede deshacer desde esta pantalla.</li>
+                                    </ul>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                                    <form th:action="@{/hogar/baja/confirmar}" method="post" class="m-0">
+                                        <input type="hidden" name="usuarioId" th:value="${simulacion.usuarioSaliente.id}">
+                                        <button type="submit" class="btn btn-danger rounded-3">
+                                            <i class="bi bi-person-x me-2"></i>Sí, dar de baja
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
                 </div>
             </div>
         </div>

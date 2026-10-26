@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.ServicioLogin;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.UsuarioExistente;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -40,9 +41,14 @@ public class ControladorLogin {
       datosLogin.getPassword()
     );
     if (usuarioBuscado != null) {
-      request.getSession().setAttribute("ROL", usuarioBuscado.getRol());
-      request.getSession().setAttribute("USUARIO_ID", usuarioBuscado.getId());
-      return new ModelAndView("redirect:/home");
+      HttpSession session = request.getSession();
+
+      session.setAttribute("ROL", usuarioBuscado.getRol());
+      session.setAttribute("USUARIO_ID", usuarioBuscado.getId());
+      session.setAttribute("usuarioLogueado", usuarioBuscado);
+      session.setAttribute("email", usuarioBuscado.getEmail());
+
+      return new ModelAndView("redirect:/dashboard");
     } else {
       Map<String, Object> model = new ModelMap();
       model.put("error", "Usuario o clave incorrecta");

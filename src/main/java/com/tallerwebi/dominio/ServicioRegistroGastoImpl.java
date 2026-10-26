@@ -16,19 +16,25 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
 
   private final RepositorioGasto repositorioGasto;
   private final RepositorioUsuario repositorioUsuario;
+  private final RepositorioHogar repositorioHogar;
   private static final int DIAS_PROXIMOS = 30;
 
   @Autowired
   public ServicioRegistroGastoImpl(
     RepositorioGasto repositorioGasto,
-    RepositorioUsuario repositorioUsuario
+    RepositorioUsuario repositorioUsuario,
+    RepositorioHogar repositorioHogar
   ) {
     this.repositorioGasto = repositorioGasto;
     this.repositorioUsuario = repositorioUsuario;
+    this.repositorioHogar = repositorioHogar;
   }
 
   @Override
-  public Gasto registrarGasto(Gasto gasto) {
+  public Gasto registrarGasto(Gasto gasto, Long hogarId) {
+    Hogar hogar = repositorioHogar.buscarPorId(hogarId);
+    gasto.setHogar(hogar);
+
     if (gasto.getDescripcion() == null || gasto.getDescripcion().trim().isEmpty()) {
       throw new DescripcionGastoVaciaException();
     }
@@ -46,19 +52,19 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   }
 
   @Override
-  public List<Gasto> obtenerTodosLosGastos() {
-    return repositorioGasto.obtenerTodos();
+  public List<Gasto> obtenerTodosLosGastos(Long hogarId) {
+    return repositorioGasto.obtenerTodosPorHogar(hogarId);
   }
 
   @Override
-  public List<Usuario> obtenerIntegrantes() {
-    return repositorioUsuario.obtenerIntegrantesDelHogar();
+  public List<Usuario> obtenerIntegrantes(Long hogarId) {
+    return repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
   }
 
   @Override
-  public String obtenerSugerenciaProximoPagador() {
-    List<Usuario> integrantes = obtenerIntegrantes();
-    List<Gasto> gastos = obtenerTodosLosGastos();
+  public String obtenerSugerenciaProximoPagador(Long hogarId) {
+    List<Usuario> integrantes = obtenerIntegrantes(hogarId);
+    List<Gasto> gastos = obtenerTodosLosGastos(hogarId);
 
     if (integrantes.isEmpty()) {
       return "@Cualquiera";
@@ -86,8 +92,8 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   }
 
   @Override
-  public List<Gasto> obtenerGastosFijosRecurrentes() {
-    return repositorioGasto.obtenerGastosFijosRecurrentes();
+  public List<Gasto> obtenerGastosFijosRecurrentes(Long hogarId) {
+    return repositorioGasto.obtenerGastosFijosRecurrentes(hogarId);
   }
 
   @Override
@@ -113,18 +119,22 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   }
 
   @Override
-  public List<Gasto> obtenerVencimientosPendientes() {
-    return repositorioGasto.obtenerGastosPendientesConVencimiento();
+  public List<Gasto> obtenerVencimientosPendientes(Long hogarId) {
+    return repositorioGasto.obtenerGastosPendientesConVencimiento(hogarId);
   }
 
   @Override
-  public List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy) {
-    return repositorioGasto.obtenerPendientesConVencimientoEntre(hoy, hoy.plusDays(DIAS_PROXIMOS));
+  public List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy, Long hogarId) {
+    return repositorioGasto.obtenerPendientesConVencimientoEntre(
+      hoy,
+      hoy.plusDays(DIAS_PROXIMOS),
+      hogarId
+    );
   }
 
   @Override
-  public List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy) {
-    return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy);
+  public List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy, Long hogarId) {
+    return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, hogarId);
   }
 
   private Map<Long, Double> calcularTotalesPorUsuario(
@@ -180,7 +190,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   }
 
   @Override
-  public List<Gasto> obtenerGastosPorTipo(TipoGasto tipo) {
-    return repositorioGasto.obtenerPorTipo(tipo);
+  public List<Gasto> obtenerGastosPorTipo(TipoGasto tipo, Long hogarId) {
+    return repositorioGasto.obtenerPorTipo(tipo, hogarId);
   }
 }

@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Controller;
@@ -25,19 +26,21 @@ public class ControladorRegistroGasto {
   }
 
   @RequestMapping(path = "/gastos", method = RequestMethod.GET)
-  public ModelAndView irAGastos() {
+  public ModelAndView irAGastos(HttpSession session) {
     ModelAndView mav = new ModelAndView("gastos");
-    cargarDatosGenerales(mav);
+    Long hogarId = obtenerHogarIdDeSesion(session);
+    cargarDatosGenerales(mav, hogarId);
     mav.addObject("gasto", new Gasto());
     return mav;
   }
 
   @RequestMapping(path = "/gastos/guardar", method = RequestMethod.POST)
-  public ModelAndView registrarGasto(@ModelAttribute("gasto") Gasto gasto) {
+  public ModelAndView registrarGasto(@ModelAttribute("gasto") Gasto gasto, HttpSession session) {
     ModelAndView mav = new ModelAndView();
+    Long hogarId = obtenerHogarIdDeSesion(session);
 
     try {
-      this.servicioRegistroGasto.registrarGasto(gasto);
+      this.servicioRegistroGasto.registrarGasto(gasto, hogarId);
       mav.setViewName(REDIRECT_GASTOS);
       return mav;
     } catch (DescripcionGastoVaciaException e) {
@@ -47,7 +50,7 @@ public class ControladorRegistroGasto {
     }
 
     mav.setViewName("gastos");
-    cargarDatosGenerales(mav);
+    cargarDatosGenerales(mav, hogarId);
     mav.addObject("gasto", gasto);
     return mav;
   }
@@ -80,28 +83,33 @@ public class ControladorRegistroGasto {
     return new ModelAndView(REDIRECT_GASTOS);
   }
 
-  private void cargarDatosGenerales(ModelAndView mav) {
-    mav.addObject("listaGastos", servicioRegistroGasto.obtenerTodosLosGastos());
-    mav.addObject("gastosFijosRecurrentes", servicioRegistroGasto.obtenerGastosFijosRecurrentes());
-    mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes());
+  private void cargarDatosGenerales(ModelAndView mav, Long hogarId) {
+    mav.addObject("listaGastos", servicioRegistroGasto.obtenerTodosLosGastos(hogarId));
+    mav.addObject(
+      "gastosFijosRecurrentes",
+      servicioRegistroGasto.obtenerGastosFijosRecurrentes(hogarId)
+    );
+    mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes(hogarId));
     mav.addObject(
       "sugerenciaProximoPagador",
-      servicioRegistroGasto.obtenerSugerenciaProximoPagador()
+      servicioRegistroGasto.obtenerSugerenciaProximoPagador(hogarId)
     );
     mav.addObject("hoy", LocalDateTime.now()); // Pasamos LocalDateTime.now() para la comparación
   }
 
   @RequestMapping("/vencimientos")
   public ModelAndView irAVencimientos(
-    @RequestParam(value = "filtro", defaultValue = "todos") String filtro
+    @RequestParam(value = "filtro", defaultValue = "todos") String filtro,
+    HttpSession session
   ) {
     LocalDateTime ahora = LocalDateTime.now();
+    Long hogarId = obtenerHogarIdDeSesion(session);
 
     List<Gasto> vencimientos =
       switch (filtro) {
-        case "proximos" -> servicioRegistroGasto.obtenerVencimientosProximos(ahora);
-        case "vencidos" -> servicioRegistroGasto.obtenerVencimientosVencidos(ahora);
-        default -> servicioRegistroGasto.obtenerVencimientosPendientes();
+        case "proximos" -> servicioRegistroGasto.obtenerVencimientosProximos(ahora, hogarId);
+        case "vencidos" -> servicioRegistroGasto.obtenerVencimientosVencidos(ahora, hogarId);
+        default -> servicioRegistroGasto.obtenerVencimientosPendientes(hogarId);
       };
 
     String filtroAplicado = "proximos".equals(filtro) || "vencidos".equals(filtro)
@@ -113,5 +121,11 @@ public class ControladorRegistroGasto {
     mav.addObject("filtro", filtroAplicado);
     mav.addObject("hoy", ahora);
     return mav;
+  }
+
+  private Long obtenerHogarIdDeSesion(HttpSession session) {
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    // ID de contingencia por si no hay sesión activa aún en desarrollo (ej. 1L)
+    return hogarId != null ? hogarId : 1L;
   }
 }
