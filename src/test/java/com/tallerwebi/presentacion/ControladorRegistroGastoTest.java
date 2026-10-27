@@ -13,10 +13,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.tallerwebi.dominio.Gasto;
-import com.tallerwebi.dominio.ServicioRegistroGasto;
-import com.tallerwebi.dominio.TipoGasto;
-import com.tallerwebi.dominio.Usuario;
+import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import jakarta.servlet.http.HttpSession;
@@ -30,14 +27,16 @@ import org.springframework.web.servlet.ModelAndView;
 public class ControladorRegistroGastoTest {
 
   private ServicioRegistroGasto servicioRegistroGasto;
+  private ServicioUsuario servicioUsuario;
   private ControladorRegistroGasto controladorRegistroGasto;
   private HttpSession sessionMock;
 
   @BeforeEach
   public void init() {
     servicioRegistroGasto = mock(ServicioRegistroGasto.class);
+    servicioUsuario = mock(ServicioUsuario.class);
     sessionMock = mock(HttpSession.class);
-    controladorRegistroGasto = new ControladorRegistroGasto(servicioRegistroGasto);
+    controladorRegistroGasto = new ControladorRegistroGasto(servicioRegistroGasto, servicioUsuario);
   }
 
   @Test

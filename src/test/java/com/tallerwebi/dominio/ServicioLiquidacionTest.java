@@ -75,7 +75,10 @@ public class ServicioLiquidacionTest {
     // Then
     // Consumo indiv: $5000. Juan pagó $10000 (+$5000). María hizo $2000 en tareas (-$3000).
     assertThat(transferencias.size(), equalTo(1));
-    assertThat(transferencias.get(0), equalTo(new TransferenciaSugerida("Maria", "Juan", 3000.0)));
+    assertThat(
+      transferencias.get(0),
+      equalTo(new TransferenciaSugerida("Maria", "maria@unlam.edu.ar", "Juan", 3000.0))
+    );
   }
 
   private Gasto givenUnGasto() {
@@ -122,7 +125,10 @@ public class ServicioLiquidacionTest {
 
   private void thenObtengoUnaListaConUnaSolaTransferencia(List<TransferenciaSugerida> resultado) {
     assertThat(resultado.size(), equalTo(1));
-    assertThat(resultado.get(0), equalTo(new TransferenciaSugerida("Juan", "Maria", 1000.0)));
+    assertThat(
+      resultado.get(0),
+      equalTo(new TransferenciaSugerida("Juan", "test@unlam.edu.ar", "Maria", 1000.0))
+    );
   }
 
   private Map<String, Double> givenUnMapaConUnAcreedorYUnDeudor() {
@@ -137,8 +143,8 @@ public class ServicioLiquidacionTest {
     assertThat(
       resultado,
       containsInAnyOrder(
-        new TransferenciaSugerida("Juan", "Maria", 2000.0),
-        new TransferenciaSugerida("Pedro", "Maria", 1000.0)
+        new TransferenciaSugerida("Juan", "test@unlam.edu.ar", "Maria", 2000.0),
+        new TransferenciaSugerida("Pedro", "pedro@unlam.edu.ar", "Maria", 1000.0)
       )
     );
   }

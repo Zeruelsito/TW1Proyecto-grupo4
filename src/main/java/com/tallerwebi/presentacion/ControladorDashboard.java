@@ -36,9 +36,9 @@ public class ControladorDashboard {
   public ModelAndView irADashboard(HttpSession session) {
     Map<String, Object> model = new HashMap<>();
 
-    Long usuarioId = obtenerUsuarioIdDeSesion(session);
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
-
+    //por si las dudas
     if (usuarioActual == null) {
       usuarioActual = new Usuario("Juan", 300000.0);
       usuarioActual.setId(usuarioId);
@@ -53,7 +53,7 @@ public class ControladorDashboard {
     model.put("hogaresUsuario", hogaresUsuario);
 
     if (hogaresUsuario != null && !hogaresUsuario.isEmpty()) {
-      procesarMetricasHogar(hogaresUsuario.get(0), model);
+      procesarMetricasHogar(hogaresUsuario.getFirst(), model);
     }
 
     return new ModelAndView("dashboard", model);
@@ -116,13 +116,14 @@ public class ControladorDashboard {
     @RequestParam("pin") String pin,
     HttpSession session
   ) {
-    Long usuarioId = obtenerUsuarioIdDeSesion(session);
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
 
     if (usuario != null) {
       Hogar nuevoHogar = new Hogar(nombreHogar, pin);
       nuevoHogar.getIntegrantes().add(usuario);
       servicioHogar.crearHogar(nuevoHogar);
+      session.setAttribute("hogarActivoEnSession", nuevoHogar);
     }
 
     return new ModelAndView("redirect:/dashboard");
@@ -134,30 +135,15 @@ public class ControladorDashboard {
     @RequestParam("pin") String pin,
     HttpSession session
   ) {
-    Long usuarioId = obtenerUsuarioIdDeSesion(session);
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
 
     if (usuario != null) {
-      servicioHogar.unirseAHogar(nombreHogar, pin, usuario);
+      if (servicioHogar.unirseAHogar(nombreHogar, pin, usuario)) {
+        session.setAttribute("hogarActivoEnSession", usuario);
+      }
     }
 
     return new ModelAndView("redirect:/dashboard");
-  }
-
-  private Long obtenerUsuarioIdDeSesion(HttpSession session) {
-    Long usuarioId = null;
-    Object idObj = session.getAttribute("USUARIO_ID");
-    if (idObj instanceof Long) {
-      usuarioId = (Long) idObj;
-    } else if (idObj instanceof Integer) {
-      usuarioId = ((Integer) idObj).longValue();
-    }
-    if (usuarioId == null) {
-      Usuario usuarioLogueadoSesion = (Usuario) session.getAttribute("usuarioLogueado");
-      if (usuarioLogueadoSesion != null) {
-        usuarioId = usuarioLogueadoSesion.getId();
-      }
-    }
-    return usuarioId != null ? usuarioId : 1L;
   }
 }

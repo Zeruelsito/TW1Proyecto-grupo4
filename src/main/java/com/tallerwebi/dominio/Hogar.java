@@ -1,12 +1,6 @@
 package com.tallerwebi.dominio;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +14,11 @@ public class Hogar {
   private String nombreHogar;
 
   @ManyToMany
+  @JoinTable(
+    name = "Hogar_Usuario",
+    joinColumns = @JoinColumn(name = "Hogar_id"),
+    inverseJoinColumns = @JoinColumn(name = "integrantes_id")
+  )
   private List<Usuario> integrantes;
 
   private Double precioHoraTarea;

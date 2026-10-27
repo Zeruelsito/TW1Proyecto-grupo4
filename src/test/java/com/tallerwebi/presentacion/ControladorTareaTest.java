@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tallerwebi.dominio.ServicioCreditoTarea;
+import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Tarea;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
@@ -28,19 +29,21 @@ public class ControladorTareaTest {
 
   private ControladorTarea controladorTarea;
   private ServicioCreditoTarea servicioCreditoTareaMock;
+  private ServicioUsuario servicioUsuarioMock;
   private HttpServletRequest requestMock;
   private HttpSession sessionMock;
 
   @BeforeEach
   public void init() {
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    servicioUsuarioMock = mock(ServicioUsuario.class);
     requestMock = mock(HttpServletRequest.class);
     sessionMock = mock(HttpSession.class);
 
     when(requestMock.getSession()).thenReturn(sessionMock);
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
-    controladorTarea = new ControladorTarea(servicioCreditoTareaMock);
+    controladorTarea = new ControladorTarea(servicioCreditoTareaMock, servicioUsuarioMock);
   }
 
   @Test
@@ -50,7 +53,7 @@ public class ControladorTareaTest {
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(new ArrayList<>());
 
     // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.irATareas(requestMock);
+    ModelAndView modelAndView = controladorTarea.irATareas(requestMock, sessionMock);
 
     // verificación[cite: 12]
     assertThat(modelAndView.getViewName(), equalTo("tareas"));

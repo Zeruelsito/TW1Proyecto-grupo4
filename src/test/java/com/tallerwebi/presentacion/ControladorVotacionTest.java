@@ -5,6 +5,7 @@ import static org.hamcrest.text.IsEqualIgnoringCase.equalToIgnoringCase;
 import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.Propuesta;
+import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.ServicioVotacion;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
@@ -19,6 +20,7 @@ public class ControladorVotacionTest {
 
   private ControladorVotacion controladorVotacion;
   private ServicioVotacion servicioVotacionMock;
+  private ServicioUsuario servicioUsuarioMock;
   private HttpServletRequest requestMock;
   private HttpSession sessionMock;
 
@@ -29,7 +31,8 @@ public class ControladorVotacionTest {
     sessionMock = mock(HttpSession.class);
     when(requestMock.getSession()).thenReturn(sessionMock);
     when(servicioVotacionMock.obtenerTodasLasPropuestas()).thenReturn(List.of());
-    controladorVotacion = new ControladorVotacion(servicioVotacionMock);
+    controladorVotacion =
+      new ControladorVotacion(servicioVotacionMock, servicioUsuarioMock, sessionMock);
   }
 
   @Test
@@ -61,7 +64,7 @@ public class ControladorVotacionTest {
     // ejecucion
     ModelAndView modelAndView = controladorVotacion.guardarPropuesta(
       new DatosPropuesta(),
-      requestMock
+      sessionMock
     );
 
     // validacion
@@ -80,7 +83,7 @@ public class ControladorVotacionTest {
     // ejecucion
     ModelAndView modelAndView = controladorVotacion.guardarPropuesta(
       new DatosPropuesta(),
-      requestMock
+      sessionMock
     );
 
     // validacion

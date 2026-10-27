@@ -32,7 +32,9 @@
                     </ul>
                 </div>
                 <div class="px-3">
-                    <a href="#" class="nav-link text-danger"><i class="bi bi-box-arrow-left me-2"></i> Salir</a>
+                    <a th:href="@{/logout}" class="nav-link text-danger">
+                        <i class="bi bi-box-arrow-left me-2"></i> Salir
+                    </a>
                 </div>
             </div>
 
@@ -44,20 +46,19 @@
                         <h2 class="fw-bold mb-0">Gestión de Gastos</h2>
                         <p class="text-muted small">Registrá las compras del hogar y mantén las cuentas claras.</p>
                     </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
-                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
-                                style="width: 32px; height: 32px;">U</div>
-                            <span class="fw-medium small">Hola, Usuario</span>
+                    <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                            <span th:text="${nombreUsuario != null ? #strings.substring(nombreUsuario, 0, 1) : 'U'}">U</span>
                         </div>
+                        <span class="fw-medium small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</span>
                     </div>
                 </div>
 
-                <!-- Error Banner -->
-                <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <span th:text="${mensajeError}">Error al registrar el gasto</span>
-                </div>
+            <!-- Error Banner (CORREGIDO: usa mensajeError) -->
+            <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${mensajeError}">Error al registrar el gasto</span>
+            </div>
 
                 <div class="row g-4">
                     <!-- Columna Izquierda: Formulario de Registro y Gastos Fijos -->
@@ -170,7 +171,7 @@
 
                                     <div class="mb-3">
                                         <label class="form-label small fw-semibold text-muted mb-1">Próximo Vencimiento</label>
-                                        <input type="datetime-local" class="form-control form-control-sm rounded-3" name="fechaVencimiento" 
+                                        <input type="datetime-local" class="form-control form-control-sm rounded-3" name="fechaVencimiento"
                                             th:value="${fijo.fechaVencimiento != null ? #temporals.format(fijo.fechaVencimiento, 'yyyy-MM-dd') + 'T' + #temporals.format(fijo.fechaVencimiento, 'HH:mm') : ''}">
                                     </div>
 

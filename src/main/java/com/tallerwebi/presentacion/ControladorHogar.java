@@ -1,9 +1,11 @@
 package com.tallerwebi.presentacion;
 
+import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import com.tallerwebi.dominio.excepcion.ParametroInvalidoException;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +35,17 @@ public class ControladorHogar {
       usuarioId = 1L; // Corresponde al usuario 'Juan' con ID 1 en el data.sql
     }
 
-    mav.addObject("hogar", servicioHogar.obtenerHogar());
+    Hogar hogarActivo = (Hogar) session.getAttribute("hogarActivoEnSession");
+
+    if (hogarActivo == null) {
+      List<Hogar> listaHogares = servicioHogar.obtenerHogares(usuarioId);
+      if (listaHogares != null && !listaHogares.isEmpty()) {
+        hogarActivo = listaHogares.get(0);
+        session.setAttribute("hogarActivoEnSession", hogarActivo);
+      }
+    }
+
+    mav.addObject("hogar", hogarActivo); // <-- Pasamos el hogar activo correcto a la vista
     mav.addObject("hogares", servicioHogar.obtenerHogares(usuarioId));
     mav.addObject("historial", servicioHogar.obtenerHistorial());
     return mav;
@@ -55,8 +67,9 @@ public class ControladorHogar {
   @PostMapping("/hogar/cambiar")
   public ModelAndView cambiarHogar(@RequestParam("hogarId") Long hogarId, HttpSession session) {
     try {
-      servicioHogar.seleccionarHogar(hogarId);
+      servicioHogar.seleccionarHogarPorId(hogarId);
       session.setAttribute("HOGAR_ID", hogarId);
+      session.setAttribute("hogarActivoEnSession", servicioHogar.seleccionarHogarPorId(hogarId));
     } catch (HogarNoEncontradoException e) {
       return new ModelAndView(REDIRECT);
     }

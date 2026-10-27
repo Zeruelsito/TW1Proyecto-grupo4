@@ -58,14 +58,8 @@ public class ServicioHogarImpl implements ServicioHogar {
   }
 
   @Override
-  public void seleccionarHogar(Long hogarId) {
-    for (Hogar hogarSeleccionado : hogares) {
-      if (hogarSeleccionado.getId().equals(hogarId)) {
-        hogar = hogarSeleccionado;
-        return;
-      }
-    }
-    throw new HogarNoEncontradoException();
+  public Hogar seleccionarHogarPorId(Long hogarId) throws HogarNoEncontradoException {
+    return repositorioHogar.buscarPorId(hogarId);
   }
 
   @Override

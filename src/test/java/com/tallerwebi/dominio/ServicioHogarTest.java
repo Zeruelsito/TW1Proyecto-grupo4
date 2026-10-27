@@ -78,7 +78,7 @@ public class ServicioHogarTest {
     hogar2.setId(2L);
     servicio.registrarHogar(hogar2);
 
-    servicio.seleccionarHogar(2L);
+    servicio.seleccionarHogarPorId(2L);
     assertThat(servicio.obtenerHogar().getNombreHogar(), equalTo("hogar2"));
   }
 
@@ -86,7 +86,7 @@ public class ServicioHogarTest {
   public void noDebeSeleccionarUnHogarQueNoExiste() {
     ServicioHogar servicio = new ServicioHogarImpl();
 
-    assertThrows(HogarNoEncontradoException.class, () -> servicio.seleccionarHogar(99L)); //error de ejhemplo
+    assertThrows(HogarNoEncontradoException.class, () -> servicio.seleccionarHogarPorId(99L)); //error de ejhemplo
   }
 
   @Test
@@ -97,7 +97,7 @@ public class ServicioHogarTest {
     servicio.registrarHogar(hogar2);
     servicio.actualizarParametros(1500.00, 2000.00);
 
-    servicio.seleccionarHogar(2L);
+    servicio.seleccionarHogarPorId(2L);
 
     assertThat(servicio.obtenerHogar().getPrecioHoraTarea(), equalTo(0.0));
     assertTrue(servicio.obtenerHistorial().isEmpty());

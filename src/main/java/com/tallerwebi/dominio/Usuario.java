@@ -24,13 +24,12 @@ public class Usuario {
   private Boolean activo = false;
   private Double ingresoMensual;
   private Double capacidadRelativaPagoMensual;
-  private Double cuotaMensual;
-  private Double horasATrabajar;
   private static Double creditosPorTareas;
   private Double porcentajeSegunCapacidadDePagoMensual;
   private Double horasTareaARealizar;
   private LocalDateTime fechaAlta;
   private LocalDateTime fechaBaja;
+  private Double cuotaMensual;
 
   public Double getHorasTareaARealizar() {
     return horasTareaARealizar;
@@ -38,14 +37,6 @@ public class Usuario {
 
   public void setHorasTareaARealizar(Double horasTareaARealizar) {
     this.horasTareaARealizar = horasTareaARealizar;
-  }
-
-  public Double getCuotaMensual() {
-    return cuotaMensual;
-  }
-
-  public void setCuotaMensual(Double cuotaMensual) {
-    this.cuotaMensual = cuotaMensual;
   }
 
   public Double getIngresoMensual() {
@@ -62,14 +53,6 @@ public class Usuario {
 
   public void setCapacidadRelativaPagoMensual(Double capacidadRelativaPagoMensual) {
     this.capacidadRelativaPagoMensual = capacidadRelativaPagoMensual;
-  }
-
-  public Double getHorasATrabajar() {
-    return horasATrabajar;
-  }
-
-  public void setHorasATrabajar(Double horasATrabajar) {
-    this.horasATrabajar = horasATrabajar;
   }
 
   public static Double getCreditosPorTareas() {
@@ -192,5 +175,13 @@ public class Usuario {
 
   public void setNombre(String nombre) {
     this.nombre = nombre;
+  }
+
+  public Double getCuotaMensual() {
+    return cuotaMensual;
+  }
+
+  public void setCuotaMensual(Double cuotaMensual) {
+    this.cuotaMensual = cuotaMensual;
   }
 }

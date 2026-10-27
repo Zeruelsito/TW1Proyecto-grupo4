@@ -1,5 +1,6 @@
 package com.tallerwebi.presentacion;
 
+import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.ServicioLogin;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.UsuarioExistente;
@@ -18,6 +19,9 @@ import org.springframework.web.servlet.ModelAndView;
 public class ControladorLogin {
 
   private ServicioLogin servicioLogin;
+
+  @Autowired
+  private ServicioHogar servicioHogar;
 
   @Autowired
   public ControladorLogin(ServicioLogin servicioLogin) {
@@ -42,12 +46,20 @@ public class ControladorLogin {
     );
     if (usuarioBuscado != null) {
       HttpSession session = request.getSession();
-
+      Long idUsuario = usuarioBuscado.getId();
       session.setAttribute("ROL", usuarioBuscado.getRol());
-      session.setAttribute("USUARIO_ID", usuarioBuscado.getId());
+      session.setAttribute("USUARIO_ID", idUsuario);
       session.setAttribute("usuarioLogueado", usuarioBuscado);
       session.setAttribute("email", usuarioBuscado.getEmail());
 
+      if (!servicioHogar.obtenerHogares(idUsuario).isEmpty()) {
+        session.setAttribute(
+          "hogarActivoEnSession",
+          servicioHogar.obtenerHogares(idUsuario).getFirst()
+        );
+      } else {
+        session.setAttribute("hogarActivoEnSession", null);
+      }
       return new ModelAndView("redirect:/dashboard");
     } else {
       Map<String, Object> model = new ModelMap();

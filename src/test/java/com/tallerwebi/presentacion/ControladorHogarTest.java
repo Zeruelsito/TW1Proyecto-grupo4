@@ -81,14 +81,14 @@ public class ControladorHogarTest {
     ModelAndView mav = controladorHogar.cambiarHogar(2L, session);
 
     // then
-    verify(servicioHogar).seleccionarHogar(2L);
+    verify(servicioHogar).seleccionarHogarPorId(2L);
     thenLaVistaEs("redirect:/hogar", mav);
   }
 
   @Test
   public void cuandoCambioAUnHogarQueNoExisteEntoncesRedirigeAHogarSinFallar() {
     // given
-    doThrow(new HogarNoEncontradoException()).when(servicioHogar).seleccionarHogar(99L);
+    doThrow(new HogarNoEncontradoException()).when(servicioHogar).seleccionarHogarPorId(99L);
 
     // when
     ModelAndView mav = controladorHogar.cambiarHogar(99L, session);

@@ -20,6 +20,7 @@ public class Tarea {
   private Double horasDedicadas;
   private Double valorCredito;
   private EstadoTarea estado;
+  private Boolean descontableDeLiquidacion;
 
   @ManyToOne
   @JoinColumn(name = "usuario_realizador_id")
@@ -117,5 +118,13 @@ public class Tarea {
 
   public void setFechaRegistro(LocalDateTime fechaRegistro) {
     this.fechaRegistro = fechaRegistro;
+  }
+
+  public Boolean getDescontableDeLiquidacion() {
+    return descontableDeLiquidacion;
+  }
+
+  public void setDescontableDeLiquidacion(Boolean descontableDeLiquidacion) {
+    this.descontableDeLiquidacion = descontableDeLiquidacion;
   }
 }

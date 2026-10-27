@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioLiquidacionImpl implements ServicioLiquidacion {
@@ -25,6 +26,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<TransferenciaSugerida> obtenerLiquidacionDelMes(Hogar hogar, List<Gasto> gastos) {
     if (hogar == null || hogar.getIntegrantes() == null || hogar.getIntegrantes().isEmpty()) {
       return Collections.emptyList();
@@ -35,20 +37,22 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     double cuotaConsumoIndividual = totalGastosHogar / integrantes.size();
 
     Map<String, Double> balances = new HashMap<>();
+    Map<String, String> emailToNombre = new HashMap<>(); // <--- Mapa auxiliar para recuperar el nombre por email
 
     for (Usuario usuario : integrantes) {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
       double creditoTareas = obtenerCreditoTareas(usuario);
 
       double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - cuotaConsumoIndividual;
-      String nombreUsuario = usuario.getNombre() != null
-        ? usuario.getNombre()
-        : "Usuario " + usuario.getId();
 
-      balances.put(nombreUsuario, balanceNeto);
+      String email = usuario.getEmail();
+      String nombre = usuario.getNombre() != null ? usuario.getNombre() : "Usuario";
+
+      emailToNombre.put(email, nombre); // Guardamos la relación email -> nombre
+      balances.put(email, balanceNeto); // Usamos el email como clave única en los balances
     }
 
-    return calcularLiquidacionOptima(balances);
+    return calcularLiquidacionOptimaConNombres(balances, emailToNombre);
   }
 
   private double calcularTotalGastos(List<Gasto> gastos) {
@@ -57,7 +61,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     }
     double total = 0.0;
     for (Gasto gasto : gastos) {
-      if (gasto.getMonto() != null) {
+      if (gasto.getMonto() != null && Boolean.TRUE.equals(gasto.getPagado())) {
         total += gasto.getMonto();
       }
     }
@@ -73,7 +77,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       if (
         gasto.getUsuarioPagador() != null &&
         gasto.getUsuarioPagador().getId() != null &&
-        usuario.getId().equals(gasto.getUsuarioPagador().getId()) // <-- Comparamos por ID, mucho más seguro
+        usuario.getId().equals(gasto.getUsuarioPagador().getId())
       ) {
         totalPagado += gasto.getMonto();
       }
@@ -88,8 +92,11 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     return 0.0;
   }
 
-  @Override
-  public List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances) {
+  // Método que calcula la liquidación óptima mapeando los emails a nombres reales
+  public List<TransferenciaSugerida> calcularLiquidacionOptimaConNombres(
+    Map<String, Double> balances,
+    Map<String, String> emailToNombre
+  ) {
     List<TransferenciaSugerida> transferencias = new ArrayList<>();
     List<PersonaBalance> deudores = new ArrayList<>();
     List<PersonaBalance> acreedores = new ArrayList<>();
@@ -107,7 +114,16 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       monto = Math.round(monto * 100.0) / 100.0;
 
       if (monto > 0) {
-        transferencias.add(new TransferenciaSugerida(deudor.nombre, acreedor.nombre, monto));
+        String emailEmisor = deudor.nombre; // Aquí se guarda el email
+        String nombreEmisor = emailToNombre.getOrDefault(emailEmisor, emailEmisor);
+
+        String emailReceptor = acreedor.nombre; // Aquí se guarda el email
+        String nombreReceptor = emailToNombre.getOrDefault(emailReceptor, emailReceptor);
+
+        // Pasamos el nombre para mostrar y el email para validar
+        transferencias.add(
+          new TransferenciaSugerida(nombreEmisor, emailEmisor, nombreReceptor, monto)
+        );
       }
 
       deudor.monto -= monto;
@@ -122,6 +138,12 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     }
 
     return transferencias;
+  }
+
+  @Override
+  public List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances) {
+    // Método por defecto por si se llama desde la interfaz sin el mapa de nombres
+    return calcularLiquidacionOptimaConNombres(balances, Collections.emptyMap());
   }
 
   private void clasificarBalances(
@@ -141,7 +163,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
   private static class PersonaBalance {
 
-    String nombre;
+    String nombre; // Guarda el email como clave única
     double monto;
 
     PersonaBalance(String nombre, double monto) {

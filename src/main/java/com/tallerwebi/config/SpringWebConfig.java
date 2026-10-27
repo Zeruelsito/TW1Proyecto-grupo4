@@ -5,8 +5,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.thymeleaf.spring6.SpringTemplateEngine;
@@ -30,6 +30,24 @@ public class SpringWebConfig implements WebMvcConfigurer {
     registry.addResourceHandler("/css/**").addResourceLocations("/resources/core/css/");
     registry.addResourceHandler("/js/**").addResourceLocations("/resources/core/js/");
     registry.addResourceHandler("/webjars/**").addResourceLocations("/webjars/");
+  }
+
+  @Override
+  public void addInterceptors(InterceptorRegistry registry) {
+    registry
+      .addInterceptor(new FiltroDeSesion())
+      .addPathPatterns("/**") // Aplica a todas las URLs por defecto
+      .excludePathPatterns(
+        "/", // La raíz que redirige a /login
+        "/login", // Vista de login
+        "/validar-login", // El POST del formulario de login
+        "/nuevo-usuario", // Vista de registro (GET)
+        "/registrarme", // El POST del registro (POST)
+        "/home",
+        "/css/**", // Archivos estáticos
+        "/js/**",
+        "/webjars/**"
+      );
   }
 
   // https://www.thymeleaf.org/doc/tutorials/3.0/thymeleafspring.html

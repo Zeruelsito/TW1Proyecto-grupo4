@@ -5,6 +5,7 @@ import static org.hamcrest.text.IsEqualIgnoringCase.equalToIgnoringCase;
 import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.ServicioListaCompras;
+import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,17 +19,20 @@ public class ControladorListaComprasTest {
 
   private ControladorListaCompras controladorListaCompras;
   private ServicioListaCompras servicioListaComprasMock;
+  private ServicioUsuario servicioUsuarioMock;
   private HttpServletRequest requestMock;
   private HttpSession sessionMock;
 
   @BeforeEach
   public void init() {
     servicioListaComprasMock = mock(ServicioListaCompras.class);
+    servicioUsuarioMock = mock(ServicioUsuario.class);
     requestMock = mock(HttpServletRequest.class);
     sessionMock = mock(HttpSession.class);
     when(requestMock.getSession()).thenReturn(sessionMock);
     when(servicioListaComprasMock.obtenerItemsActivos()).thenReturn(List.of());
-    controladorListaCompras = new ControladorListaCompras(servicioListaComprasMock);
+    controladorListaCompras =
+      new ControladorListaCompras(servicioListaComprasMock, servicioUsuarioMock, sessionMock);
   }
 
   @Test

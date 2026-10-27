@@ -1,11 +1,12 @@
 package com.tallerwebi.presentacion;
 
-import com.tallerwebi.dominio.ItemCompra;
-import com.tallerwebi.dominio.ServicioListaCompras;
+import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -26,9 +27,17 @@ public class ControladorListaCompras {
   private static final String REDIRECT_GASTOS = "redirect:/gastos?descripcion=";
 
   private final ServicioListaCompras servicioListaCompras;
+  private final ServicioUsuario servicioUsuario;
+  private final HttpSession session;
 
-  public ControladorListaCompras(ServicioListaCompras servicioListaCompras) {
+  public ControladorListaCompras(
+    ServicioListaCompras servicioListaCompras,
+    ServicioUsuario servicioUsuario,
+    HttpSession session
+  ) {
     this.servicioListaCompras = servicioListaCompras;
+    this.servicioUsuario = servicioUsuario;
+    this.session = session;
   }
 
   @RequestMapping(path = "/lista-compras", method = RequestMethod.GET)
@@ -110,6 +119,12 @@ public class ControladorListaCompras {
     long cantidadEnCarrito = items.stream().filter(ItemCompra::estaEnCarrito).count();
 
     ModelAndView mav = new ModelAndView(VISTA_LISTA_COMPRAS);
+    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(idUsuario);
+    mav.addObject(
+      "nombreUsuario",
+      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
+    );
     mav.addObject("items", items);
     mav.addObject("cantidadEnCarrito", cantidadEnCarrito);
     if (mensajeError != null) {

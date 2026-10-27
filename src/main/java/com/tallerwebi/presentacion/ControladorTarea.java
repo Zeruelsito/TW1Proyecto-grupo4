@@ -1,11 +1,14 @@
 package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.ServicioCreditoTarea;
+import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Tarea;
+import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,16 +27,26 @@ public class ControladorTarea {
   private static final String ATRIBUTO_ERROR = "error";
 
   private final ServicioCreditoTarea servicioCreditoTarea;
+  private final ServicioUsuario servicioUsuario;
 
   @Autowired
-  public ControladorTarea(ServicioCreditoTarea servicioCreditoTarea) {
+  public ControladorTarea(
+    ServicioCreditoTarea servicioCreditoTarea,
+    ServicioUsuario servicioUsuario
+  ) {
     this.servicioCreditoTarea = servicioCreditoTarea;
+    this.servicioUsuario = servicioUsuario;
   }
 
   @GetMapping("/tareas")
-  public ModelAndView irATareas(HttpServletRequest request) {
+  public ModelAndView irATareas(HttpServletRequest request, HttpSession session) {
     Map<String, Object> model = new HashMap<>();
-    Long usuarioId = obtenerUsuarioIdDeSesion(request);
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
+    model.put(
+      "nombreUsuario",
+      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
+    );
 
     cargarDatosDashboardTareas(model, usuarioId);
     model.put(ATRIBUTO_NUEVA_TAREA, new Tarea());
