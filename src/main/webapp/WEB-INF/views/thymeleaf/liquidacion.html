@@ -19,16 +19,26 @@
             <div>
                 <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
                 <ul class="nav flex-column mt-4 gap-1">
-                    <li class="nav-item"><a class="nav-link dashboard-active px-3 py-2" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
-                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/dashboard}"><i
+                            class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/gastos}"><i
+                            class="bi bi-receipt me-2"></i> Gastos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas}"><i
+                            class="bi bi-check2-square me-2"></i> Tareas</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/tareas-repetitivas}"><i
+                            class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/vencimientos}"><i
+                            class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/liquidacion}"><i
+                            class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/hogar}"><i
+                            class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/propuestas}"><i
+                            class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/lista-compras}"><i
+                            class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link px-3 py-2" th:href="@{/reporte}"><i
+                            class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -47,7 +57,8 @@
                     <p class="text-muted small mb-0">Hoja de ruta simplificada para saldar deudas en el hogar.</p>
                 </div>
                 <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold"
+                         style="width: 32px; height: 32px;">
                         <span th:text="${usuarioLogueado != null ? #strings.substring(usuarioLogueado, 0, 1) : 'U'}">U</span>
                     </div>
                     <span class="fw-medium small" th:text="${usuarioLogueado != null ? usuarioLogueado : 'Mi Casa'}">Mi Casa</span>
@@ -76,27 +87,31 @@
                                     <th>Emisor</th>
                                     <th>Receptor</th>
                                     <th>Monto</th>
-                                    <th>Acción</th>
+                                    <th class="text-center">Acción</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <tr th:each="t : ${transferencias}">
                                     <td th:text="${t.emisor}">Emisor</td>
                                     <td th:text="${t.receptor}">Receptor</td>
-                                    <td th:text="${t.monto}">0.00</td>
-                                    <td>
-                                        <form th:action="@{/procesarPago}" method="post" accept-charset="UTF-8">
-                                            <input type="hidden" name="nombreHogar" th:value="${casa.nombreHogar}" />
-                                            <input type="hidden" name="emisor" th:value="${t.emisor}" />
-                                            <input type="hidden" name="receptor" th:value="${t.receptor}" />
-                                            <input type="hidden" name="monto" th:value="${t.monto}" />
-
-                                            <!-- El botón solo aparece si el email del usuario logueado coincide con el email del emisor -->
-                                            <button type="submit" class="btn btn-sm btn-primary"
-                                                    th:if="${session.email == t.emailEmisor}">
+                                    <td th:text="${'$' + t.monto}">0.00</td>
+                                    <td class="align-middle text-center">
+                                        <form th:action="@{/procesarPago}" method="post" accept-charset="UTF-8"
+                                              class="m-0"
+                                              th:if="${session.email != null and session.email == t.emailEmisor}">
+                                            <input type="hidden" name="nombreHogar"
+                                                   th:value="${casa != null ? casa.nombreHogar : 'Hogar'}"/>
+                                            <input type="hidden" name="emisor" th:value="${t.emisor}"/>
+                                            <input type="hidden" name="receptor" th:value="${t.receptor}"/>
+                                            <input type="hidden" name="monto" th:value="${t.monto}"/>
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-primary px-3 rounded-3 shadow-sm">
                                                 Generar URL
                                             </button>
                                         </form>
+                                        <span class="text-muted small"
+                                              th:unless="${session.email != null and session.email == t.emailEmisor}">Pendiente de pago
+                                        </span>
                                     </td>
                                 </tr>
                                 </tbody>
@@ -107,7 +122,51 @@
                         <div th:if="${#lists.isEmpty(transferencias)}" class="text-center py-5">
                             <i class="bi bi-emoji-smile fs-1 text-success"></i>
                             <h5 class="fw-bold mt-2">¡Todos están al día!</h5>
-                            <p class="text-muted small">No hay deudas ni transferencias pendientes para realizar este mes.</p>
+                            <p class="text-muted small">No hay deudas ni transferencias pendientes para realizar este
+                                mes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Card: Historial de Pagos Realizados -->
+            <div class="row g-4 mb-4">
+                <div class="col-12">
+                    <div class="kumo-card p-4">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-clock-history me-2 text-success"></i>Historial de Pagos Realizados
+                        </h5>
+
+                        <p th:if="${#lists.isEmpty(historialPagos)}" class="small text-muted mb-0">
+                            Todavía no hay pagos registrados en este hogar.
+                        </p>
+
+                        <div class="table-responsive" th:unless="${#lists.isEmpty(historialPagos)}">
+                            <table class="table align-middle mb-0 small">
+                                <thead>
+                                <tr>
+                                    <th>Emisor</th>
+                                    <th>Receptor</th>
+                                    <th>Monto</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="p : ${historialPagos}">
+                                    <td class="fw-semibold text-danger" th:text="${p.emisor}">Emisor</td>
+                                    <td class="fw-semibold text-success" th:text="${p.receptor}">Receptor</td>
+                                    <td class="fw-bold" th:text="${'$' + p.monto}">0.00</td>
+                                    <td th:text="${#temporals.format(p.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026 12:00
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                                            Abonado / Exitoso
+                                        </span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

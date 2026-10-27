@@ -4,10 +4,12 @@ import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.tallerwebi.dominio.*;
 import jakarta.servlet.http.HttpSession;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -19,29 +21,33 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class ControladorLiquidacion {
 
+  private HttpSession session;
+
   private final ServicioLiquidacion servicioLiquidacion;
   private final ServicioRegistroGasto servicioRegistroGasto;
-  private final ServicioHogar servicioHogar; // <-- Inyectamos el servicio
+  private final ServicioHogar servicioHogar;
   private final ServicioUsuario servicioUsuario;
+  private final ServicioPagoRealizado servicioPagoRealizado; // <-- NUEVO: Servicio inyectado
 
   @Autowired
   public ControladorLiquidacion(
+    HttpSession session,
     ServicioLiquidacion servicioLiquidacion,
     ServicioRegistroGasto servicioRegistroGasto,
     ServicioHogar servicioHogar,
-    ServicioUsuario servicioUsuario
+    ServicioUsuario servicioUsuario,
+    ServicioPagoRealizado servicioPagoRealizado
   ) {
+    this.session = session;
     this.servicioLiquidacion = servicioLiquidacion;
     this.servicioRegistroGasto = servicioRegistroGasto;
     this.servicioHogar = servicioHogar;
     this.servicioUsuario = servicioUsuario;
+    this.servicioPagoRealizado = servicioPagoRealizado;
   }
 
   @GetMapping("/liquidacion")
-  public ModelAndView irALiquidacion(
-    @RequestParam(value = "nombreHogar", required = false) String nombreHogar,
-    HttpSession session
-  ) {
+  public ModelAndView irALiquidacion(HttpSession session) {
     Map<String, Object> modelo = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
@@ -70,51 +76,32 @@ public class ControladorLiquidacion {
         if (transferencias != null) {
           modelo.put("transferencias", transferencias);
         }
+
+        // NUEVO: Obtenemos y pasamos el historial de pagos a la vista de liquidación
+        List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(
+          hogar.getId()
+        );
+        modelo.put("historialPagos", historialPagos);
       }
     }
 
     return new ModelAndView("liquidacion", modelo);
   }
 
-  // Genera la URL de Mercado Pago y recarga la vista con los datos del hogar
-  // que vaya a otro html que simule una pasarela de pago para que se vea
   @PostMapping("/procesar-liquidacion")
-  public String procesarPagoLiquidacion(
-    //    @RequestParam("nombreHogar") String nombreHogar,
-    //    @RequestParam("emisor") String emisor,
-    //    @RequestParam("receptor") String receptor,
-    //    @RequestParam("monto") Double monto
-  ) throws MPException, MPApiException {
-    //    Map<String, Object> model = new HashMap<>();
-    //
-    //    List<Hogar> listaHogares = servicioHogar.obtenerHogares();
-    //    model.put("listaHogares", listaHogares);
-    //
-    //    Hogar casa = servicioHogar.obtenerHogarPorNombre(nombreHogar);
-    //    List<Gasto> gastos = servicioRegistroGasto.obtenerGastosPorHogar(casa);
-    //    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
-    //      casa,
-    //      gastos
-    //    );
-    //
-    //    model.put("casa", casa);
-    //    model.put("transferencias", transferencias);
-    //
-    //    String concepto = "Pago de " + emisor + " a " + receptor + " (" + casa.getNombreHogar() + ")";
-    //    String sandboxUrl = mercadoPagoService.crearUrl(concepto, monto);
-    //    model.put("urlPago", sandboxUrl);
-    //
-    //    return new ModelAndView("liquidaciones", model);
+  public String procesarPagoLiquidacion() throws MPException, MPApiException {
     return "redirect:/procesarPago";
   }
 
   @PostMapping("/procesarPago")
   public ModelAndView mostrarPasarela(
+    @RequestParam("nombreHogar") String nombreHogar,
     @RequestParam("emisor") String emisor,
     @RequestParam("receptor") String receptor,
     @RequestParam("monto") Double monto
   ) {
-    ModelAndView modelAndView = new ModelAndView("procesarPago"); // Nombre de tu archivo .html
+    ModelAndView modelAndView = new ModelAndView("procesarPago");
+    modelAndView.addObject("nombreHogar", nombreHogar);
     modelAndView.addObject("emisor", emisor);
     modelAndView.addObject("receptor", receptor);
     modelAndView.addObject("monto", monto);
@@ -128,6 +115,24 @@ public class ControladorLiquidacion {
   ) {
     model.addAttribute("paymentId", paymentId);
     return "pago-exitoso";
+  }
+
+  @PostMapping("/simular-exito")
+  public ModelAndView simularExito(
+    @RequestParam("nombreHogar") String nombreHogar,
+    @RequestParam("emisor") String emisor,
+    @RequestParam("receptor") String receptor,
+    @RequestParam("monto") Double monto
+  ) {
+    // NUEVO: Buscamos el hogar y guardamos el pago en la base de datos
+    Hogar casa = (Hogar) session.getAttribute("hogarActivoEnSession");
+    if (casa != null) {
+      PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
+      servicioPagoRealizado.registrarPagoExitoso(pago);
+    }
+
+    // Redirigimos de vuelta a la liquidación para que la tabla se actualice sola
+    return new ModelAndView("redirect:/liquidacion");
   }
 
   @PostMapping("/simular-error")

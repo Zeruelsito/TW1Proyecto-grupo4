@@ -28,6 +28,7 @@ public class ServicioBajaIntegranteTest {
   private RepositorioGasto repositorioGastoMock;
   private ServicioHogar servicioHogarMock;
   private ServicioCreditoTarea servicioCreditoTareaMock;
+  private ServicioPagoRealizado servicioPagoRealizadoMock;
   private HttpSession sessionMock;
 
   private Usuario juan;
@@ -42,13 +43,15 @@ public class ServicioBajaIntegranteTest {
     repositorioGastoMock = mock(RepositorioGasto.class);
     servicioHogarMock = mock(ServicioHogar.class);
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
     sessionMock = mock(HttpSession.class);
 
     servicioBaja =
       new ServicioBajaIntegranteImpl(
         repositorioUsuarioMock,
         repositorioGastoMock,
-        new ServicioLiquidacionImpl(),
+        new ServicioLiquidacionImpl(servicioCreditoTareaMock, servicioPagoRealizadoMock),
         new ServicioCalculosGastoImpl(),
         servicioHogarMock,
         servicioCreditoTareaMock,

@@ -16,10 +16,13 @@ import org.junit.jupiter.api.Test;
 public class ServicioLiquidacionTest {
 
   private ServicioLiquidacion servicioLiquidacion;
+  private ServicioCreditoTarea servicioCreditoTarea;
+  private ServicioPagoRealizado servicioPagoRealizado;
 
   @BeforeEach
   public void init() {
-    this.servicioLiquidacion = new ServicioLiquidacionImpl();
+    this.servicioLiquidacion =
+      new ServicioLiquidacionImpl(servicioCreditoTarea, servicioPagoRealizado);
   }
 
   @Test
@@ -64,10 +67,14 @@ public class ServicioLiquidacionTest {
 
     // Mock del servicio de tareas
     ServicioCreditoTarea servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    ServicioPagoRealizado servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(2L)).thenReturn(2000.0);
 
-    ServicioLiquidacion servicio = new ServicioLiquidacionImpl(servicioCreditoTareaMock);
+    ServicioLiquidacion servicio = new ServicioLiquidacionImpl(
+      servicioCreditoTareaMock,
+      servicioPagoRealizadoMock
+    );
 
     // When
     List<TransferenciaSugerida> transferencias = servicio.obtenerLiquidacionDelMes(hogar, gastos);
