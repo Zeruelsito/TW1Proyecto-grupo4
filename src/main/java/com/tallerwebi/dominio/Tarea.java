@@ -25,6 +25,10 @@ public class Tarea {
   @JoinColumn(name = "usuario_realizador_id")
   private Usuario usuarioRealizador;
 
+  @ManyToOne
+  @JoinColumn(name = "tarea_repetitiva_id")
+  private TareaRepetitiva tareaRepetitiva;
+
   private LocalDateTime fechaRegistro;
 
   public Tarea() {
@@ -117,5 +121,13 @@ public class Tarea {
 
   public void setFechaRegistro(LocalDateTime fechaRegistro) {
     this.fechaRegistro = fechaRegistro;
+  }
+
+  public TareaRepetitiva getTareaRepetitiva() {
+    return tareaRepetitiva;
+  }
+
+  public void setTareaRepetitiva(TareaRepetitiva tareaRepetitiva) {
+    this.tareaRepetitiva = tareaRepetitiva;
   }
 }

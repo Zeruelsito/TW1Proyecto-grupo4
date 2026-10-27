@@ -31,7 +31,7 @@ public class ControladorTareaRepetitiva {
   public ModelAndView irATareasRepetitivas(HttpSession session) {
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
     ModelAndView mav = new ModelAndView("tareas-repetitivas");
-    mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas());
+    mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas(hogarId));
     mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes(hogarId));
     return mav;
   }
@@ -42,19 +42,20 @@ public class ControladorTareaRepetitiva {
     try {
       servicioTareaRepetitiva.asignarEquitativamente(
         tareaId,
-        servicioRegistroGasto.obtenerIntegrantes(hogarId)
+        servicioRegistroGasto.obtenerIntegrantes(hogarId),
+        hogarId
       );
       return new ModelAndView("redirect:/tareas-repetitivas");
     } catch (TareaNoEncontradaException e) {
       ModelAndView mav = new ModelAndView("tareas-repetitivas");
       mav.addObject("mensajeError", "La tarea seleccionada no existe.");
-      mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas());
+      mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas(hogarId));
       mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes(hogarId));
       return mav;
     } catch (HogarSinIntegrantesException e) {
       ModelAndView mav = new ModelAndView("tareas-repetitivas");
       mav.addObject("mensajeError", "El hogar no tiene integrantes para asignar la tarea.");
-      mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas());
+      mav.addObject("tareasRepetitivas", servicioTareaRepetitiva.obtenerTodas(hogarId));
       mav.addObject("integrantes", servicioRegistroGasto.obtenerIntegrantes(hogarId));
       return mav;
     }

@@ -8,4 +8,6 @@ public interface ServicioCreditoTarea {
   Double obtenerCreditoAcumuladoPorUsuario(Long usuarioId);
   Double calcularMontoNetoAPagar(Double montoBruto, Long usuarioId);
   List<Tarea> obtenerTodasLasTareas();
+
+  void registrarTareaDesdeCatalogo(Long tareaRepetitivaId, Double horasDedicadas, Long hogarId);
 }

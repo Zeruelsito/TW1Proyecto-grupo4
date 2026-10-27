@@ -111,13 +111,13 @@ public class ControladorTareaRepetitivaTest {
     when(servicioRegistroGasto.obtenerIntegrantes(anyLong())).thenReturn(integrantes);
     doThrow(new HogarSinIntegrantesException())
       .when(servicioTareaRepetitiva)
-      .asignarEquitativamente(tareaId, integrantes);
+      .asignarEquitativamente(tareaId, integrantes, HOGAR_ID);
   }
 
   private void givenElServicioNoEncuentraLaTarea(Long tareaId, List<Usuario> integrantes) {
     doThrow(new TareaNoEncontradaException())
       .when(servicioTareaRepetitiva)
-      .asignarEquitativamente(tareaId, integrantes);
+      .asignarEquitativamente(tareaId, integrantes, HOGAR_ID);
   }
 
   private void thenElMensajeDeErrorEs(String mensajeErrorEsperado, ModelAndView mav) {
@@ -134,7 +134,7 @@ public class ControladorTareaRepetitivaTest {
     List<Usuario> integrantes,
     ModelAndView mav
   ) {
-    verify(servicioTareaRepetitiva).asignarEquitativamente(tareaId, integrantes);
+    verify(servicioTareaRepetitiva).asignarEquitativamente(tareaId, integrantes, HOGAR_ID);
     assertThat(mav.getViewName(), equalTo("redirect:/tareas-repetitivas"));
   }
 
@@ -143,7 +143,7 @@ public class ControladorTareaRepetitivaTest {
   private void givenExistenTareasRepetitivasEIntegrantes() {
     List<TareaRepetitiva> tareas = new ArrayList<>();
     tareas.add(new TareaRepetitiva(1L, "compra semanal"));
-    when(servicioTareaRepetitiva.obtenerTodas()).thenReturn(tareas);
+    when(servicioTareaRepetitiva.obtenerTodas(HOGAR_ID)).thenReturn(tareas);
 
     List<Usuario> integrantes = new ArrayList<>();
     integrantes.add(new Usuario("ori", "o1@email.com", "3333"));

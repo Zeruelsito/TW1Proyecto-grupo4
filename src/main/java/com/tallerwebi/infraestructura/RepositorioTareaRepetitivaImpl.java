@@ -37,6 +37,7 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
     return sessionFactory.getCurrentSession().get(TareaRepetitiva.class, id);
   }
 
+  /* borrar*/
   @Override
   public int contarAsignadasAUsuario(Usuario usuario) {
     String query =
@@ -46,5 +47,15 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
       .createQuery(query, Integer.class)
       .setParameter("usuario", usuario)
       .getSingleResult();
+  }
+
+  @Override
+  public List<TareaRepetitiva> obtenerPorHogar(Long hogarId) {
+    String query = "select t from TareaRepetitiva t where t.hogar.id = :hogarId order by t.id";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, TareaRepetitiva.class)
+      .setParameter("hogarId", hogarId)
+      .getResultList();
   }
 }

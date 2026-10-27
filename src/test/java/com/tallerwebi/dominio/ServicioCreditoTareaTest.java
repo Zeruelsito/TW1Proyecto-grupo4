@@ -20,6 +20,7 @@ public class ServicioCreditoTareaTest {
   private RepositorioTarea repositorioTareaMock;
   private RepositorioUsuario repositorioUsuarioMock;
   private ServicioCreditoTarea servicioCreditoTarea;
+  private RepositorioTareaRepetitiva repositorioTareaRepetitivaMock;
 
   private List<Tarea> tareasEnMemoria;
 
@@ -27,8 +28,13 @@ public class ServicioCreditoTareaTest {
   public void init() {
     repositorioTareaMock = mock(RepositorioTarea.class);
     repositorioUsuarioMock = mock(RepositorioUsuario.class);
+    repositorioTareaRepetitivaMock = mock(RepositorioTareaRepetitiva.class);
     servicioCreditoTarea =
-      new ServicioCreditoTareaImpl(repositorioTareaMock, repositorioUsuarioMock);
+      new ServicioCreditoTareaImpl(
+        repositorioTareaMock,
+        repositorioUsuarioMock,
+        repositorioTareaRepetitivaMock
+      );
 
     tareasEnMemoria = new ArrayList<>();
 
@@ -131,6 +137,35 @@ public class ServicioCreditoTareaTest {
     //given + when + then
     thenDebeLanzarExceptionAlRegistrarUnaTareaInvalida(givenUnaTareaInvalida());
   }
+
+  @Test
+  public void dadaUnaTareaDelCatalogoConValorPropioElCreditoUsaEseValor() {
+
+    Hogar hogar = givenTengoUnHogar(1L, 1000.00,"casa de ori");
+    givenUnaTareaDelCatalogo(7L, "compra semanal", hogar, 1500.00);
+
+    servicioCreditoTarea.registrarTareaDesdeCatalogo(7L,2.0, 1L);
+  }
+
+
+
+
+
+  private TareaRepetitiva givenUnaTareaDelCatalogo(Long id, String titulo,Hogar hogar,Double valorPorHora) {
+    TareaRepetitiva tarea = new TareaRepetitiva(id, titulo);
+    tarea.setHogar(hogar);
+    tarea.setValorPorHora(valorPorHora);
+    when(repositorioTareaRepetitivaMock.obtenerPorId(id)).thenReturn(tarea);
+    return tarea;
+  }
+
+  private Hogar givenTengoUnHogar(Long id, Double precioHora, String nombre) {
+    Hogar hogar = new Hogar(nombre);
+    hogar.setId(id);
+    hogar.setPrecioHoraTarea(precioHora);
+    return hogar;
+  }
+///////
 
   private Tarea givenUnaTareaInvalida() {
     Tarea tareaInvalida = new Tarea("Pintar pared", -1.0, 1000.0, null);

@@ -16,14 +16,17 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
 
   private final RepositorioTarea repositorioTarea;
   private final RepositorioUsuario repositorioUsuario;
+  private final RepositorioTareaRepetitiva repositorioTareaRepetitiva;
 
   @Autowired
   public ServicioCreditoTareaImpl(
     RepositorioTarea repositorioTarea,
-    RepositorioUsuario repositorioUsuario
+    RepositorioUsuario repositorioUsuario,
+    RepositorioTareaRepetitiva repositorioTareaRepetitiva
   ) {
     this.repositorioTarea = repositorioTarea;
     this.repositorioUsuario = repositorioUsuario;
+    this.repositorioTareaRepetitiva = repositorioTareaRepetitiva;
   }
 
   @Override
@@ -36,6 +39,25 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     }
 
     repositorioTarea.guardar(tarea);
+  }
+
+  @Override
+  public void registrarTareaDesdeCatalogo(
+    Long tareaRepetitivaId,
+    Double horasDedicadas,
+    Long hogarId
+  ) {
+    TareaRepetitiva plantilla = buscarPlantillaDelHogar(tareaRepetitivaId, hogarId);
+    validarHorasDedicadas(horasDedicadas);
+
+    Double valorPorHora = plantilla.obtenerValorPorHora();
+    if (valorPorHora == null || valorPorHora <= 0) {
+      throw new ValorCreditoInvalidoException();
+    }
+
+    Tarea tarea = new Tarea(plantilla.getTitulo(), horasDedicadas, valorPorHora, null);
+    tarea.setTareaRepetitiva(plantilla);
+    registrarTarea(tarea);
   }
 
   @Override
@@ -53,7 +75,12 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     }
 
     tarea.setEstado(EstadoTarea.COMPLETADA);
+
     tarea.setUsuarioRealizador(usuario); // Seteamos el objeto Usuario directamente
+    if (tarea.getTareaRepetitiva() != null) {
+      tarea.getTareaRepetitiva().setUsuarioAsignado(usuario);
+    }
+
     tarea.setFechaRegistro(LocalDateTime.now());
 
     repositorioTarea.guardar(tarea);
@@ -101,5 +128,20 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {
       throw new TareaYaCompletadaException();
     }
+  }
+
+  private TareaRepetitiva buscarPlantillaDelHogar(Long tareaRepetitivaId, Long hogarId) {
+    TareaRepetitiva plantilla = null;
+    if (tareaRepetitivaId != null) {
+      plantilla = repositorioTareaRepetitiva.obtenerPorId(tareaRepetitivaId);
+    }
+    boolean esDelHogar =
+      plantilla != null &&
+      plantilla.getHogar() != null &&
+      plantilla.getHogar().getId().equals(hogarId);
+    if (!esDelHogar) {
+      throw new TareaNoEncontradaException();
+    }
+    return plantilla;
   }
 }
