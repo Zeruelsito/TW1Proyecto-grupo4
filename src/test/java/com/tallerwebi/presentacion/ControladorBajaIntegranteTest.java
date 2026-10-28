@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import com.tallerwebi.dominio.ServicioBajaIntegrante;
 import com.tallerwebi.dominio.SimulacionBaja;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
+import com.tallerwebi.dominio.excepcion.PagoNoCorrespondeALiquidacionException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import java.util.List;
@@ -43,7 +44,7 @@ public class ControladorBajaIntegranteTest {
     when(servicioBajaMock.simularBaja(1L)).thenReturn(simulacion);
 
     // ejecucion
-    ModelAndView modelAndView = controladorBaja.simular(1L);
+    ModelAndView modelAndView = controladorBaja.simular(1L, null);
 
     // validacion
     assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
@@ -56,7 +57,7 @@ public class ControladorBajaIntegranteTest {
     when(servicioBajaMock.simularBaja(99L)).thenThrow(new UsuarioNoEncontrado());
 
     // ejecucion
-    ModelAndView modelAndView = controladorBaja.simular(99L);
+    ModelAndView modelAndView = controladorBaja.simular(99L, null);
 
     // validacion
     assertThat(
@@ -110,6 +111,37 @@ public class ControladorBajaIntegranteTest {
     assertThat(
       modelAndView.getModel().get("error").toString(),
       equalToIgnoringCase("No se puede dar de baja: el integrante todavía tiene saldo pendiente.")
+    );
+  }
+
+  @Test
+  public void registrarPagoDeberiaRegistrarloYVolverALaSimulacion() {
+    // ejecucion
+    ModelAndView modelAndView = controladorBaja.registrarPago(1L, "Juan", "Maria", 1000.0);
+
+    // validacion
+    verify(servicioBajaMock).registrarPago(1L, "Juan", "Maria", 1000.0);
+    assertThat(
+      modelAndView.getViewName(),
+      equalToIgnoringCase("redirect:/hogar/baja/simular?usuarioId=1&pagoRegistrado=true")
+    );
+  }
+
+  @Test
+  public void registrarPagoQueNoCorrespondeDeberiaMostrarError() {
+    // preparacion
+    doThrow(new PagoNoCorrespondeALiquidacionException())
+      .when(servicioBajaMock)
+      .registrarPago(1L, "Juan", "Maria", 5.0);
+
+    // ejecucion
+    ModelAndView modelAndView = controladorBaja.registrarPago(1L, "Juan", "Maria", 5.0);
+
+    // validacion
+    assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
+    assertThat(
+      modelAndView.getModel().get("error"),
+      equalTo("Ese pago no corresponde a la liquidación pendiente o ya fue registrado.")
     );
   }
 }
