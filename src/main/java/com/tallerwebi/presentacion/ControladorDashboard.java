@@ -139,9 +139,7 @@ public class ControladorDashboard {
     Usuario usuario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
 
     if (usuario != null) {
-      if (servicioHogar.unirseAHogar(nombreHogar, pin, usuario)) {
-        session.setAttribute("hogarActivoEnSession", usuario);
-      }
+      servicioHogar.unirseAHogar(nombreHogar, pin, usuario);
     }
 
     return new ModelAndView("redirect:/dashboard");
