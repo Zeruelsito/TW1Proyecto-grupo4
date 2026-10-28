@@ -104,3 +104,7 @@ VALUES(13, 'G-104', 'Asado Bienvenida', 35000, 'ALIMENTACION', 5, 'OCASIONAL', N
 
 INSERT IGNORE INTO Gasto(id, codigo, descripcion, monto, categoria, usuario_pagador_id, tipoGasto, fecha, pagado, fechaVencimiento, hogar_id) 
 VALUES(14, 'G-105', 'Fumigacion', 16000, 'SERVICIOS', null, 'FIJO', NOW(), false, DATE_ADD(NOW(), INTERVAL 8 DAY), 2);
+
+INSERT IGNORE INTO TareaRepetitiva(id, titulo, frecuencia, valorPorHora, hogar_id) VALUES(1, 'Limpiar el baño', 'SEMANAL', 7000.0, 1);
+INSERT IGNORE INTO TareaRepetitiva(id, titulo, frecuencia, valorPorHora, hogar_id) VALUES(2, 'Sacar la basura', 'DIARIA', NULL, 1);
+INSERT IGNORE INTO TareaRepetitiva(id, titulo, frecuencia, valorPorHora, hogar_id) VALUES(3, 'Lavar los platos', 'DIARIA', NULL, 1);

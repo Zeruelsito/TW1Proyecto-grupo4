@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
 import java.util.ArrayList;
@@ -140,18 +141,41 @@ public class ServicioCreditoTareaTest {
 
   @Test
   public void dadaUnaTareaDelCatalogoConValorPropioElCreditoUsaEseValor() {
-
-    Hogar hogar = givenTengoUnHogar(1L, 1000.00,"casa de ori");
+    Hogar hogar = givenTengoUnHogar(1L, 1000.00, "casa de ori");
     givenUnaTareaDelCatalogo(7L, "compra semanal", hogar, 1500.00);
 
-    servicioCreditoTarea.registrarTareaDesdeCatalogo(7L,2.0, 1L);
+    servicioCreditoTarea.registrarTareaDesdeCatalogo(7L, 2.0, 1L);
+    assertThat(tareasEnMemoria.get(0).getValorCredito(), equalTo(3000.0));
   }
 
+  @Test
+  public void noDebeRegistrarUnaTareaDelCatalogoQueNoExiste() {
+    //no tiene given asi no registra una tarea
+    assertThrows(
+      TareaNoEncontradaException.class,
+      () -> {
+        servicioCreditoTarea.registrarTareaDesdeCatalogo(999L, 2.0, 1L);
+      }
+    );
+  }
 
+  @Test
+  public void noDebeRegistrarUnaTareaDelCatalogoSiNoHayValorPorHoraNiPrecioDelHogar() {
+    Hogar hogarSinPrecio = givenTengoUnHogar(1L, 0.0, "casa de ori");
+    givenUnaTareaDelCatalogo(7L, "limpiar el baño", hogarSinPrecio, null);
 
+    assertThrows(
+      ValorCreditoInvalidoException.class,
+      () -> servicioCreditoTarea.registrarTareaDesdeCatalogo(7L, 1.0, 1L)
+    );
+  }
 
-
-  private TareaRepetitiva givenUnaTareaDelCatalogo(Long id, String titulo,Hogar hogar,Double valorPorHora) {
+  private TareaRepetitiva givenUnaTareaDelCatalogo(
+    Long id,
+    String titulo,
+    Hogar hogar,
+    Double valorPorHora
+  ) {
     TareaRepetitiva tarea = new TareaRepetitiva(id, titulo);
     tarea.setHogar(hogar);
     tarea.setValorPorHora(valorPorHora);
@@ -165,7 +189,6 @@ public class ServicioCreditoTareaTest {
     hogar.setPrecioHoraTarea(precioHora);
     return hogar;
   }
-///////
 
   private Tarea givenUnaTareaInvalida() {
     Tarea tareaInvalida = new Tarea("Pintar pared", -1.0, 1000.0, null);

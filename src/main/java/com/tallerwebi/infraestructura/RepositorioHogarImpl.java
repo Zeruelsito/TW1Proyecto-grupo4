@@ -36,7 +36,7 @@ public class RepositorioHogarImpl implements RepositorioHogar {
   public List<Hogar> obtenerHogaresDeUsuario(Long usuarioId) {
     String hql = "SELECT h FROM Hogar h JOIN h.integrantes u WHERE u.id = :usuarioId";
     return sessionFactory
-      .getCurrentSession() // O entityManager si usan JPA puro
+      .getCurrentSession()
       .createQuery(hql, Hogar.class)
       .setParameter("usuarioId", usuarioId)
       .getResultList();
@@ -45,9 +45,6 @@ public class RepositorioHogarImpl implements RepositorioHogar {
   @Override
   public List<Hogar> obtenerTodos() {
     String hql = "FROM Hogar";
-    return sessionFactory
-      .getCurrentSession() // O entityManager si usan JPA puro
-      .createQuery(hql, Hogar.class)
-      .getResultList();
+    return sessionFactory.getCurrentSession().createQuery(hql, Hogar.class).getResultList();
   }
 }

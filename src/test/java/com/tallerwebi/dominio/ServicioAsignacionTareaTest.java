@@ -57,15 +57,13 @@ public class ServicioAsignacionTareaTest {
   @Test
   public void debeRotarElResponsableSiLaTareaYaEstabaAsignada() {
     Usuario ori = new Usuario();
-
     ori.setId(11L);
     Usuario pepe = new Usuario();
     pepe.setId(12L);
-    TareaRepetitiva tareaA = new TareaRepetitiva(1L, "compra semanal");
 
-    servicio.registrar(tareaA, HOGAR_ID);
+    TareaRepetitiva tareaA = new TareaRepetitiva(1L, "compra semanal");
     TareaRepetitiva tareaB = new TareaRepetitiva(2L, "comprar facturas ricas para el desayuno");
-    servicio.registrar(tareaB, HOGAR_ID);
+
     when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(tareaA, tareaB));
 
     List<Usuario> integrantes = new ArrayList<>();
@@ -73,9 +71,9 @@ public class ServicioAsignacionTareaTest {
     integrantes.add(ori);
     integrantes.add(pepe);
     servicio.asignarEquitativamente(1L, integrantes, HOGAR_ID);
-
     servicio.asignarEquitativamente(2L, integrantes, HOGAR_ID);
     servicio.asignarEquitativamente(1L, integrantes, HOGAR_ID);
+
     assertThat(tareaA.getUsuarioAsignado(), equalTo(pepe));
   }
 
@@ -92,7 +90,6 @@ public class ServicioAsignacionTareaTest {
 
   @Test
   public void noDebeAsignarTareasSiElHogarNoTieneIntegrantes() {
-    servicio.registrar(new TareaRepetitiva(1L, "compra semanal"), HOGAR_ID);
     List<Usuario> integrantes = new ArrayList<>();
     assertThrows(
       HogarSinIntegrantesException.class,

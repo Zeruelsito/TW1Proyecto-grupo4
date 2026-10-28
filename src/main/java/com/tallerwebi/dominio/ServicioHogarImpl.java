@@ -15,9 +15,12 @@ public class ServicioHogarImpl implements ServicioHogar {
 
   private final List<Hogar> hogares = new ArrayList<>();
   private Hogar hogar = new Hogar("Hogar 1"); //le saque el final
+  private final RepositorioHogar repositorioHogar;
 
   @Autowired
-  private RepositorioHogar repositorioHogar;
+  public ServicioHogarImpl(RepositorioHogar repositorioHogar) {
+    this.repositorioHogar = repositorioHogar;
+  }
 
   @Override
   public void actualizarParametros(Double precioHoraTarea, Double pisoMinimoHogar) {
@@ -93,19 +96,24 @@ public class ServicioHogarImpl implements ServicioHogar {
   public boolean unirseAHogar(String nombreHogar, String pin, Usuario usuario) {
     List<Hogar> todosLosHogares = repositorioHogar.obtenerTodos();
     for (Hogar h : todosLosHogares) {
-      if (
-        h.getNombreHogar() != null &&
-        h.getNombreHogar().equalsIgnoreCase(nombreHogar) &&
-        pin.equals(h.getPin())
-      ) {
-        boolean yaEsIntegrante = h
-          .getIntegrantes()
-          .stream()
-          .anyMatch(u -> u.getId().equals(usuario.getId()));
-        if (!yaEsIntegrante) {
+      boolean mismoNombre =
+        h.getNombreHogar() != null && h.getNombreHogar().equalsIgnoreCase(nombreHogar);
+      boolean mismoPin = h.getPin() != null && h.getPin().equals(pin);
+
+      if (mismoNombre && mismoPin) {
+        if (!esIntegrante(h, usuario)) {
           h.getIntegrantes().add(usuario);
           repositorioHogar.actualizar(h);
         }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean esIntegrante(Hogar hogar, Usuario usuario) {
+    for (Usuario integrante : hogar.getIntegrantes()) {
+      if (integrante.getId().equals(usuario.getId())) {
         return true;
       }
     }

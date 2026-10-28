@@ -1,6 +1,7 @@
 package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.ServicioCreditoTarea;
+import com.tallerwebi.dominio.ServicioTareaRepetitiva;
 import com.tallerwebi.dominio.Tarea;
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
@@ -23,11 +24,16 @@ public class ControladorTarea {
   private static final String ATRIBUTO_NUEVA_TAREA = "nuevaTarea";
   private static final String ATRIBUTO_ERROR = "error";
 
+  private final ServicioTareaRepetitiva servicioTareaRepetitiva;
   private final ServicioCreditoTarea servicioCreditoTarea;
 
   @Autowired
-  public ControladorTarea(ServicioCreditoTarea servicioCreditoTarea) {
+  public ControladorTarea(
+    ServicioCreditoTarea servicioCreditoTarea,
+    ServicioTareaRepetitiva servicioTareaRepetitiva
+  ) {
     this.servicioCreditoTarea = servicioCreditoTarea;
+    this.servicioTareaRepetitiva = servicioTareaRepetitiva;
   }
 
   @GetMapping("/tareas")
@@ -35,7 +41,7 @@ public class ControladorTarea {
     Map<String, Object> model = new HashMap<>();
     Long usuarioId = obtenerUsuarioIdDeSesion(request);
 
-    cargarDatosDashboardTareas(model, usuarioId);
+    cargarDatosDashboardTareas(model, usuarioId, obtenerHogarIdDeSesion(request));
     model.put(ATRIBUTO_NUEVA_TAREA, new Tarea());
 
     return new ModelAndView(VISTA_TAREAS, model);
@@ -48,15 +54,27 @@ public class ControladorTarea {
   ) {
     Map<String, Object> model = new HashMap<>();
     Long usuarioId = obtenerUsuarioIdDeSesion(request);
+    Long hogarId = obtenerHogarIdDeSesion(request);
+    Long tareaRepetitivaId = obtenerTareaRepetitivaId(request);
 
     try {
-      servicioCreditoTarea.registrarTarea(tarea);
+      if (tareaRepetitivaId != null) {
+        servicioCreditoTarea.registrarTareaDesdeCatalogo(
+          tareaRepetitivaId,
+          tarea.getHorasDedicadas(),
+          hogarId
+        );
+      } else {
+        servicioCreditoTarea.registrarTarea(tarea);
+      }
       return new ModelAndView("redirect:/tareas");
+    } catch (TareaNoEncontradaException e) {
+      model.put(ATRIBUTO_ERROR, "La tarea seleccionada no existe en tu hogar.");
     } catch (ValorCreditoInvalidoException e) {
       model.put(ATRIBUTO_ERROR, "El valor del crédito debe ser mayor a $0.");
-      cargarDatosDashboardTareas(model, usuarioId);
-      return new ModelAndView(VISTA_TAREAS, model);
     }
+    cargarDatosDashboardTareas(model, usuarioId, hogarId);
+    return new ModelAndView(VISTA_TAREAS, model);
   }
 
   @PostMapping("/tareas/completar")
@@ -69,7 +87,7 @@ public class ControladorTarea {
 
     if (tareaId == null) {
       model.put(ATRIBUTO_ERROR, "Identificador de tarea inválido.");
-      cargarDatosDashboardTareas(model, usuarioId);
+      cargarDatosDashboardTareas(model, usuarioId, obtenerHogarIdDeSesion(request));
       model.put(ATRIBUTO_NUEVA_TAREA, new Tarea());
       return new ModelAndView(VISTA_TAREAS, model);
     }
@@ -83,17 +101,18 @@ public class ControladorTarea {
       model.put(ATRIBUTO_ERROR, "Esta tarea ya fue completada previamente.");
     }
 
-    cargarDatosDashboardTareas(model, usuarioId);
+    cargarDatosDashboardTareas(model, usuarioId, obtenerHogarIdDeSesion(request));
     model.put(ATRIBUTO_NUEVA_TAREA, new Tarea());
     return new ModelAndView(VISTA_TAREAS, model);
   }
 
   /* --- Métodos Auxiliares Privados para Cumplir PMD --- */
 
-  private void cargarDatosDashboardTareas(Map<String, Object> model, Long usuarioId) {
+  private void cargarDatosDashboardTareas(Map<String, Object> model, Long usuarioId, Long hogarId) {
     Double creditoAcumulado = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
     model.put("tareas", servicioCreditoTarea.obtenerTodasLasTareas());
     model.put("creditoAcumulado", creditoAcumulado);
+    model.put("catalogo", servicioTareaRepetitiva.obtenerTodas(hogarId));
 
     // IMPORTANTE: Variable enviada a la vista
     model.put("precioHoraHogar", 1000.0);
@@ -105,5 +124,21 @@ public class ControladorTarea {
       return 1L; // Fallback mock para desarrollo local
     }
     return usuarioId;
+  }
+
+  private Long obtenerHogarIdDeSesion(HttpServletRequest request) {
+    Object hogarId = request.getSession().getAttribute("HOGAR_ID");
+    if (hogarId instanceof Long) {
+      return (Long) hogarId;
+    }
+    return 1L;
+  }
+
+  private Long obtenerTareaRepetitivaId(HttpServletRequest request) {
+    String valor = request.getParameter("tareaRepetitivaId");
+    if (valor == null || valor.isBlank()) {
+      return null;
+    }
+    return Long.valueOf(valor);
   }
 }

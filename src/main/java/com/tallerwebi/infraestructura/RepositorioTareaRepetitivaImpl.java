@@ -37,7 +37,6 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
     return sessionFactory.getCurrentSession().get(TareaRepetitiva.class, id);
   }
 
-  /* borrar*/
   @Override
   public int contarAsignadasAUsuario(Usuario usuario) {
     String query =

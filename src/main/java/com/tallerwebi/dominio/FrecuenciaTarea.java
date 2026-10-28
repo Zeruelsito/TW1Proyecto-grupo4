@@ -1,8 +1,5 @@
 package com.tallerwebi.dominio;
 
-/**
- * FrecuenciaTarea
- */
 public enum FrecuenciaTarea {
   DIARIA("diaria"),
   SEMANAL("semanal"),

@@ -19,12 +19,8 @@ public class TareaRepetitiva {
 
   private Double valorPorHora;
 
-  // peso de tarea tipo 0.5 lavar platos y 1 para lavar baño (a revisar) / null = usa el precio por hora del hogar
-
   @Enumerated(EnumType.STRING)
   private FrecuenciaTarea frecuencia;
-
-  //private Enum<FrecuenciaTarea> frecuencia;
 
   @ManyToOne
   private Hogar hogar;
@@ -93,7 +89,7 @@ public class TareaRepetitiva {
     return valorPorHora;
   }
 
-  public void setValorPorHora(double valorPorHora) {
+  public void setValorPorHora(Double valorPorHora) {
     this.valorPorHora = valorPorHora;
   }
 }

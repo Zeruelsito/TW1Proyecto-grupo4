@@ -12,6 +12,6 @@ public interface ServicioHogar {
   List<CambioParametro> obtenerHistorial();
 
   List<Hogar> obtenerHogares(Long usuarioId);
-  void crearHogar(Hogar hogar); // <-- Nuevo
+  void crearHogar(Hogar hogar);
   boolean unirseAHogar(String nombreHogar, String pin, Usuario usuario);
 }

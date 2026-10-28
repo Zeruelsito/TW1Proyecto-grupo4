@@ -13,7 +13,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.tallerwebi.dominio.ServicioCreditoTarea;
+import com.tallerwebi.dominio.ServicioTareaRepetitiva;
 import com.tallerwebi.dominio.Tarea;
+import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,17 +32,19 @@ public class ControladorTareaTest {
   private ServicioCreditoTarea servicioCreditoTareaMock;
   private HttpServletRequest requestMock;
   private HttpSession sessionMock;
+  private ServicioTareaRepetitiva servicioTareaRepetitivaMock;
 
   @BeforeEach
   public void init() {
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
+    servicioTareaRepetitivaMock = mock(ServicioTareaRepetitiva.class);
     requestMock = mock(HttpServletRequest.class);
     sessionMock = mock(HttpSession.class);
 
     when(requestMock.getSession()).thenReturn(sessionMock);
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
-    controladorTarea = new ControladorTarea(servicioCreditoTareaMock);
+    controladorTarea = new ControladorTarea(servicioCreditoTareaMock, servicioTareaRepetitivaMock);
   }
 
   @Test
@@ -129,6 +133,38 @@ public class ControladorTareaTest {
     assertThat(
       modelAndView.getModelMap().get("error"),
       equalTo("Esta tarea ya fue completada previamente.")
+    );
+  }
+
+  @Test
+  public void crearTareaDesdeCatalogoDebeRegistrarConLaPlantillaYRedirigir() {
+    when(requestMock.getParameter("tareaRepetitivaId")).thenReturn("7");
+    Tarea tarea = new Tarea();
+    tarea.setHorasDedicadas(2.0);
+
+    ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
+
+    assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
+    verify(servicioCreditoTareaMock).registrarTareaDesdeCatalogo(7L, 2.0, 1L);
+  }
+
+  @Test
+  public void crearTareaDesdeCatalogoInexistenteDebeMostrarMensajeDeError() {
+    when(requestMock.getParameter("tareaRepetitivaId")).thenReturn("99");
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(91L);
+    Tarea tarea = new Tarea();
+    tarea.setHorasDedicadas(1.0);
+
+    doThrow(new TareaNoEncontradaException())
+      .when(servicioCreditoTareaMock)
+      .registrarTareaDesdeCatalogo(99L, 1.0, 91L);
+
+    ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
+
+    assertThat(modelAndView.getViewName(), equalTo("tareas"));
+    assertThat(
+      modelAndView.getModelMap().get("error"),
+      equalTo("La tarea seleccionada no existe en tu hogar.")
     );
   }
 }
