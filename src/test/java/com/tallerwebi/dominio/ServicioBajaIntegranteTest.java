@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
+import com.tallerwebi.dominio.excepcion.PagoNoCorrespondeALiquidacionException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import jakarta.servlet.http.HttpSession;
@@ -55,6 +56,7 @@ public class ServicioBajaIntegranteTest {
         new ServicioCalculosGastoImpl(),
         servicioHogarMock,
         servicioCreditoTareaMock,
+        servicioPagoRealizadoMock,
         sessionMock
       );
 
@@ -219,5 +221,46 @@ public class ServicioBajaIntegranteTest {
 
     // validacion
     assertFalse(simulacion.isSaldoPendiente());
+  }
+
+  @Test
+  public void registrarUnPagoDeLaLiquidacionFinalDeberiaGuardarlo() {
+    // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
+    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
+    when(servicioHogarMock.seleccionarHogarPorId(HOGAR_ID)).thenReturn(hogar);
+
+    // ejecucion
+    servicioBaja.registrarPago(1L, "Juan", "Maria", 10000.0);
+
+    // validacion
+    verify(servicioPagoRealizadoMock, times(1)).registrarPagoExitoso(any(PagoRealizado.class));
+  }
+
+  @Test
+  public void registrarUnPagoQueNoEstaEnLaLiquidacionDeberiaLanzarExcepcion() {
+    // preparacion: no hay gastos -> Juan no debe nada
+    // ejecucion y validacion
+    assertThrows(
+      PagoNoCorrespondeALiquidacionException.class,
+      () -> servicioBaja.registrarPago(1L, "Juan", "Maria", 10000.0)
+    );
+    verify(servicioPagoRealizadoMock, times(0)).registrarPagoExitoso(any());
+  }
+
+  @Test
+  public void conLaDeudaPagadaElIntegranteNoDeberiaTenerSaldoPendiente() {
+    // preparacion: Juan le debía 10000 a Maria y ya se los pagó
+    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
+    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
+    PagoRealizado pago = new PagoRealizado("Juan", "Maria", 10000.0, LocalDateTime.now(), hogar);
+    when(servicioPagoRealizadoMock.obtenerHistorialPagos(HOGAR_ID)).thenReturn(List.of(pago));
+
+    // ejecucion
+    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
+
+    // validacion
+    assertFalse(simulacion.isSaldoPendiente());
+    assertTrue(simulacion.getLiquidacionFinal().isEmpty());
   }
 }
