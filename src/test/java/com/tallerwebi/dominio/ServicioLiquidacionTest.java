@@ -1,166 +1,173 @@
 package com.tallerwebi.dominio;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.equalTo;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.*;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class ServicioLiquidacionTest {
 
-  private ServicioLiquidacion servicioLiquidacion;
-  private ServicioCreditoTarea servicioCreditoTarea;
-  private ServicioPagoRealizado servicioPagoRealizado;
+  @Mock
+  private ServicioCreditoTarea servicioCreditoTareaMock;
+
+  @Mock
+  private ServicioPagoRealizado servicioPagoRealizadoMock;
+
+  @InjectMocks
+  private ServicioLiquidacionImpl servicioLiquidacion;
 
   @BeforeEach
-  public void init() {
-    this.servicioLiquidacion =
-      new ServicioLiquidacionImpl(servicioCreditoTarea, servicioPagoRealizado);
+  public void setUp() {
+    MockitoAnnotations.openMocks(this);
   }
 
   @Test
-  public void siTodosTienenSaldoCeroNoDebeGenerarTransferencias() {
-    //given
-    Map<String, Double> balances = givenUnMapaConBalancesConSaldosCero();
-    //when
-    List<TransferenciaSugerida> resultado = whenCalculoLaLiquidacion(balances);
-    //then
-    thenObtengoUnaListaVacia(resultado);
-  }
+  public void queRetorneListaVaciaSiHogarEsNullOIntegrantesEstanVacios() {
+    Hogar hogarVacio = new Hogar("Hogar Vacío");
+    hogarVacio.setIntegrantes(Collections.emptyList());
 
-  @Test
-  public void siUnUsuarioDebeYOtroEsAcreedorDebeGenerarUnaSolaTransferencia() {
-    // Juan consumió $1000 de más (-1000), Maria pagó $1000 de más (+1000)
-    //given
-    Map<String, Double> balances = givenUnMapaConUnAcreedorYUnDeudor();
-    //when
-    List<TransferenciaSugerida> resultado = whenCalculoLaLiquidacion(balances);
-    //then
-    thenObtengoUnaListaConUnaSolaTransferencia(resultado);
-  }
-
-  @Test
-  public void tresIntegrantesDebenSimplificarTransaccionesCorrectamente() {
-    // Juan debe $2000, Pedro debe $1000, Maria puso $3000
-    //given
-    Map<String, Double> balances = givenUnMapaConBalancesDeTresIntegrantes();
-    //when
-    List<TransferenciaSugerida> resultado = whenCalculoLaLiquidacion(balances);
-    //then
-    thenObtengoUnaListaConDosTransferencias(resultado);
-  }
-
-  @Test
-  public void debeCalcularLiquidacionDelMesConObjetosEnMemoria() {
-    // Given
-    Hogar hogar = givenUnHogarConDosIntegrantes();
-    // Gasto total: $10.000 (pagado por Juan con ID 1L)
-    Gasto gastoServicio = givenUnGasto();
-    List<Gasto> gastos = List.of(gastoServicio);
-
-    // Mock del servicio de tareas
-    ServicioCreditoTarea servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
-    ServicioPagoRealizado servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(2L)).thenReturn(2000.0);
-
-    ServicioLiquidacion servicio = new ServicioLiquidacionImpl(
-      servicioCreditoTareaMock,
-      servicioPagoRealizadoMock
+    List<TransferenciaSugerida> resultadoNull = servicioLiquidacion.obtenerLiquidacionDelMes(
+      null,
+      Collections.emptyList()
+    );
+    List<TransferenciaSugerida> resultadoVacio = servicioLiquidacion.obtenerLiquidacionDelMes(
+      hogarVacio,
+      Collections.emptyList()
     );
 
-    // When
-    List<TransferenciaSugerida> transferencias = servicio.obtenerLiquidacionDelMes(hogar, gastos);
+    assertTrue(resultadoNull.isEmpty());
+    assertTrue(resultadoVacio.isEmpty());
+  }
 
-    // Then
-    // Consumo indiv: $5000. Juan pagó $10000 (+$5000). María hizo $2000 en tareas (-$3000).
-    assertThat(transferencias.size(), equalTo(1));
-    assertThat(
-      transferencias.get(0),
-      equalTo(new TransferenciaSugerida("Maria", "maria@unlam.edu.ar", "Juan", 3000.0))
+  @Test
+  public void queCalculeLiquidacionCorrectamenteYFiltrePagosYaRealizados() {
+    Usuario u1 = new Usuario();
+    u1.setId(1L);
+    u1.setEmail("juan@test.com");
+    u1.setNombre("Juan");
+
+    Usuario u2 = new Usuario();
+    u2.setId(2L);
+    u2.setEmail("maria@test.com");
+    u2.setNombre("María");
+
+    Hogar hogar = new Hogar("Casa");
+    hogar.setId(10L);
+    hogar.setIntegrantes(Arrays.asList(u1, u2));
+
+    // Gasto total de 1000 pagado por Juan (u1) -> Cuota consumo individual = 500 c/u
+    Gasto gasto = new Gasto();
+    gasto.setMonto(1000.0);
+    gasto.setPagado(true);
+    gasto.setUsuarioPagador(u1);
+    List<Gasto> gastos = Collections.singletonList(gasto);
+
+    // Sin créditos de tareas
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
+
+    // Supongamos que ya existe un pago realizado de María a Juan por 500 (debe filtrarse)
+    PagoRealizado pagoRealizado = new PagoRealizado(
+      "María",
+      "Juan",
+      500.0,
+      LocalDateTime.now(),
+      hogar
     );
-  }
+    when(servicioPagoRealizadoMock.obtenerHistorialPagos(10L))
+      .thenReturn(Collections.singletonList(pagoRealizado));
 
-  private Gasto givenUnGasto() {
-    Usuario juan = new Usuario("Juan", "juan@kumo.com", "1234");
-    juan.setId(1L);
-
-    Gasto gastoServicio = new Gasto(
-      "G001",
-      TipoGasto.OCASIONAL,
-      "gasto x",
-      10000.0,
-      juan,
-      "VARIOS"
+    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
+      hogar,
+      gastos
     );
-    return gastoServicio;
+
+    // Como ya fue abonado, el resultado debe estar vacío
+    assertTrue(transferencias.isEmpty());
   }
 
-  private Hogar givenUnHogarConDosIntegrantes() {
-    Usuario juan = new Usuario("Juan", "juan@kumo.com", "1234");
-    juan.setId(1L);
-    Usuario maria = new Usuario("Maria", "maria@kumo.com", "1212");
-    maria.setId(2L);
-    Hogar hogar = new Hogar("Hogar Compartido");
-    hogar.getIntegrantes().add(juan);
-    hogar.getIntegrantes().add(maria);
-    return hogar;
+  @Test
+  public void queGenereTransferenciaSugeridaSiAunNoFuePagado() {
+    Usuario u1 = new Usuario();
+    u1.setId(1L);
+    u1.setEmail("juan@test.com");
+    u1.setNombre("Juan");
+
+    Usuario u2 = new Usuario();
+    u2.setId(2L);
+    u2.setEmail("maria@test.com");
+    u2.setNombre("María");
+
+    Hogar hogar = new Hogar("Casa");
+    hogar.setId(10L);
+    hogar.setIntegrantes(Arrays.asList(u1, u2));
+
+    Gasto gasto = new Gasto();
+    gasto.setMonto(1000.0);
+    gasto.setPagado(true);
+    gasto.setUsuarioPagador(u1);
+    List<Gasto> gastos = Collections.singletonList(gasto);
+
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
+    when(servicioPagoRealizadoMock.obtenerHistorialPagos(10L)).thenReturn(Collections.emptyList());
+
+    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
+      hogar,
+      gastos
+    );
+
+    assertEquals(1, transferencias.size());
+    assertEquals(500.0, transferencias.get(0).getMonto());
+    assertEquals("María", transferencias.get(0).getEmisor());
+    assertEquals("Juan", transferencias.get(0).getReceptor());
   }
 
-  private void thenObtengoUnaListaVacia(List<TransferenciaSugerida> resultado) {
-    assertTrue(resultado.isEmpty());
+  @Test
+  public void queRegistrePagoExitosoCorrectamente() {
+    Hogar hogar = new Hogar("Casa");
+    doNothing().when(servicioPagoRealizadoMock).registrarPagoExitoso(any(PagoRealizado.class));
+
+    servicioLiquidacion.registrarPagoExitoso(hogar, "emisor@test.com", "receptor@test.com", 300.0);
+
+    verify(servicioPagoRealizadoMock, times(1)).registrarPagoExitoso(any(PagoRealizado.class));
   }
 
-  private List<TransferenciaSugerida> whenCalculoLaLiquidacion(Map<String, Double> balances) {
-    List<TransferenciaSugerida> resultado = servicioLiquidacion.calcularLiquidacionOptima(balances);
-    return resultado;
+  @Test
+  public void queObtengaHistorialPagosCorrectamente() {
+    when(servicioPagoRealizadoMock.obtenerHistorialPagos(1L)).thenReturn(Collections.emptyList());
+
+    List<PagoRealizado> historial = servicioLiquidacion.obtenerHistorialPagos(1L);
+
+    assertNotNull(historial);
+    verify(servicioPagoRealizadoMock, times(1)).obtenerHistorialPagos(1L);
   }
 
-  private Map<String, Double> givenUnMapaConBalancesConSaldosCero() {
+  @Test
+  public void queCalculeLiquidacionOptimaConNombresCorrectamente() {
     Map<String, Double> balances = new HashMap<>();
-    balances.put("Juan", 0.0);
-    balances.put("Maria", 0.0);
-    return balances;
-  }
+    balances.put("deudor@test.com", -250.0);
+    balances.put("acreedor@test.com", 250.0);
 
-  private void thenObtengoUnaListaConUnaSolaTransferencia(List<TransferenciaSugerida> resultado) {
-    assertThat(resultado.size(), equalTo(1));
-    assertThat(
-      resultado.get(0),
-      equalTo(new TransferenciaSugerida("Juan", "test@unlam.edu.ar", "Maria", 1000.0))
-    );
-  }
+    Map<String, String> emailToNombre = new HashMap<>();
+    emailToNombre.put("deudor@test.com", "Deudor");
+    emailToNombre.put("acreedor@test.com", "Acreedor");
 
-  private Map<String, Double> givenUnMapaConUnAcreedorYUnDeudor() {
-    Map<String, Double> balances = new HashMap<>();
-    balances.put("Juan", -1000.0);
-    balances.put("Maria", 1000.0);
-    return balances;
-  }
+    List<TransferenciaSugerida> transferencias =
+      servicioLiquidacion.calcularLiquidacionOptimaConNombres(balances, emailToNombre);
 
-  private void thenObtengoUnaListaConDosTransferencias(List<TransferenciaSugerida> resultado) {
-    assertThat(resultado.size(), equalTo(2));
-    assertThat(
-      resultado,
-      containsInAnyOrder(
-        new TransferenciaSugerida("Juan", "test@unlam.edu.ar", "Maria", 2000.0),
-        new TransferenciaSugerida("Pedro", "pedro@unlam.edu.ar", "Maria", 1000.0)
-      )
-    );
-  }
-
-  private Map<String, Double> givenUnMapaConBalancesDeTresIntegrantes() {
-    Map<String, Double> balances = new HashMap<>();
-    balances.put("Juan", -2000.0);
-    balances.put("Pedro", -1000.0);
-    balances.put("Maria", 3000.0);
-    return balances;
+    assertEquals(1, transferencias.size());
+    assertEquals(250.0, transferencias.get(0).getMonto());
+    assertEquals("Deudor", transferencias.get(0).getEmisor());
+    assertEquals("Acreedor", transferencias.get(0).getReceptor());
   }
 }

@@ -1,137 +1,174 @@
 package com.tallerwebi.presentacion;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.tallerwebi.dominio.ServicioCreditoTarea;
 import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Tarea;
+import com.tallerwebi.dominio.Usuario;
+import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
-import java.util.ArrayList;
+import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.ui.ModelMap;
-import org.springframework.web.servlet.ModelAndView;
+import org.mockito.ArgumentMatchers;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 public class ControladorTareaTest {
 
-  private ControladorTarea controladorTarea;
+  private MockMvc mockMvc;
   private ServicioCreditoTarea servicioCreditoTareaMock;
   private ServicioUsuario servicioUsuarioMock;
-  private HttpServletRequest requestMock;
-  private HttpSession sessionMock;
+  private ControladorTarea controladorTarea;
 
   @BeforeEach
-  public void init() {
+  public void setUp() {
     servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
     servicioUsuarioMock = mock(ServicioUsuario.class);
-    requestMock = mock(HttpServletRequest.class);
-    sessionMock = mock(HttpSession.class);
-
-    when(requestMock.getSession()).thenReturn(sessionMock);
-    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
 
     controladorTarea = new ControladorTarea(servicioCreditoTareaMock, servicioUsuarioMock);
+
+    // Configuramos el ViewResolver para evitar el bucle de vista circular en Spring MVC
+    InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+    viewResolver.setPrefix("/WEB-INF/views/");
+    viewResolver.setSuffix(".jsp");
+
+    mockMvc =
+      MockMvcBuilders.standaloneSetup(controladorTarea).setViewResolvers(viewResolver).build();
   }
 
   @Test
-  public void irATareasDebeDevolverLaVistaTareasYElModeloConCreditoAcumulado() {
-    // preparación[cite: 12]
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(1500.0);
-    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(new ArrayList<>());
+  public void queMuestreLaVistaDeTareasConDatosDelDashboard() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
 
-    // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.irATareas(requestMock, sessionMock);
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(500.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
-    // verificación[cite: 12]
-    assertThat(modelAndView.getViewName(), equalTo("tareas"));
-    ModelMap modelMap = modelAndView.getModelMap();
-    assertThat(modelMap.get("creditoAcumulado"), equalTo(1500.0));
-    assertThat(modelMap.get("tareas"), notNullValue());
-    assertThat(modelMap.get("nuevaTarea"), notNullValue());
+    mockMvc
+      .perform(get("/tareas").sessionAttr("USUARIO_ID", 1L))
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(model().attributeExists("nombreUsuario"))
+      .andExpect(model().attributeExists("tareas"))
+      .andExpect(model().attributeExists("creditoAcumulado"))
+      .andExpect(model().attributeExists("precioHoraHogar"))
+      .andExpect(model().attributeExists("nuevaTarea"));
   }
 
   @Test
-  public void crearTareaExitosaDebeRedirigirATareas() {
-    // preparación - Usamos el nuevo constructor sin ID y lo seteamos aparte[cite: 9, 12]
-    Tarea tarea = new Tarea("Limpiar la cocina", 2.0, 1000.0, null);
-    tarea.setId(1L);
+  public void queCreeTareaExitosamenteYRedirija() throws Exception {
     doNothing().when(servicioCreditoTareaMock).registrarTarea(any(Tarea.class));
 
-    // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
+    mockMvc
+      .perform(
+        post("/tareas/crear").sessionAttr("USUARIO_ID", 1L).param("nombre", "Limpiar cocina")
+      )
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/tareas"));
 
-    // verificación[cite: 12]
-    assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
-    verify(servicioCreditoTareaMock, times(1)).registrarTarea(tarea);
+    verify(servicioCreditoTareaMock, times(1)).registrarTarea(any(Tarea.class));
   }
 
   @Test
-  public void crearTareaConCreditoInvalidoDebeMostrarMensajeDeError() {
-    // preparación - Usamos el nuevo constructor sin ID[cite: 9, 12]
-    Tarea tareaInvalida = new Tarea("Pintar reja", -1.0, 1000.0, null);
-    tareaInvalida.setId(1L);
+  public void queManejeExcepcionValorCreditoInvalidoAlCrearTarea() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
+
     doThrow(new ValorCreditoInvalidoException())
       .when(servicioCreditoTareaMock)
       .registrarTarea(any(Tarea.class));
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
 
-    // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.crearTarea(tareaInvalida, requestMock);
-
-    // verificación[cite: 12]
-    assertThat(modelAndView.getViewName(), equalTo("tareas"));
-    assertThat(
-      modelAndView.getModelMap().get("error"),
-      equalTo("El valor del crédito debe ser mayor a $0.")
-    );
+    mockMvc
+      .perform(
+        post("/tareas/crear").sessionAttr("USUARIO_ID", 1L).param("nombre", "Tarea inválida")
+      )
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(model().attributeExists("error"))
+      .andExpect(model().attribute("error", "El valor del crédito debe ser mayor a $0."));
   }
 
   @Test
-  public void completarTareaExitosaDebeRedirigirATareas() {
-    // preparación[cite: 12]
-    Long tareaId = 5L;
-    Long usuarioId = 1L;
-    doNothing().when(servicioCreditoTareaMock).completarTareaYGenerarCredito(tareaId, usuarioId);
+  public void queCompletarTareaExitosamenteRedirija() throws Exception {
+    doNothing().when(servicioCreditoTareaMock).completarTareaYGenerarCredito(10L, 1L);
 
-    // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.completarTarea(tareaId, requestMock);
+    mockMvc
+      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "10"))
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/tareas"));
 
-    // verificación[cite: 12]
-    assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
-    verify(servicioCreditoTareaMock, times(1))
-      .completarTareaYGenerarCredito(eq(tareaId), eq(usuarioId));
+    verify(servicioCreditoTareaMock, times(1)).completarTareaYGenerarCredito(10L, 1L);
   }
 
   @Test
-  public void completarTareaYaCompletadaDebePermanecerEnVistaYMostrarError() {
-    // preparación[cite: 12]
-    Long tareaId = 5L;
-    Long usuarioId = 1L;
+  public void queManejeErrorSiIdDeTareaEsNullAlCompletar() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(100.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
+
+    mockMvc
+      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L)) // Sin param tareaId
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(model().attribute("error", "Identificador de tarea inválido."));
+
+    verify(servicioCreditoTareaMock, never()).completarTareaYGenerarCredito(anyLong(), anyLong());
+  }
+
+  @Test
+  public void queManejeExcepcionTareaNoEncontradaAlCompletar() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(100.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
+
+    doThrow(new TareaNoEncontradaException())
+      .when(servicioCreditoTareaMock)
+      .completarTareaYGenerarCredito(99L, 1L);
+
+    mockMvc
+      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "99"))
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(model().attribute("error", "La tarea seleccionada no existe."));
+  }
+
+  @Test
+  public void queManejeExcepcionTareaYaCompletadaAlCompletar() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(200.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
+
     doThrow(new TareaYaCompletadaException())
       .when(servicioCreditoTareaMock)
-      .completarTareaYGenerarCredito(tareaId, usuarioId);
+      .completarTareaYGenerarCredito(5L, 1L);
 
-    // ejecución[cite: 12]
-    ModelAndView modelAndView = controladorTarea.completarTarea(tareaId, requestMock);
-
-    // verificación[cite: 12]
-    assertThat(modelAndView.getViewName(), equalTo("tareas"));
-    assertThat(
-      modelAndView.getModelMap().get("error"),
-      equalTo("Esta tarea ya fue completada previamente.")
-    );
+    mockMvc
+      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "5"))
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(model().attribute("error", "Esta tarea ya fue completada previamente."));
   }
 }

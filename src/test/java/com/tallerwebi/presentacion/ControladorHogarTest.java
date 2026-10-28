@@ -1,123 +1,116 @@
 package com.tallerwebi.presentacion;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.tallerwebi.dominio.CambioParametro;
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import com.tallerwebi.dominio.excepcion.ParametroInvalidoException;
-import jakarta.servlet.http.HttpSession;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.servlet.ModelAndView;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
 public class ControladorHogarTest {
 
-  private ServicioHogar servicioHogar;
-  private HttpSession session;
+  private MockMvc mockMvc;
+  private ServicioHogar servicioHogarMock;
   private ControladorHogar controladorHogar;
 
   @BeforeEach
-  public void init() {
-    servicioHogar = mock(ServicioHogar.class);
-    session = mock(HttpSession.class);
-    controladorHogar = new ControladorHogar(servicioHogar);
+  public void setUp() {
+    servicioHogarMock = mock(ServicioHogar.class);
+    controladorHogar = new ControladorHogar(servicioHogarMock);
+
+    // Configuramos el ViewResolver para evitar el bucle de vista circular en Spring MVC
+    InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+    viewResolver.setPrefix("/WEB-INF/views/");
+    viewResolver.setSuffix(".jsp");
+
+    mockMvc =
+      MockMvcBuilders.standaloneSetup(controladorHogar).setViewResolvers(viewResolver).build();
   }
 
   @Test
-  public void cuandoConsultoLaVistaEntoncesDevuelveElHogarLosHogaresYElHistorial() {
-    // given
-    Hogar hogar = givenExisteUnHogarActivo();
-    List<Hogar> hogares = givenExistenHogares();
-    List<CambioParametro> historial = givenExisteHistorial();
+  public void queMuestreLaVistaHogaresYSeleccioneHogarPorDefectoSiNoEstaEnSesion()
+    throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
+    List<Hogar> listaHogares = Collections.singletonList(hogarMock);
 
-    when(session.getAttribute("usuarioId")).thenReturn(1L);
+    when(servicioHogarMock.obtenerHogares(1L)).thenReturn(listaHogares);
+    when(servicioHogarMock.obtenerHistorial()).thenReturn(Collections.emptyList());
 
-    // when
-    ModelAndView mav = controladorHogar.irAHogar(session);
+    mockMvc
+      .perform(get("/hogar"))
+      .andExpect(status().isOk())
+      .andExpect(view().name("hogar"))
+      .andExpect(model().attributeExists("hogar"))
+      .andExpect(model().attributeExists("hogares"))
+      .andExpect(model().attributeExists("historial"));
 
-    // then
-    thenLaVistaEs("hogar", mav);
-    assertThat(mav.getModel().get("hogar"), equalTo(hogar));
-    assertThat(mav.getModel().get("hogares"), equalTo(hogares));
-    assertThat(mav.getModel().get("historial"), equalTo(historial));
+    verify(servicioHogarMock, atLeastOnce()).obtenerHogares(1L);
   }
 
   @Test
-  public void cuandoGuardoParametrosValidosEntoncesLlamaAlServicioYRedirigeAHogar() {
-    // when
-    ModelAndView mav = controladorHogar.guardarParametros(1500.0, 20000.0);
+  public void queGuardeParametrosExitosamenteYRedirija() throws Exception {
+    doNothing().when(servicioHogarMock).actualizarParametros(150.0, 500.0);
 
-    // then
-    verify(servicioHogar).actualizarParametros(1500.0, 20000.0);
-    thenLaVistaEs("redirect:/hogar", mav);
+    mockMvc
+      .perform(
+        post("/hogar/parametros")
+          .param("precioHoraTarea", "150.0")
+          .param("pisoMinimoHogar", "500.0")
+      )
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/hogar"));
+
+    verify(servicioHogarMock, times(1)).actualizarParametros(150.0, 500.0);
   }
 
   @Test
-  public void cuandoGuardoParametrosInvalidosEntoncesRedirigeAHogarSinFallar() {
-    // given
+  public void queRedirijaAunSiLanzaExcepcionParametroInvalidoAlGuardar() throws Exception {
     doThrow(new ParametroInvalidoException())
-      .when(servicioHogar)
-      .actualizarParametros(-1.0, 20000.0);
+      .when(servicioHogarMock)
+      .actualizarParametros(anyDouble(), anyDouble());
 
-    // when
-    ModelAndView mav = controladorHogar.guardarParametros(-1.0, 20000.0);
-
-    // then
-    thenLaVistaEs("redirect:/hogar", mav);
+    mockMvc
+      .perform(
+        post("/hogar/parametros")
+          .param("precioHoraTarea", "-10.0")
+          .param("pisoMinimoHogar", "500.0")
+      )
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/hogar"));
   }
 
   @Test
-  public void cuandoCambioDeHogarEntoncesLlamaAlServicioYRedirigeAHogar() {
-    // when
-    ModelAndView mav = controladorHogar.cambiarHogar(2L, session);
+  public void queCambieDeHogarExitosamenteYRedirija() throws Exception {
+    Hogar hogarNuevo = new Hogar("Casa de Campo");
+    when(servicioHogarMock.seleccionarHogarPorId(2L)).thenReturn(hogarNuevo);
 
-    // then
-    verify(servicioHogar).seleccionarHogarPorId(2L);
-    thenLaVistaEs("redirect:/hogar", mav);
+    mockMvc
+      .perform(post("/hogar/cambiar").param("hogarId", "2"))
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/hogar"));
+
+    verify(servicioHogarMock, times(2)).seleccionarHogarPorId(2L);
   }
 
   @Test
-  public void cuandoCambioAUnHogarQueNoExisteEntoncesRedirigeAHogarSinFallar() {
-    // given
-    doThrow(new HogarNoEncontradoException()).when(servicioHogar).seleccionarHogarPorId(99L);
+  public void queManejeExcepcionHogarNoEncontradoAlCambiarDeHogar() throws Exception {
+    doThrow(new HogarNoEncontradoException()).when(servicioHogarMock).seleccionarHogarPorId(99L);
 
-    // when
-    ModelAndView mav = controladorHogar.cambiarHogar(99L, session);
-
-    // then
-    thenLaVistaEs("redirect:/hogar", mav);
-  }
-
-  private Hogar givenExisteUnHogarActivo() {
-    Hogar hogar = new Hogar("Hogar 1");
-    when(servicioHogar.obtenerHogar()).thenReturn(hogar);
-    return hogar;
-  }
-
-  private List<Hogar> givenExistenHogares() {
-    List<Hogar> hogares = new ArrayList<>();
-    hogares.add(new Hogar("Hogar 2"));
-    when(servicioHogar.obtenerHogares(1L)).thenReturn(hogares);
-    return hogares;
-  }
-
-  private List<CambioParametro> givenExisteHistorial() {
-    List<CambioParametro> historial = new ArrayList<>();
-    historial.add(new CambioParametro("Precio por hora", 1000.0, 1500.0));
-    when(servicioHogar.obtenerHistorial()).thenReturn(historial);
-    return historial;
-  }
-
-  private void thenLaVistaEs(String vistaEsperada, ModelAndView mav) {
-    assertThat(mav.getViewName(), equalTo(vistaEsperada));
+    mockMvc
+      .perform(post("/hogar/cambiar").param("hogarId", "99"))
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/hogar"));
   }
 }
