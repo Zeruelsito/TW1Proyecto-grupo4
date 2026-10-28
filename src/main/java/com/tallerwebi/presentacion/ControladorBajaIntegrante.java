@@ -4,6 +4,7 @@ import com.tallerwebi.dominio.ServicioBajaIntegrante;
 import com.tallerwebi.dominio.SimulacionBaja;
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
+import com.tallerwebi.dominio.excepcion.PagoNoCorrespondeALiquidacionException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,8 +38,14 @@ public class ControladorBajaIntegrante {
   }
 
   @GetMapping("/hogar/baja/simular")
-  public ModelAndView simular(@RequestParam("usuarioId") Long usuarioId) {
+  public ModelAndView simular(
+    @RequestParam("usuarioId") Long usuarioId,
+    @RequestParam(value = "pagoRegistrado", required = false) Boolean pagoRegistrado
+  ) {
     ModelAndView mav = vistaBase();
+    if (Boolean.TRUE.equals(pagoRegistrado)) {
+      mav.addObject("mensaje", "El pago se registró y la liquidación final se actualizó.");
+    }
     try {
       SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(usuarioId);
       mav.addObject("simulacion", simulacion);
@@ -59,9 +66,25 @@ public class ControladorBajaIntegrante {
     return new ModelAndView("redirect:/hogar/baja?confirmada=true");
   }
 
-  /** Vuelve a mostrar la simulación del integrante (si se puede) junto con el mensaje de error. */
+  @PostMapping("/hogar/baja/registrar-pago")
+  public ModelAndView registrarPago(
+    @RequestParam("usuarioId") Long usuarioId,
+    @RequestParam("emisor") String emisor,
+    @RequestParam("receptor") String receptor,
+    @RequestParam("monto") Double monto
+  ) {
+    try {
+      servicioBajaIntegrante.registrarPago(usuarioId, emisor, receptor, monto);
+    } catch (RuntimeException excepcion) {
+      return simulacionConError(usuarioId, mensajeDeError(excepcion));
+    }
+    return new ModelAndView(
+      "redirect:/hogar/baja/simular?usuarioId=" + usuarioId + "&pagoRegistrado=true"
+    );
+  }
+
   private ModelAndView simulacionConError(Long usuarioId, String error) {
-    ModelAndView mav = simular(usuarioId);
+    ModelAndView mav = simular(usuarioId, null);
     mav.addObject("error", error);
     return mav;
   }
@@ -84,6 +107,9 @@ public class ControladorBajaIntegrante {
     }
     if (excepcion instanceof IntegranteConSaldoPendienteException) {
       return "No se puede dar de baja: el integrante todavía tiene saldo pendiente.";
+    }
+    if (excepcion instanceof PagoNoCorrespondeALiquidacionException) {
+      return "Ese pago no corresponde a la liquidación pendiente o ya fue registrado.";
     }
     throw excepcion;
   }

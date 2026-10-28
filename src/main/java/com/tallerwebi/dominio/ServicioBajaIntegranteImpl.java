@@ -2,6 +2,7 @@ package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
+import com.tallerwebi.dominio.excepcion.PagoNoCorrespondeALiquidacionException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import jakarta.servlet.http.HttpSession;
@@ -32,6 +33,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   private final ServicioCalculosGasto servicioCalculosGasto;
   private final ServicioHogar servicioHogar;
   private final ServicioCreditoTarea servicioCreditoTarea;
+  private final ServicioPagoRealizado servicioPagoRealizado;
   private final HttpSession session; // <-- Inyectamos la sesión para obtener el hogarId actual
 
   @Autowired
@@ -42,6 +44,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     ServicioCalculosGasto servicioCalculosGasto,
     ServicioHogar servicioHogar,
     ServicioCreditoTarea servicioCreditoTarea,
+    ServicioPagoRealizado servicioPagoRealizado,
     HttpSession session
   ) {
     this.repositorioUsuario = repositorioUsuario;
@@ -50,6 +53,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     this.servicioCalculosGasto = servicioCalculosGasto;
     this.servicioHogar = servicioHogar;
     this.servicioCreditoTarea = servicioCreditoTarea;
+    this.servicioPagoRealizado = servicioPagoRealizado;
     this.session = session;
   }
 
@@ -80,6 +84,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     List<Gasto> gastos = repositorioGasto.obtenerTodosPorHogar(hogarId);
 
     Map<String, Double> balances = calcularBalances(integrantes, gastos);
+    aplicarPagosRealizados(balances, hogarId);
     String nombreSaliente = nombreDe(saliente);
     Double balanceFinal = redondear(balances.getOrDefault(nombreSaliente, 0.0));
     List<TransferenciaSugerida> liquidacionFinal = transferenciasDe(
@@ -131,6 +136,27 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
       usuario.setCuotaMensual(valorDe(nuevas, usuario.getId(), CUOTA));
       usuario.setHorasTareaARealizar(valorDe(nuevas, usuario.getId(), HORAS));
       repositorioUsuario.modificar(usuario);
+    }
+  }
+
+  @Override
+  public void registrarPago(Long usuarioId, String emisor, String receptor, Double monto) {
+    SimulacionBaja simulacion = simularBaja(usuarioId);
+    if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
+      throw new PagoNoCorrespondeALiquidacionException();
+    }
+    Hogar hogar = servicioHogar.seleccionarHogarPorId(obtenerHogarIdActual());
+    PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), hogar);
+    servicioPagoRealizado.registrarPagoExitoso(pago);
+  }
+
+  private void aplicarPagosRealizados(Map<String, Double> balances, Long hogarId) {
+    for (PagoRealizado pago : servicioPagoRealizado.obtenerHistorialPagos(hogarId)) {
+      if (pago.getMonto() == null) {
+        continue;
+      }
+      balances.computeIfPresent(pago.getEmisor(), (nombre, saldo) -> saldo + pago.getMonto());
+      balances.computeIfPresent(pago.getReceptor(), (nombre, saldo) -> saldo - pago.getMonto());
     }
   }
 

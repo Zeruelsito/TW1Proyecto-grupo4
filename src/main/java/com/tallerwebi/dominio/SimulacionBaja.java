@@ -4,6 +4,8 @@ import java.util.List;
 
 public class SimulacionBaja {
 
+  private static final double MARGEN_MONTO = 0.01;
+
   private final Usuario usuarioSaliente;
   private final Double balanceFinal;
   private final List<TransferenciaSugerida> liquidacionFinal;
@@ -58,6 +60,19 @@ public class SimulacionBaja {
 
   public boolean isDebeCobrar() {
     return balanceFinal != null && balanceFinal > 0;
+  }
+
+  public boolean tieneTransferenciaPendiente(String emisor, String receptor, Double monto) {
+    for (TransferenciaSugerida transferencia : liquidacionFinal) {
+      if (
+        transferencia.getEmisor().equals(emisor) &&
+        transferencia.getReceptor().equals(receptor) &&
+        Math.abs(transferencia.getMonto() - monto) < MARGEN_MONTO
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public boolean isSaldoPendiente() {

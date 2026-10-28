@@ -8,4 +8,6 @@ public interface ServicioBajaIntegrante {
   SimulacionBaja simularBaja(Long usuarioId);
 
   void confirmarBaja(Long usuarioId);
+
+  void registrarPago(Long usuarioId, String emisor, String receptor, Double monto);
 }
