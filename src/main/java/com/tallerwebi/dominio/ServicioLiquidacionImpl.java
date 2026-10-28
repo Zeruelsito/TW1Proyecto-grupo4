@@ -1,12 +1,15 @@
 package com.tallerwebi.dominio;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ServicioLiquidacionImpl implements ServicioLiquidacion {
@@ -14,17 +17,19 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   private static final double MARGEN_TOLERANCIA = 0.01;
 
   private final ServicioCreditoTarea servicioCreditoTarea;
+  private final ServicioPagoRealizado servicioPagoRealizado;
 
   @Autowired
-  public ServicioLiquidacionImpl(ServicioCreditoTarea servicioCreditoTarea) {
+  public ServicioLiquidacionImpl(
+    ServicioCreditoTarea servicioCreditoTarea,
+    ServicioPagoRealizado servicioPagoRealizado
+  ) {
     this.servicioCreditoTarea = servicioCreditoTarea;
-  }
-
-  public ServicioLiquidacionImpl() {
-    this.servicioCreditoTarea = null;
+    this.servicioPagoRealizado = servicioPagoRealizado;
   }
 
   @Override
+  @Transactional(readOnly = true)
   public List<TransferenciaSugerida> obtenerLiquidacionDelMes(Hogar hogar, List<Gasto> gastos) {
     if (hogar == null || hogar.getIntegrantes() == null || hogar.getIntegrantes().isEmpty()) {
       return Collections.emptyList();
@@ -35,29 +40,65 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     double cuotaConsumoIndividual = totalGastosHogar / integrantes.size();
 
     Map<String, Double> balances = new HashMap<>();
+    Map<String, String> emailToNombre = new HashMap<>();
 
     for (Usuario usuario : integrantes) {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
       double creditoTareas = obtenerCreditoTareas(usuario);
 
       double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - cuotaConsumoIndividual;
-      String nombreUsuario = usuario.getNombre() != null
-        ? usuario.getNombre()
-        : "Usuario " + usuario.getId();
 
-      balances.put(nombreUsuario, balanceNeto);
+      String email = usuario.getEmail();
+      String nombre = usuario.getNombre() != null ? usuario.getNombre() : "Usuario";
+
+      emailToNombre.put(email, nombre);
+      balances.put(email, balanceNeto);
     }
 
-    return calcularLiquidacionOptima(balances);
+    List<TransferenciaSugerida> transferencias = calcularLiquidacionOptimaConNombres(
+      balances,
+      emailToNombre
+    );
+
+    // Obtenemos los pagos realizados de este hogar desde la base de datos
+    List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null
+      ? servicioPagoRealizado.obtenerHistorialPagos(hogar.getId())
+      : Collections.emptyList();
+
+    // Filtramos para remover transferencias que ya fueron abonadas
+    return transferencias
+      .stream()
+      .filter(t ->
+        pagosRealizados
+          .stream()
+          .noneMatch(p ->
+            p.getEmisor().equals(t.getEmisor()) &&
+            p.getReceptor().equals(t.getReceptor()) &&
+            Math.abs(p.getMonto() - t.getMonto()) < MARGEN_TOLERANCIA
+          )
+      )
+      .collect(Collectors.toList());
+  }
+
+  @Transactional
+  public void registrarPagoExitoso(Hogar hogar, String emisor, String receptor, Double monto) {
+    if (servicioPagoRealizado != null && hogar != null) {
+      PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), hogar);
+      servicioPagoRealizado.registrarPagoExitoso(pago);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public List<PagoRealizado> obtenerHistorialPagos(Long hogarId) {
+    if (servicioPagoRealizado == null || hogarId == null) return Collections.emptyList();
+    return servicioPagoRealizado.obtenerHistorialPagos(hogarId);
   }
 
   private double calcularTotalGastos(List<Gasto> gastos) {
-    if (gastos == null) {
-      return 0.0;
-    }
+    if (gastos == null) return 0.0;
     double total = 0.0;
     for (Gasto gasto : gastos) {
-      if (gasto.getMonto() != null) {
+      if (gasto.getMonto() != null && Boolean.TRUE.equals(gasto.getPagado())) {
         total += gasto.getMonto();
       }
     }
@@ -65,15 +106,13 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   }
 
   private double calcularTotalPagadoPorUsuario(Usuario usuario, List<Gasto> gastos) {
-    if (gastos == null || usuario == null || usuario.getId() == null) {
-      return 0.0;
-    }
+    if (gastos == null || usuario == null || usuario.getId() == null) return 0.0;
     double totalPagado = 0.0;
     for (Gasto gasto : gastos) {
       if (
         gasto.getUsuarioPagador() != null &&
         gasto.getUsuarioPagador().getId() != null &&
-        usuario.getId().equals(gasto.getUsuarioPagador().getId()) // <-- Comparamos por ID, mucho más seguro
+        usuario.getId().equals(gasto.getUsuarioPagador().getId())
       ) {
         totalPagado += gasto.getMonto();
       }
@@ -88,8 +127,10 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     return 0.0;
   }
 
-  @Override
-  public List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances) {
+  public List<TransferenciaSugerida> calcularLiquidacionOptimaConNombres(
+    Map<String, Double> balances,
+    Map<String, String> emailToNombre
+  ) {
     List<TransferenciaSugerida> transferencias = new ArrayList<>();
     List<PersonaBalance> deudores = new ArrayList<>();
     List<PersonaBalance> acreedores = new ArrayList<>();
@@ -107,7 +148,15 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       monto = Math.round(monto * 100.0) / 100.0;
 
       if (monto > 0) {
-        transferencias.add(new TransferenciaSugerida(deudor.nombre, acreedor.nombre, monto));
+        String emailEmisor = deudor.nombre;
+        String nombreEmisor = emailToNombre.getOrDefault(emailEmisor, emailEmisor);
+
+        String emailReceptor = acreedor.nombre;
+        String nombreReceptor = emailToNombre.getOrDefault(emailReceptor, emailReceptor);
+
+        transferencias.add(
+          new TransferenciaSugerida(nombreEmisor, emailEmisor, nombreReceptor, monto)
+        );
       }
 
       deudor.monto -= monto;
@@ -122,6 +171,11 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     }
 
     return transferencias;
+  }
+
+  @Override
+  public List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances) {
+    return calcularLiquidacionOptimaConNombres(balances, Collections.emptyMap());
   }
 
   private void clasificarBalances(

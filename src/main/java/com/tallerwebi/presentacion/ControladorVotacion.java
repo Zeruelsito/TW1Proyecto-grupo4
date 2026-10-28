@@ -1,12 +1,13 @@
 package com.tallerwebi.presentacion;
 
-import com.tallerwebi.dominio.EstadoPropuesta;
-import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.ServicioVotacion;
+import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,9 +20,17 @@ import org.springframework.web.servlet.ModelAndView;
 public class ControladorVotacion {
 
   private final ServicioVotacion servicioVotacion;
+  private final ServicioUsuario servicioUsuario;
+  private final HttpSession session;
 
-  public ControladorVotacion(ServicioVotacion servicioVotacion) {
+  public ControladorVotacion(
+    ServicioVotacion servicioVotacion,
+    ServicioUsuario servicioUsuario,
+    HttpSession session
+  ) {
     this.servicioVotacion = servicioVotacion;
+    this.servicioUsuario = servicioUsuario;
+    this.session = session;
   }
 
   @RequestMapping(path = "/propuestas", method = RequestMethod.GET)
@@ -35,13 +44,9 @@ public class ControladorVotacion {
   @RequestMapping(path = "/propuestas/guardar", method = RequestMethod.POST)
   public ModelAndView guardarPropuesta(
     @ModelAttribute("datosPropuesta") DatosPropuesta datos,
-    HttpServletRequest request
+    HttpSession session
   ) {
-    Long idUsuario = obtenerIdUsuario(request);
-    if (idUsuario == null) {
-      return new ModelAndView("redirect:/login");
-    }
-
+    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
     try {
       servicioVotacion.guardarPropuesta(armarPropuesta(datos, idUsuario));
     } catch (PropuestaNoExiste e) {
@@ -88,6 +93,13 @@ public class ControladorVotacion {
 
   private ModelAndView armarVista(DatosPropuesta datos, String mensajeError) {
     ModelAndView mav = new ModelAndView("propuestas");
+    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(idUsuario);
+    mav.addObject(
+      "nombreUsuario",
+      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
+    );
+
     mav.addObject("listaPropuestas", servicioVotacion.obtenerTodasLasPropuestas());
     mav.addObject("datosPropuesta", datos);
     if (mensajeError != null) {

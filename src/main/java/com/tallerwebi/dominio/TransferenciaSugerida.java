@@ -4,14 +4,16 @@ import java.util.Objects;
 
 public class TransferenciaSugerida {
 
-  private String emisor; // Quién debe pagar
-  private String receptor; // Quién debe recibir
+  private String emisor; // Nombre del emisor (para mostrar en la tabla)
+  private String emailEmisor; // Email (para comparar en el th:if)
+  private String receptor; // Nombre del receptor
   private Double monto; // Cuánto debe transferir
 
   public TransferenciaSugerida() {}
 
-  public TransferenciaSugerida(String emisor, String receptor, Double monto) {
+  public TransferenciaSugerida(String emisor, String emailEmisor, String receptor, Double monto) {
     this.emisor = emisor;
+    this.emailEmisor = emailEmisor;
     this.receptor = receptor;
     this.monto = monto;
   }
@@ -22,6 +24,14 @@ public class TransferenciaSugerida {
 
   public void setEmisor(String emisor) {
     this.emisor = emisor;
+  }
+
+  public String getEmailEmisor() {
+    return emailEmisor;
+  }
+
+  public void setEmailEmisor(String emailEmisor) {
+    this.emailEmisor = emailEmisor;
   }
 
   public String getReceptor() {
@@ -47,6 +57,7 @@ public class TransferenciaSugerida {
     TransferenciaSugerida que = (TransferenciaSugerida) objetoComparado;
     return (
       Objects.equals(emisor, que.emisor) &&
+      Objects.equals(emailEmisor, que.emailEmisor) &&
       Objects.equals(receptor, que.receptor) &&
       Objects.equals(monto, que.monto)
     );
@@ -54,6 +65,6 @@ public class TransferenciaSugerida {
 
   @Override
   public int hashCode() {
-    return Objects.hash(emisor, receptor, monto);
+    return Objects.hash(emisor, emailEmisor, receptor, monto);
   }
 }

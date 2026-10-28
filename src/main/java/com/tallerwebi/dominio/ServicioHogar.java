@@ -1,5 +1,6 @@
 package com.tallerwebi.dominio;
 
+import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import java.util.List;
 
 public interface ServicioHogar {
@@ -7,7 +8,7 @@ public interface ServicioHogar {
 
   Hogar obtenerHogar();
   void registrarHogar(Hogar hogar);
-  void seleccionarHogar(Long hogarId);
+  Hogar seleccionarHogarPorId(Long hogarId) throws HogarNoEncontradoException;
 
   List<CambioParametro> obtenerHistorial();
 

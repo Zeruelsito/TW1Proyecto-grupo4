@@ -29,7 +29,13 @@ public class RepositorioHogarImpl implements RepositorioHogar {
 
   @Override
   public Hogar buscarPorId(Long id) {
-    return sessionFactory.getCurrentSession().get(Hogar.class, id);
+    String hql =
+      "SELECT DISTINCT h FROM Hogar h LEFT JOIN FETCH h.integrantes WHERE h.id = :hogarId";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(hql, Hogar.class)
+      .setParameter("hogarId", id)
+      .getSingleResultOrNull();
   }
 
   @Override

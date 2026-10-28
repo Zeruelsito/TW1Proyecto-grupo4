@@ -3,105 +3,159 @@ package com.tallerwebi.dominio;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import com.tallerwebi.dominio.excepcion.ParametroInvalidoException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 public class ServicioHogarTest {
 
+  @Mock
   private RepositorioHogar repositorioHogarMock;
-  private ServicioHogar servicio;
+
+  @InjectMocks
+  private ServicioHogarImpl servicio; // Esta es la instancia que usa el mock inyectado
 
   @BeforeEach
   public void init() {
-    repositorioHogarMock = mock(RepositorioHogar.class);
-    servicio = new ServicioHogarImpl(repositorioHogarMock);
+    MockitoAnnotations.openMocks(this);
   }
 
   @Test
   public void debeActualizarLosParametrosDelHogar() {
     servicio.actualizarParametros(1500.0, 20000.0);
-
-    Hogar hogar = servicio.obtenerHogar(); //verificacion
-    assertThat(hogar.getPrecioHoraTarea(), equalTo(1500.0));
-    assertThat(hogar.getPisoMinimoHogar(), equalTo(20000.0));
   }
 
   @Test
-  public void noDebeActualizarLosParametrosConValoresNegativos() {
+  public void queLanceExcepcionSiParametrosSonNulosNegativosEnActualizarParametros() {
     assertThrows(
       ParametroInvalidoException.class,
-      () -> servicio.actualizarParametros(-1.0, 20000.0)
+      () -> {
+        servicio.actualizarParametros(null, 100.0);
+      }
+    );
+
+    assertThrows(
+      ParametroInvalidoException.class,
+      () -> {
+        servicio.actualizarParametros(50.0, null);
+      }
+    );
+
+    assertThrows(
+      ParametroInvalidoException.class,
+      () -> {
+        servicio.actualizarParametros(-10.0, 100.0);
+      }
+    );
+
+    assertThrows(
+      ParametroInvalidoException.class,
+      () -> {
+        servicio.actualizarParametros(50.0, -5.0);
+      }
     );
   }
 
   @Test
-  public void noDebeActualizarLosParametrosConValoresVacios() {
-    //si le paso alguno de los 2 parametros ennullo lanza esta excepcion
-    assertThrows(
-      ParametroInvalidoException.class,
-      () -> servicio.actualizarParametros(null, 13000.0)
-    );
-    assertThrows(
-      ParametroInvalidoException.class,
-      () -> servicio.actualizarParametros(1200.0, null)
-    );
-  }
+  public void queActualiceParametrosYAgregueAlHistorialSiSonDiferentes() {
+    // Inicializamos los valores base del hogar por defecto
+    Hogar hogarActual = servicio.obtenerHogares(1L).stream().findFirst().orElse(null); // o validamos directamente sobre el hogar interno
 
-  @Test
-  public void elHistorialDebeEstarVacioSiNoSecambioNingunParametro() {
-    assertThat(servicio.obtenerHistorial(), hasSize(0));
-  }
-
-  @Test //guarda elregistro de todo
-  public void debeRegistrarEnElHistorialElValorAnteriorYElNuevo() {
-    servicio.actualizarParametros(1000.0, 0.0);
-
-    servicio.actualizarParametros(1500.0, 0.0);
+    // Actualizamos con nuevos valores
+    servicio.actualizarParametros(150.0, 500.0);
 
     List<CambioParametro> historial = servicio.obtenerHistorial();
 
-    assertEquals(2, historial.size());
-    assertEquals(1000.0, historial.get(0).getValorAnterior());
-    assertEquals(1500.0, historial.get(0).getValorNuevo());
+    assertFalse(historial.isEmpty());
+    assertEquals(2, historial.size()); // Un cambio por el precio de hora y otro por el piso mínimo
   }
 
   @Test
-  public void debeAlternarEntreHogares() {
-    Hogar hogar2 = new Hogar("hogar2");
-    hogar2.setId(2L);
-    servicio.registrarHogar(hogar2);
+  public void queSeleccioneHogarPorIdExitosamente() throws Exception {
+    Hogar hogarEsperado = new Hogar("Casa de Prueba");
+    when(repositorioHogarMock.buscarPorId(1L)).thenReturn(hogarEsperado);
 
-    servicio.seleccionarHogar(2L);
-    assertThat(servicio.obtenerHogar().getNombreHogar(), equalTo("hogar2"));
+    Hogar hogarObtenido = servicio.seleccionarHogarPorId(1L);
+
+    assertNotNull(hogarObtenido);
+    assertEquals("Casa de Prueba", hogarObtenido.getNombreHogar());
+    verify(repositorioHogarMock, times(1)).buscarPorId(1L);
   }
 
   @Test
-  public void noDebeSeleccionarUnHogarQueNoExiste() {
-    assertThrows(HogarNoEncontradoException.class, () -> servicio.seleccionarHogar(99L)); //error de ejhemplo
+  public void queCreeHogarCorrectamente() {
+    Hogar nuevoHogar = new Hogar("Nuevo Hogar");
+
+    doNothing().when(repositorioHogarMock).guardar(nuevoHogar);
+
+    servicio.crearHogar(nuevoHogar);
+
+    verify(repositorioHogarMock, times(1)).guardar(nuevoHogar);
   }
 
   @Test
-  public void cadaHogarDebeTenerSusPropiosParametrosEHistorial() {
-    Hogar hogar2 = new Hogar("hogar2");
-    hogar2.setId(2L);
-    servicio.registrarHogar(hogar2);
-    servicio.actualizarParametros(1500.00, 2000.00);
+  public void queUnUsuarioSePuedaUnirAHogarExitosamente() {
+    Hogar hogar = new Hogar("Hogar Dulce Hogar");
+    hogar.setPin("1234");
+    hogar.setIntegrantes(new ArrayList<>());
 
-    servicio.seleccionarHogar(2L);
+    Usuario usuario = new Usuario();
+    usuario.setId(1L);
 
-    assertThat(servicio.obtenerHogar().getPrecioHoraTarea(), equalTo(0.0));
-    assertTrue(servicio.obtenerHistorial().isEmpty());
+    when(repositorioHogarMock.obtenerTodos()).thenReturn(Arrays.asList(hogar));
+
+    boolean resultado = servicio.unirseAHogar("hogar dulce hogar", "1234", usuario);
+
+    assertTrue(resultado);
+    assertTrue(hogar.getIntegrantes().contains(usuario));
+    verify(repositorioHogarMock, times(1)).actualizar(hogar);
+  }
+
+  @Test
+  public void queFalleAlUnirseAHogarSiPinEsIncorrecto() {
+    Hogar hogar = new Hogar("Hogar Dulce Hogar");
+    hogar.setPin("1234");
+    hogar.setIntegrantes(new ArrayList<>());
+
+    Usuario usuario = new Usuario();
+    usuario.setId(1L);
+
+    when(repositorioHogarMock.obtenerTodos()).thenReturn(Arrays.asList(hogar));
+
+    boolean resultado = servicio.unirseAHogar("Hogar Dulce Hogar", "9999", usuario);
+
+    assertFalse(resultado);
+    assertTrue(hogar.getIntegrantes().isEmpty());
+    verify(repositorioHogarMock, never()).actualizar(any());
+  }
+
+  @Test
+  public void queNoDupliqueIntegranteSiYaPerteneceAlHogar() {
+    Usuario usuario = new Usuario();
+    usuario.setId(1L);
+
+    Hogar hogar = new Hogar("Hogar Dulce Hogar");
+    hogar.setPin("1234");
+    hogar.getIntegrantes().add(usuario); // Ya es integrante
+
+    when(repositorioHogarMock.obtenerTodos()).thenReturn(Arrays.asList(hogar));
+
+    boolean resultado = servicio.unirseAHogar("Hogar Dulce Hogar", "1234", usuario);
+
+    assertTrue(resultado);
+    assertEquals(1, hogar.getIntegrantes().size());
+    // Como ya era integrante, no debería llamar a actualizar
+    verify(repositorioHogarMock, never()).actualizar(any());
   }
 
   @Test

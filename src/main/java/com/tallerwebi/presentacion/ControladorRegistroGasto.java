@@ -1,7 +1,6 @@
 package com.tallerwebi.presentacion;
 
-import com.tallerwebi.dominio.Gasto;
-import com.tallerwebi.dominio.ServicioRegistroGasto;
+import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import jakarta.servlet.http.HttpSession;
@@ -20,15 +19,26 @@ public class ControladorRegistroGasto {
   private static final String REDIRECT_GASTOS = "redirect:/gastos";
 
   private final ServicioRegistroGasto servicioRegistroGasto;
+  private final ServicioUsuario servicioUsuario;
 
-  public ControladorRegistroGasto(ServicioRegistroGasto servicioRegistroGasto) {
+  public ControladorRegistroGasto(
+    ServicioRegistroGasto servicioRegistroGasto,
+    ServicioUsuario servicioUsuario
+  ) {
     this.servicioRegistroGasto = servicioRegistroGasto;
+    this.servicioUsuario = servicioUsuario;
   }
 
   @RequestMapping(path = "/gastos", method = RequestMethod.GET)
   public ModelAndView irAGastos(HttpSession session) {
     ModelAndView mav = new ModelAndView("gastos");
     Long hogarId = obtenerHogarIdDeSesion(session);
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
+    mav.addObject(
+      "nombreUsuario",
+      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
+    );
     cargarDatosGenerales(mav, hogarId);
     mav.addObject("gasto", new Gasto());
     return mav;
