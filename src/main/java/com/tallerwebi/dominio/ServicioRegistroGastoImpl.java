@@ -137,6 +137,50 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, hogarId);
   }
 
+  @Override
+  public Gasto registrarGastoConParticipantes(
+    Gasto gasto,
+    Long hogarId,
+    List<Long> participantesIds
+  ) {
+    Hogar hogar = repositorioHogar.buscarPorId(hogarId);
+    gasto.setHogar(hogar);
+
+    validarGasto(gasto);
+    asignarParticipantes(gasto, hogarId, participantesIds);
+
+    repositorioGasto.guardar(gasto);
+    return gasto;
+  }
+
+  private void validarGasto(Gasto gasto) {
+    if (gasto.getDescripcion() == null || gasto.getDescripcion().trim().isEmpty()) {
+      throw new DescripcionGastoVaciaException();
+    }
+
+    if (gasto.getMonto() == null || gasto.getMonto() <= 0) {
+      throw new MontoGastoInvalidoException();
+    }
+
+    if (gasto.getFecha() == null) {
+      gasto.setFecha(LocalDateTime.now());
+    }
+  }
+
+  private void asignarParticipantes(Gasto gasto, Long hogarId, List<Long> participantesIds) {
+    List<Usuario> integrantesHogar = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
+
+    if (participantesIds != null && !participantesIds.isEmpty()) {
+      List<Usuario> seleccionados = integrantesHogar
+        .stream()
+        .filter(u -> participantesIds.contains(u.getId()))
+        .toList();
+      gasto.setParticipantes(seleccionados);
+    } else {
+      gasto.setParticipantes(integrantesHogar);
+    }
+  }
+
   private Map<Long, Double> calcularTotalesPorUsuario(
     List<Usuario> integrantes,
     List<Gasto> gastos

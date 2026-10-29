@@ -45,12 +45,16 @@ public class ControladorRegistroGasto {
   }
 
   @RequestMapping(path = "/gastos/guardar", method = RequestMethod.POST)
-  public ModelAndView registrarGasto(@ModelAttribute("gasto") Gasto gasto, HttpSession session) {
+  public ModelAndView registrarGasto(
+    @ModelAttribute("gasto") Gasto gasto,
+    @RequestParam(value = "participantesIds", required = false) List<Long> participantesIds,
+    HttpSession session
+  ) {
     ModelAndView mav = new ModelAndView();
     Long hogarId = obtenerHogarIdDeSesion(session);
 
     try {
-      this.servicioRegistroGasto.registrarGasto(gasto, hogarId);
+      this.servicioRegistroGasto.registrarGastoConParticipantes(gasto, hogarId, participantesIds);
       mav.setViewName(REDIRECT_GASTOS);
       return mav;
     } catch (DescripcionGastoVaciaException e) {
