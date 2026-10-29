@@ -4,13 +4,18 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 //import java.math.BigDecimal;
 import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @SuppressWarnings("PMD.TooManyFields")
@@ -35,6 +40,14 @@ public class Gasto {
   @ManyToOne
   @JoinColumn(name = "usuario_pagador_id")
   private Usuario usuarioPagador;
+
+  @ManyToMany(fetch = FetchType.EAGER)
+  @JoinTable(
+    name = "gasto_participante",
+    joinColumns = @JoinColumn(name = "gasto_id"),
+    inverseJoinColumns = @JoinColumn(name = "usuario_id")
+  )
+  private List<Usuario> participantes = new ArrayList<>();
 
   @Enumerated(EnumType.STRING)
   private TipoGasto tipoGasto;
@@ -160,5 +173,13 @@ public class Gasto {
 
   public void setHogar(Hogar hogar) {
     this.hogar = hogar;
+  }
+
+  public List<Usuario> getParticipantes() {
+    return participantes;
+  }
+
+  public void setParticipantes(List<Usuario> participantes) {
+    this.participantes = participantes;
   }
 }

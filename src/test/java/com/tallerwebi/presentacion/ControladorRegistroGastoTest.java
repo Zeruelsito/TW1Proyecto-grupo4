@@ -1,7 +1,6 @@
 package com.tallerwebi.presentacion;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -76,10 +75,7 @@ public class ControladorRegistroGastoTest {
   }
 
   @Test
-  public void queRegistreGastoExitosamenteYRedirija() throws Exception {
-    // Como registrarGasto no es void (o no requiere configuración especial),
-    // simplemente eliminamos el doNothing() y Mockito no fallará.
-
+  public void queRegistreGastoExitososamenteYRedirija() throws Exception {
     mockMvc
       .perform(
         post("/gastos/guardar").param("descripcion", "Compra supermercado").param("monto", "1500.0")
@@ -87,7 +83,9 @@ public class ControladorRegistroGastoTest {
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/gastos"));
 
-    verify(servicioRegistroGastoMock, times(1)).registrarGasto(any(Gasto.class), any());
+    // Actualizado al nuevo método con participantes
+    verify(servicioRegistroGastoMock, times(1))
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
   }
 
   @Test
@@ -100,9 +98,10 @@ public class ControladorRegistroGastoTest {
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(any()))
       .thenReturn(Collections.emptyList());
 
+    // Actualizado al nuevo método con participantes
     doThrow(new DescripcionGastoVaciaException())
       .when(servicioRegistroGastoMock)
-      .registrarGasto(any(Gasto.class), any());
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
 
     mockMvc
       .perform(post("/gastos/guardar").param("descripcion", "").param("monto", "500.0"))
@@ -123,9 +122,10 @@ public class ControladorRegistroGastoTest {
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(any()))
       .thenReturn(Collections.emptyList());
 
+    // Actualizado al nuevo método con participantes
     doThrow(new MontoGastoInvalidoException())
       .when(servicioRegistroGastoMock)
-      .registrarGasto(any(Gasto.class), any());
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
 
     mockMvc
       .perform(post("/gastos/guardar").param("descripcion", "Luz").param("monto", "-100.0"))
@@ -135,7 +135,7 @@ public class ControladorRegistroGastoTest {
   }
 
   @Test
-  public void quePagueGastoExitosamenteYRedirija() throws Exception {
+  public void quePagueGastoExitososamenteYRedirija() throws Exception {
     doNothing().when(servicioRegistroGastoMock).marcarComoPagado(10L, 2L);
 
     mockMvc
@@ -147,7 +147,7 @@ public class ControladorRegistroGastoTest {
   }
 
   @Test
-  public void queElimineGastoExitosamenteYRedirija() throws Exception {
+  public void queElimineGastoExitososamenteYRedirija() throws Exception {
     doNothing().when(servicioRegistroGastoMock).eliminarGasto(5L);
 
     mockMvc
