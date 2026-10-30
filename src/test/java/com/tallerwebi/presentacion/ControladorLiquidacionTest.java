@@ -72,7 +72,7 @@ public class ControladorLiquidacionTest {
     }
 
     @Test
-    public void queAlAccederALiquidacionSinHogarActivoDevuelvaLaVistaConDatosBasicos() throws Exception {
+    public void queRedirijaAlDashboardSiUsuarioSinHogarIntentaAccederALiquidacion() throws Exception {
         Long usuarioId = 1L;
         Usuario usuarioMock = new Usuario();
         usuarioMock.setId(usuarioId);
@@ -83,10 +83,8 @@ public class ControladorLiquidacionTest {
 
         mockMvc.perform(get("/liquidacion")
                         .sessionAttr("USUARIO_ID", usuarioId))
-                .andExpect(status().isOk())
-                .andExpect(view().name("liquidacion"))
-                .andExpect(model().attribute("usuarioLogueado", "Ezequiel"))
-                .andExpect(model().attribute("listaHogares", hasSize(0)));
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
     }
 
     @Test
@@ -111,7 +109,8 @@ public class ControladorLiquidacionTest {
 
         mockMvc.perform(get("/liquidacion")
                         .sessionAttr("USUARIO_ID", usuarioId)
-                        .sessionAttr("hogarActivoEnSession", hogarMock))
+                        .sessionAttr("hogarActivoEnSession", hogarMock)
+                        .sessionAttr("HOGAR_ID", hogarId)) // <-- ¡Esta es la línea que faltaba agregar!
                 .andExpect(status().isOk())
                 .andExpect(view().name("liquidacion"))
                 .andExpect(model().attribute("usuarioLogueado", "Ezequiel"))
