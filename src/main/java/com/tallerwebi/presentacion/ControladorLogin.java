@@ -1,11 +1,13 @@
 package com.tallerwebi.presentacion;
 
+import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.ServicioLogin;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.UsuarioExistente;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -52,14 +54,17 @@ public class ControladorLogin {
       session.setAttribute("usuarioLogueado", usuarioBuscado);
       session.setAttribute("email", usuarioBuscado.getEmail());
 
-      if (!servicioHogar.obtenerHogares(idUsuario).isEmpty()) {
-        session.setAttribute(
-          "hogarActivoEnSession",
-          servicioHogar.obtenerHogares(idUsuario).getFirst()
-        );
+      // CORREGIDO: Obtenemos los hogares y seteamos ambas variables de sesión juntas
+      List<Hogar> hogaresUsuario = servicioHogar.obtenerHogares(idUsuario);
+      if (hogaresUsuario != null && !hogaresUsuario.isEmpty()) {
+        Hogar primerHogar = hogaresUsuario.get(0);
+        session.setAttribute("hogarActivoEnSession", primerHogar);
+        session.setAttribute("HOGAR_ID", primerHogar.getId()); // <-- Clave vital para que el gasto no quede pegado a otro ID
       } else {
         session.setAttribute("hogarActivoEnSession", null);
+        session.setAttribute("HOGAR_ID", null);
       }
+
       return new ModelAndView("redirect:/dashboard");
     } else {
       Map<String, Object> model = new ModelMap();

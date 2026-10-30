@@ -1,13 +1,13 @@
 package com.tallerwebi.presentacion;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.tallerwebi.dominio.Gasto;
+import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Usuario;
@@ -38,7 +38,6 @@ public class ControladorRegistroGastoTest {
     controladorRegistroGasto =
       new ControladorRegistroGasto(servicioRegistroGastoMock, servicioUsuarioMock);
 
-    // Configuramos el ViewResolver para evitar el bucle de vista circular en Spring MVC
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
     viewResolver.setSuffix(".jsp");
@@ -54,8 +53,10 @@ public class ControladorRegistroGastoTest {
   public void queMuestreLaVistaDeGastosCorrectamente() throws Exception {
     Usuario usuario = new Usuario();
     usuario.setNombre("Lucía");
+    Hogar hogarMock = new Hogar("Hogar Principal");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(any()))
       .thenReturn(Collections.emptyList());
@@ -65,7 +66,12 @@ public class ControladorRegistroGastoTest {
     when(servicioRegistroGastoMock.obtenerSugerenciaProximoPagador(any())).thenReturn(null);
 
     mockMvc
-      .perform(get("/gastos").sessionAttr("USUARIO_ID", 1L))
+      .perform(
+        get("/gastos")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("gastos"))
       .andExpect(model().attributeExists("nombreUsuario"))
@@ -76,36 +82,50 @@ public class ControladorRegistroGastoTest {
   }
 
   @Test
-  public void queRegistreGastoExitosamenteYRedirija() throws Exception {
-    // Como registrarGasto no es void (o no requiere configuración especial),
-    // simplemente eliminamos el doNothing() y Mockito no fallará.
+  public void queRegistreGastoExitososamenteYRedirija() throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
 
     mockMvc
       .perform(
-        post("/gastos/guardar").param("descripcion", "Compra supermercado").param("monto", "1500.0")
+        post("/gastos/guardar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("descripcion", "Compra supermercado")
+          .param("monto", "1500.0")
       )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/gastos"));
 
-    verify(servicioRegistroGastoMock, times(1)).registrarGasto(any(Gasto.class), any());
+    verify(servicioRegistroGastoMock, times(1))
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
   }
 
   @Test
   public void queManejeExcepcionDescripcionGastoVaciaAlGuardar() throws Exception {
     Usuario usuario = new Usuario();
     usuario.setNombre("Lucía");
+    Hogar hogarMock = new Hogar("Hogar Principal");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(any()))
       .thenReturn(Collections.emptyList());
 
     doThrow(new DescripcionGastoVaciaException())
       .when(servicioRegistroGastoMock)
-      .registrarGasto(any(Gasto.class), any());
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
 
     mockMvc
-      .perform(post("/gastos/guardar").param("descripcion", "").param("monto", "500.0"))
+      .perform(
+        post("/gastos/guardar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("descripcion", "")
+          .param("monto", "500.0")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("gastos"))
       .andExpect(
@@ -117,29 +137,46 @@ public class ControladorRegistroGastoTest {
   public void queManejeExcepcionMontoGastoInvalidoAlGuardar() throws Exception {
     Usuario usuario = new Usuario();
     usuario.setNombre("Lucía");
+    Hogar hogarMock = new Hogar("Hogar Principal");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(any()))
       .thenReturn(Collections.emptyList());
 
     doThrow(new MontoGastoInvalidoException())
       .when(servicioRegistroGastoMock)
-      .registrarGasto(any(Gasto.class), any());
+      .registrarGastoConParticipantes(any(Gasto.class), any(), any());
 
     mockMvc
-      .perform(post("/gastos/guardar").param("descripcion", "Luz").param("monto", "-100.0"))
+      .perform(
+        post("/gastos/guardar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("descripcion", "Luz")
+          .param("monto", "-100.0")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("gastos"))
       .andExpect(model().attribute("mensajeError", "El monto del gasto debe ser mayor a cero."));
   }
 
   @Test
-  public void quePagueGastoExitosamenteYRedirija() throws Exception {
+  public void quePagueGastoExitososamenteYRedirija() throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
     doNothing().when(servicioRegistroGastoMock).marcarComoPagado(10L, 2L);
 
     mockMvc
-      .perform(post("/gastos/pagar").param("gastoId", "10").param("pagadorId", "2"))
+      .perform(
+        post("/gastos/pagar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("gastoId", "10")
+          .param("pagadorId", "2")
+      )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/gastos"));
 
@@ -147,11 +184,18 @@ public class ControladorRegistroGastoTest {
   }
 
   @Test
-  public void queElimineGastoExitosamenteYRedirija() throws Exception {
+  public void queElimineGastoExitososamenteYRedirija() throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
     doNothing().when(servicioRegistroGastoMock).eliminarGasto(5L);
 
     mockMvc
-      .perform(post("/gastos/eliminar").param("id", "5"))
+      .perform(
+        post("/gastos/eliminar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("id", "5")
+      )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/gastos"));
 
@@ -160,11 +204,17 @@ public class ControladorRegistroGastoTest {
 
   @Test
   public void queMuestreVencimientosConFiltroTodosPorDefecto() throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
     when(servicioRegistroGastoMock.obtenerVencimientosPendientes(any()))
       .thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(get("/vencimientos"))
+      .perform(
+        get("/vencimientos")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("vencimientos"))
       .andExpect(model().attribute("filtro", "todos"))
@@ -173,11 +223,18 @@ public class ControladorRegistroGastoTest {
 
   @Test
   public void queMuestreVencimientosConFiltroProximos() throws Exception {
+    Hogar hogarMock = new Hogar("Hogar Principal");
     when(servicioRegistroGastoMock.obtenerVencimientosProximos(any(), any()))
       .thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(get("/vencimientos").param("filtro", "proximos"))
+      .perform(
+        get("/vencimientos")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .sessionAttr("hogarActivoEnSession", hogarMock)
+          .param("filtro", "proximos")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("vencimientos"))
       .andExpect(model().attribute("filtro", "proximos"));

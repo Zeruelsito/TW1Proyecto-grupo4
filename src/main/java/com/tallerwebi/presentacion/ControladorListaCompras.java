@@ -5,7 +5,6 @@ import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorListaCompras {
@@ -41,7 +41,19 @@ public class ControladorListaCompras {
   }
 
   @RequestMapping(path = "/lista-compras", method = RequestMethod.GET)
-  public ModelAndView irAListaDeCompras(HttpServletRequest request) {
+  public ModelAndView irAListaDeCompras(
+    HttpServletRequest request,
+    RedirectAttributes redirectAttributes
+  ) {
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "Para ver la liquidación y otras secciones debes pertenecer a un hogar."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
+
     if (obtenerIdUsuario(request) == null) {
       return new ModelAndView(REDIRECT_LOGIN);
     }

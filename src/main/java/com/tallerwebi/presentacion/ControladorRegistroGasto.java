@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorRegistroGasto {
@@ -30,9 +31,19 @@ public class ControladorRegistroGasto {
   }
 
   @RequestMapping(path = "/gastos", method = RequestMethod.GET)
-  public ModelAndView irAGastos(HttpSession session) {
-    ModelAndView mav = new ModelAndView("gastos");
+  public ModelAndView irAGastos(HttpSession session, RedirectAttributes redirectAttributes) {
     Long hogarId = obtenerHogarIdDeSesion(session);
+
+    // Si no tiene hogar asignado en la sesión, lo mandamos a la vista de dashboard para que seleccione o cree un hogar
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "¡Atención! Para acceder a las funcionalidades de KUMO debes ser parte de un hogar. Creá uno o unite a uno existente."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
+
+    ModelAndView mav = new ModelAndView("gastos");
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
     mav.addObject(
@@ -45,12 +56,16 @@ public class ControladorRegistroGasto {
   }
 
   @RequestMapping(path = "/gastos/guardar", method = RequestMethod.POST)
-  public ModelAndView registrarGasto(@ModelAttribute("gasto") Gasto gasto, HttpSession session) {
+  public ModelAndView registrarGasto(
+    @ModelAttribute("gasto") Gasto gasto,
+    @RequestParam(value = "participantesIds", required = false) List<Long> participantesIds,
+    HttpSession session
+  ) {
     ModelAndView mav = new ModelAndView();
     Long hogarId = obtenerHogarIdDeSesion(session);
 
     try {
-      this.servicioRegistroGasto.registrarGasto(gasto, hogarId);
+      this.servicioRegistroGasto.registrarGastoConParticipantes(gasto, hogarId, participantesIds);
       mav.setViewName(REDIRECT_GASTOS);
       return mav;
     } catch (DescripcionGastoVaciaException e) {
@@ -110,10 +125,18 @@ public class ControladorRegistroGasto {
   @RequestMapping("/vencimientos")
   public ModelAndView irAVencimientos(
     @RequestParam(value = "filtro", defaultValue = "todos") String filtro,
-    HttpSession session
+    HttpSession session,
+    RedirectAttributes redirectAttributes
   ) {
     LocalDateTime ahora = LocalDateTime.now();
     Long hogarId = obtenerHogarIdDeSesion(session);
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "¡Atención! Para acceder a las funcionalidades de KUMO debes ser parte de un hogar. Creá uno o unite a uno existente."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
 
     List<Gasto> vencimientos =
       switch (filtro) {
@@ -135,7 +158,7 @@ public class ControladorRegistroGasto {
 
   private Long obtenerHogarIdDeSesion(HttpSession session) {
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
-    // ID de contingencia por si no hay sesión activa aún en desarrollo (ej. 1L)
-    return hogarId != null ? hogarId : 1L;
+    // Si no hay hogar en sesión, devolvemos null en lugar de un ID fijo (1L) para evitar cruce de datos
+    return hogarId;
   }
 }

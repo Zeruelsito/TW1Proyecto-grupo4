@@ -8,4 +8,5 @@ public interface RepositorioHogar {
   Hogar buscarPorId(Long id);
   List<Hogar> obtenerHogaresDeUsuario(Long usuarioId);
   List<Hogar> obtenerTodos();
+  Hogar buscarPorPin(String pin);
 }

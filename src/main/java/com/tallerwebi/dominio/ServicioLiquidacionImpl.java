@@ -36,9 +36,6 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     }
 
     List<Usuario> integrantes = hogar.getIntegrantes();
-    double totalGastosHogar = calcularTotalGastos(gastos);
-    double cuotaConsumoIndividual = totalGastosHogar / integrantes.size();
-
     Map<String, Double> balances = new HashMap<>();
     Map<String, String> emailToNombre = new HashMap<>();
 
@@ -46,7 +43,10 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
       double creditoTareas = obtenerCreditoTareas(usuario);
 
-      double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - cuotaConsumoIndividual;
+      // NUEVO: Calculamos el consumo real en base a los participantes de cada gasto
+      double consumoIndividual = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
+
+      double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - consumoIndividual;
 
       String email = usuario.getEmail();
       String nombre = usuario.getNombre() != null ? usuario.getNombre() : "Usuario";
@@ -60,12 +60,10 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       emailToNombre
     );
 
-    // Obtenemos los pagos realizados de este hogar desde la base de datos
     List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null
       ? servicioPagoRealizado.obtenerHistorialPagos(hogar.getId())
       : Collections.emptyList();
 
-    // Filtramos para remover transferencias que ya fueron abonadas
     return transferencias
       .stream()
       .filter(t ->
@@ -80,6 +78,41 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       .collect(Collectors.toList());
   }
 
+  // NUEVO MÉTODO: Calcula cuánto debe consumir cada usuario según los gastos en los que participa
+  private double calcularConsumoIndividualPorUsuario(
+    Usuario usuario,
+    Hogar hogar,
+    List<Gasto> gastos
+  ) {
+    if (gastos == null || usuario == null || usuario.getId() == null) return 0.0;
+    double totalConsumo = 0.0;
+    List<Usuario> integrantesHogar = hogar.getIntegrantes();
+
+    for (Gasto gasto : gastos) {
+      if (gasto.getMonto() != null && Boolean.TRUE.equals(gasto.getPagado())) {
+        totalConsumo += acumularSiParticipa(gasto, usuario, integrantesHogar);
+      }
+    }
+    return totalConsumo;
+  }
+
+  // MÉTODO AUXILIAR para mantener baja la complejidad ciclomática (PMD)
+  private double acumularSiParticipa(Gasto gasto, Usuario usuario, List<Usuario> integrantesHogar) {
+    List<Usuario> participantes = gasto.getParticipantes();
+
+    // Si el gasto viejo no tiene participantes asignados, se divide entre todos por defecto
+    if (participantes == null || participantes.isEmpty()) {
+      participantes = integrantesHogar;
+    }
+
+    boolean participa = participantes.stream().anyMatch(p -> p.getId().equals(usuario.getId()));
+
+    if (participa && !participantes.isEmpty()) {
+      return gasto.getMonto() / participantes.size();
+    }
+    return 0.0;
+  }
+
   @Transactional
   public void registrarPagoExitoso(Hogar hogar, String emisor, String receptor, Double monto) {
     if (servicioPagoRealizado != null && hogar != null) {
@@ -92,17 +125,6 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   public List<PagoRealizado> obtenerHistorialPagos(Long hogarId) {
     if (servicioPagoRealizado == null || hogarId == null) return Collections.emptyList();
     return servicioPagoRealizado.obtenerHistorialPagos(hogarId);
-  }
-
-  private double calcularTotalGastos(List<Gasto> gastos) {
-    if (gastos == null) return 0.0;
-    double total = 0.0;
-    for (Gasto gasto : gastos) {
-      if (gasto.getMonto() != null && Boolean.TRUE.equals(gasto.getPagado())) {
-        total += gasto.getMonto();
-      }
-    }
-    return total;
   }
 
   private double calcularTotalPagadoPorUsuario(Usuario usuario, List<Gasto> gastos) {

@@ -13,13 +13,10 @@ import com.tallerwebi.dominio.ServicioVotacion;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.servlet.http.HttpSession;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
@@ -41,23 +38,20 @@ public class ControladorVotacionTest {
     controladorVotacion =
       new ControladorVotacion(servicioVotacionMock, servicioUsuarioMock, sessionMock);
 
-    // Configuramos el ViewResolver para evitar el bucle de vista circular
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
     viewResolver.setSuffix(".jsp");
 
-    // Configuramos MockMvc con el viewResolver
     mockMvc =
       MockMvcBuilders.standaloneSetup(controladorVotacion).setViewResolvers(viewResolver).build();
   }
 
   @Test
-  public void queRedirijaAlLoginSiNoHayUsuarioLogueadoEnIrAPropuestas() throws Exception {
-    // La sesión no tiene el atributo USUARIO_ID
+  public void queRedirijaAlDashboardSiNoHayUsuarioLogueadoEnIrAPropuestas() throws Exception {
     mockMvc
       .perform(get("/propuestas"))
       .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/login"));
+      .andExpect(redirectedUrl("/dashboard"));
   }
 
   @Test
@@ -66,11 +60,12 @@ public class ControladorVotacionTest {
     usuario.setNombre("Juan");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioVotacionMock.obtenerTodasLasPropuestas()).thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(get("/propuestas").sessionAttr("USUARIO_ID", 1L))
+      .perform(get("/propuestas").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("propuestas"))
       .andExpect(model().attributeExists("nombreUsuario"))
@@ -85,6 +80,7 @@ public class ControladorVotacionTest {
       .perform(
         post("/propuestas/guardar")
           .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
           .param("titulo", "Nueva Propuesta")
           .param("descripcion", "Descripcion de prueba")
           .param("porcentajeQuorum", "50.0")
@@ -110,7 +106,10 @@ public class ControladorVotacionTest {
 
     mockMvc
       .perform(
-        post("/propuestas/guardar").sessionAttr("USUARIO_ID", 1L).param("titulo", "Invalida")
+        post("/propuestas/guardar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("titulo", "Invalida")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("propuestas"))
@@ -125,6 +124,7 @@ public class ControladorVotacionTest {
       .perform(
         post("/propuestas/10/votar")
           .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
           .param("esAfirmativo", "true")
           .param("comentario", "Excelente")
       )
@@ -157,7 +157,10 @@ public class ControladorVotacionTest {
 
     mockMvc
       .perform(
-        post("/propuestas/10/votar").sessionAttr("USUARIO_ID", 1L).param("esAfirmativo", "true")
+        post("/propuestas/10/votar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("esAfirmativo", "true")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("propuestas"))

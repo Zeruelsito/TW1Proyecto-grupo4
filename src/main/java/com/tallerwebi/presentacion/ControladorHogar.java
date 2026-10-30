@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorHogar {
@@ -26,13 +27,17 @@ public class ControladorHogar {
   }
 
   @GetMapping("/hogar") // pedir y mostrar
-  public ModelAndView irAHogar(HttpSession session) {
+  public ModelAndView irAHogar(HttpSession session, RedirectAttributes redirectAttributes) {
     ModelAndView mav = new ModelAndView("hogar");
     Long usuarioId = (Long) session.getAttribute("USUARIO_ID");
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
 
-    // PARCHE TEMPORAL PARA PRUEBAS (mientras no esté el login conectado):
-    if (usuarioId == null) {
-      usuarioId = 1L; // Corresponde al usuario 'Juan' con ID 1 en el data.sql
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "Para ver el hogar y otras secciones debes pertenecer a un hogar."
+      );
+      return new ModelAndView("redirect:/dashboard");
     }
 
     Hogar hogarActivo = (Hogar) session.getAttribute("hogarActivoEnSession");

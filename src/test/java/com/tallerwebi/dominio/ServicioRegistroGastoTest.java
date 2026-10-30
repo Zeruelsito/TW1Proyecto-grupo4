@@ -20,6 +20,8 @@ import com.tallerwebi.dominio.excepcion.DescripcionGastoVaciaException;
 import com.tallerwebi.dominio.excepcion.MontoGastoInvalidoException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,7 @@ public class ServicioRegistroGastoTest {
   private RepositorioGasto repositorioGasto;
   private RepositorioUsuario repositorioUsuario;
   private RepositorioHogar repositorioHogar;
-  private ServicioRegistroGasto servicioRegistroGasto;
+  private ServicioRegistroGastoImpl servicioRegistroGasto;
 
   private List<Gasto> gastosEnMemoria;
   private static final Long HOGAR_ID = 1L;
@@ -44,6 +46,11 @@ public class ServicioRegistroGastoTest {
       new ServicioRegistroGastoImpl(repositorioGasto, repositorioUsuario, repositorioHogar);
     gastosEnMemoria = new ArrayList<>();
 
+    // Mock del Hogar
+    Hogar hogarMock = new Hogar();
+    hogarMock.setId(HOGAR_ID);
+    when(repositorioHogar.buscarPorId(HOGAR_ID)).thenReturn(hogarMock);
+
     // Simulamos comportamiento adaptado al hogarId
     when(repositorioGasto.obtenerTodosPorHogar(eq(HOGAR_ID)))
       .thenAnswer(invocation -> gastosEnMemoria);
@@ -57,20 +64,20 @@ public class ServicioRegistroGastoTest {
   }
 
   @Test
-  public void dadoUnGastoValidoCuandoLoRegistroEntoncesSeGuardaEnLaLista() {
+  public void dadoUnGastoValidoКогдаLoRegistroEntoncesSeGuardaEnLaLista() {
     Gasto gastoValido = givenUnGastoValido();
     whenRegistroUn(gastoValido);
     thenElGastoSeGuardaEnLaLista(gastoValido);
   }
 
   @Test
-  public void dadoUnGastoConMontoInvalidoCuandoLoRegistroEntoncesLanzaExcepcion() {
+  public void dadoUnGastoConMontoInvalidoКогдаLoRegistroEntoncesLanzaExcepcion() {
     Gasto gastoConMontoInvalido = givenUnGastoConMontoInvalido();
     assertThrows(MontoGastoInvalidoException.class, () -> whenRegistroUn(gastoConMontoInvalido));
   }
 
   @Test
-  public void dadoUnGastoConDescripcionVaciaCuandoLoRegistroEntoncesLanzaExcepcion() {
+  public void dadoUnGastoConDescripcionVaciaКогдаLoRegistroEntoncesLanzaExcepcion() {
     Gasto gastoConDescripcionVacia = givenUnGastoConDescripcionVacia();
     assertThrows(
       DescripcionGastoVaciaException.class,
@@ -79,9 +86,47 @@ public class ServicioRegistroGastoTest {
   }
 
   @Test
+  public void queSePuedaRegistrarGastoConParticipantesEspecificos() {
+    Gasto gasto = givenUnGastoValido();
+    List<Usuario> integrantesMock = givenCuatroIntegrantes();
+
+    when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
+
+    // Registramos especificando solo al usuario con ID 1L
+    Gasto resultado = servicioRegistroGasto.registrarGastoConParticipantes(
+      gasto,
+      HOGAR_ID,
+      Arrays.asList(1L)
+    );
+
+    assertNotNull(resultado);
+    assertEquals(1, resultado.getParticipantes().size());
+    assertEquals(1L, resultado.getParticipantes().get(0).getId());
+    verify(repositorioGasto, times(1)).guardar(gasto);
+  }
+
+  @Test
+  public void queAsigneTodosLosIntegrantesSiLaListaDeParticipantesEstaVacia() {
+    Gasto gasto = givenUnGastoValido();
+    List<Usuario> integrantesMock = givenCuatroIntegrantes();
+
+    when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
+
+    // Lista vacía para que asigne todos por defecto
+    Gasto resultado = servicioRegistroGasto.registrarGastoConParticipantes(
+      gasto,
+      HOGAR_ID,
+      Collections.emptyList()
+    );
+
+    assertNotNull(resultado);
+    assertEquals(4, resultado.getParticipantes().size());
+    verify(repositorioGasto, times(1)).guardar(gasto);
+  }
+
+  @Test
   public void debeObtenerLaListaDeIntegrantesCorrectamente() {
     List<Usuario> integrantesMock = givenCuatroIntegrantes();
-    // CORREGIDO: Se pasa HOGAR_ID al método del repositorio
     when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
 
     List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes(HOGAR_ID);
@@ -93,7 +138,6 @@ public class ServicioRegistroGastoTest {
   @Test
   public void debeSugerirComoProximoPagadorAlIntegranteConMenorMontoAcumulado() {
     List<Usuario> integrantesMock = givenCuatroIntegrantes();
-    // CORREGIDO: Se pasa HOGAR_ID al método del repositorio
     when(repositorioUsuario.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(integrantesMock);
 
     Usuario macarena = integrantesMock.get(0);
@@ -105,7 +149,7 @@ public class ServicioRegistroGastoTest {
       macarena,
       "Varios"
     );
-    servicioRegistroGasto.registrarGasto(gastoMacarena, HOGAR_ID);
+    servicioRegistroGasto.registrarGastoConParticipantes(gastoMacarena, HOGAR_ID, null);
 
     String sugerencia = servicioRegistroGasto.obtenerSugerenciaProximoPagador(HOGAR_ID);
 
@@ -183,7 +227,7 @@ public class ServicioRegistroGastoTest {
   }
 
   @Test
-  public void dadoQueHayGastosPendientesConVencimientoCuandoLosPidoEntoncesDevuelveLosDelRepositorio() {
+  public void dadoQueHayGastosPendientesConVencimientoКогдаLosPidoEntoncesDevuelveLosDelRepositorio() {
     Gasto luz = new Gasto("G-010", TipoGasto.FIJO, "Luz", 5000.0, "SERVICIOS");
     luz.setFechaVencimiento(LocalDateTime.now().plusDays(5));
     when(repositorioGasto.obtenerGastosPendientesConVencimiento(HOGAR_ID)).thenReturn(List.of(luz));
@@ -219,7 +263,7 @@ public class ServicioRegistroGastoTest {
   }
 
   @Test
-  public void dadaUnaFechaCuandoPidoLosVencimientosVencidosEntoncesConsultaLosAnterioresAEsaFecha() {
+  public void dadaUnaFechaКогдаPidoLosVencimientosVencidosEntoncesConsultaLosAnterioresAEsaFecha() {
     LocalDateTime hoy = LocalDateTime.now();
     Gasto gas = new Gasto("G-011", TipoGasto.FIJO, "Gas", 3000.0, "SERVICIOS");
     when(repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, HOGAR_ID)).thenReturn(List.of(gas));
@@ -288,7 +332,7 @@ public class ServicioRegistroGastoTest {
   }
 
   private void whenRegistroUn(Gasto gasto) {
-    servicioRegistroGasto.registrarGasto(gasto, HOGAR_ID);
+    servicioRegistroGasto.registrarGastoConParticipantes(gasto, HOGAR_ID, null);
   }
 
   private void thenElGastoSeGuardaEnLaLista(Gasto gastoValido) {

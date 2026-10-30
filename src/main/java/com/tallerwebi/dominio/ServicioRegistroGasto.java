@@ -17,4 +17,6 @@ public interface ServicioRegistroGasto {
   List<Gasto> obtenerVencimientosPendientes(Long hogarId);
   List<Gasto> obtenerVencimientosProximos(LocalDateTime hoy, Long hogarId);
   List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy, Long hogarId);
+
+  Gasto registrarGastoConParticipantes(Gasto gasto, Long hogarId, List<Long> participantesIds);
 }
