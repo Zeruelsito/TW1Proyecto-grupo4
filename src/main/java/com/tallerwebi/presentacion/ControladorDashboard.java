@@ -16,9 +16,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorDashboard {
+
+  private static final String HOGAR_ID = "HOGAR_ID";
+  private static final String REDIRECT_DASHBOARD = "redirect:/dashboard";
 
   @Autowired
   ServicioUsuario servicioUsuario;
@@ -38,7 +42,6 @@ public class ControladorDashboard {
 
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
-    //por si las dudas
     if (usuarioActual == null) {
       usuarioActual = new Usuario("Juan", 300000.0);
       usuarioActual.setId(usuarioId);
@@ -53,13 +56,17 @@ public class ControladorDashboard {
     model.put("hogaresUsuario", hogaresUsuario);
 
     if (hogaresUsuario != null && !hogaresUsuario.isEmpty()) {
-      procesarMetricasHogar(hogaresUsuario.getFirst(), model);
+      Hogar primerHogar = hogaresUsuario.getFirst();
+      if (session.getAttribute(HOGAR_ID) == null) {
+        session.setAttribute(HOGAR_ID, primerHogar.getId());
+        session.setAttribute("hogarActivoEnSession", primerHogar);
+      }
+      procesarMetricasHogar(primerHogar, model);
     }
 
     return new ModelAndView("dashboard", model);
   }
 
-  // Método principal simplificado
   private void procesarMetricasHogar(Hogar hogarActual, Map<String, Object> model) {
     List<Usuario> usuariosAgregados = obtenerIntegrantesOTodos(hogarActual);
     verificarYAsignarIngresos(usuariosAgregados);
@@ -84,7 +91,6 @@ public class ControladorDashboard {
     model.put("usuarios", usuariosAgregados);
   }
 
-  // Métodos auxiliares para mantener baja la complejidad ciclomática
   private List<Usuario> obtenerIntegrantesOTodos(Hogar hogarActual) {
     List<Usuario> integrantes = hogarActual.getIntegrantes();
     if (integrantes == null || integrantes.isEmpty()) {
@@ -123,25 +129,69 @@ public class ControladorDashboard {
       Hogar nuevoHogar = new Hogar(nombreHogar, pin);
       nuevoHogar.getIntegrantes().add(usuario);
       servicioHogar.crearHogar(nuevoHogar);
+      session.setAttribute(HOGAR_ID, nuevoHogar.getId());
       session.setAttribute("hogarActivoEnSession", nuevoHogar);
     }
 
-    return new ModelAndView("redirect:/dashboard");
+    return new ModelAndView(REDIRECT_DASHBOARD);
   }
 
-  @PostMapping("/unirse-hogar")
-  public ModelAndView unirseHogar(
-    @RequestParam("nombreHogar") String nombreHogar,
+  // NUEVO FLUJO PASO 1: Buscar hogar por PIN para previsualizarlo
+  @PostMapping("/previsualizar-unirse")
+  public ModelAndView previsualizarUnirse(
     @RequestParam("pin") String pin,
+    HttpSession session,
+    RedirectAttributes redirectAttributes
+  ) {
+    // Buscamos a través del servicio para asegurar la transacción de Hibernate
+    Hogar hogarEncontrado = servicioHogar.buscarPorPin(pin);
+
+    if (hogarEncontrado == null) {
+      redirectAttributes.addFlashAttribute(
+        "errorPin",
+        "El PIN ingresado es incorrecto o no existe un hogar con el mismo."
+      );
+      return new ModelAndView(REDIRECT_DASHBOARD);
+    }
+
+    // Validar si el usuario ya es parte de este hogar
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    List<Hogar> hogaresDelUsuario = servicioHogar.obtenerHogares(usuarioId);
+
+    boolean yaEsParte = hogaresDelUsuario
+      .stream()
+      .anyMatch(h -> h.getId().equals(hogarEncontrado.getId()));
+
+    if (yaEsParte) {
+      redirectAttributes.addFlashAttribute(
+        "errorPin",
+        "Ya formás parte de este hogar, no podés volver a unirte."
+      );
+      return new ModelAndView(REDIRECT_DASHBOARD);
+    }
+
+    redirectAttributes.addFlashAttribute("hogarPrevisualizado", hogarEncontrado);
+    return new ModelAndView(REDIRECT_DASHBOARD);
+  }
+
+  // NUEVO FLUJO PASO 2: Confirmar la unión definitiva al hogar encontrado
+  @PostMapping("/confirmar-unirse-hogar")
+  public ModelAndView confirmarUnirseHogar(
+    @RequestParam("hogarId") Long hogarId,
     HttpSession session
   ) {
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
 
     if (usuario != null) {
-      servicioHogar.unirseAHogar(nombreHogar, pin, usuario);
+      Hogar hogar = servicioHogar.buscarPorId(hogarId);
+      if (hogar != null) {
+        servicioHogar.unirseAHogar(hogar.getNombreHogar(), hogar.getPin(), usuario);
+        session.setAttribute(HOGAR_ID, hogar.getId());
+        session.setAttribute("hogarActivoEnSession", hogar);
+      }
     }
 
-    return new ModelAndView("redirect:/dashboard");
+    return new ModelAndView(REDIRECT_DASHBOARD);
   }
 }

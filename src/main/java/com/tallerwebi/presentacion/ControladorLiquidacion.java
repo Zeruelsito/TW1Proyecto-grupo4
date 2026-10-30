@@ -5,11 +5,9 @@ import com.mercadopago.exceptions.MPException;
 import com.tallerwebi.dominio.*;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorLiquidacion {
@@ -47,10 +46,19 @@ public class ControladorLiquidacion {
   }
 
   @GetMapping("/liquidacion")
-  public ModelAndView irALiquidacion(HttpSession session) {
+  public ModelAndView irALiquidacion(HttpSession session, RedirectAttributes redirectAttributes) {
     Map<String, Object> modelo = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "Para ver la liquidación y otras secciones debes pertenecer a un hogar."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
 
     String nombreUser = (usuarioActual != null && usuarioActual.getNombre() != null)
       ? usuarioActual.getNombre()

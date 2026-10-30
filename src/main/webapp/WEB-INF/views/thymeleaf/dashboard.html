@@ -276,7 +276,7 @@
     </div>
 </div>
 
-<!-- MODAL: Unirse a Hogar (Formato Bento Box) -->
+<!-- MODAL: Unirse a Hogar (Solo PIN) -->
 <div class="modal fade" id="modalUnirseHogar" tabindex="-1" aria-labelledby="modalUnirseHogarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
@@ -284,27 +284,82 @@
                 <h5 class="modal-title fw-bold" id="modalUnirseHogarLabel"><i class="bi bi-box-arrow-in-right me-2 text-success"></i>Unirse a un Hogar</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form th:action="@{/unirse-hogar}" method="POST">
+            <form th:action="@{/previsualizar-unirse}" method="POST">
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">Ingresá el nombre exacto del hogar y el PIN provisto por el administrador para sumarte.</p>
-                    <div class="mb-3">
-                        <label for="nombreHogarUnirse" class="form-label small fw-semibold">Nombre del Hogar</label>
-                        <input type="text" class="form-control rounded-3" id="nombreHogarUnirse" name="nombreHogar" placeholder="Ej: Hogar Principal" required />
-                    </div>
+                    <p class="text-muted small mb-3">Ingresá el PIN provisto por el administrador para buscar el hogar.</p>
                     <div class="mb-3">
                         <label for="pinUnirse" class="form-label small fw-semibold">PIN del Hogar</label>
-                        <input type="text" class="form-control rounded-3" id="pinUnirse" name="pin" placeholder="PIN de acceso" required />
+                        <input type="text" class="form-control rounded-3" id="pinUnirse" name="pin" placeholder="Ej: kumo2026" required />
                     </div>
+                    <div th:if="${errorPin != null}" class="alert alert-danger py-2 small" th:text="${errorPin}"></div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light rounded-3 px-3" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-semibold shadow-sm">Unirme al Hogar</button>
+                    <button type="submit" class="btn btn-dark rounded-3 px-4 fw-semibold shadow-sm">Buscar Hogar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<!-- MODAL: Confirmacion de Hogar Encontrado (Se abre solo si se encontro el hogar por PIN) -->
+<div th:if="${hogarPrevisualizado != null}" class="modal fade show" id="modalConfirmarHogar" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success"><i class="bi bi-house-check me-2"></i>¿Es este el hogar que buscabas?</h5>
+            </div>
+            <form th:action="@{/confirmar-unirse-hogar}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="hogarId" th:value="${hogarPrevisualizado.id}" />
+                    <div class="p-3 bg-light rounded-3 mb-3">
+                        <p class="mb-1 text-muted small">Nombre del Hogar:</p>
+                        <!-- Corregido a nombreHogar para evitar el error de Thymeleaf -->
+                        <h4 class="fw-bold text-dark mb-3" th:text="${hogarPrevisualizado.nombreHogar}">Depto Palermo</h4>
+                        <p class="mb-1 text-muted small">Integrantes actuales:</p>
+                        <h5 class="fw-semibold text-primary mb-0" th:text="${hogarPrevisualizado.integrantes != null ? hogarPrevisualizado.integrantes.size() : 0} + ' integrantes'">3 integrantes</h5>
+                    </div>
+                    <p class="text-secondary small mb-0">Al confirmar, pasarás a formar parte de este hogar inmediatamente.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex gap-2">
+                    <a th:href="@{/dashboard}" class="btn btn-light rounded-3 px-3 w-50 text-center">Cancelar</a>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 fw-semibold shadow-sm w-50">Confirmar y Unirme</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de advertencia de Hogar requerido (Manejado puramente por Bootstrap, sin pantalla gris trabada) -->
+<div class="modal fade" id="modalHogarRequerido" tabindex="-1" aria-labelledby="modalHogarRequeridoLabel" aria-hidden="true" th:if="${alertaHogar != null}">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0 rounded-4 p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold text-dark" id="modalHogarRequeridoLabel">Hogar requerido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-secondary fs-6" th:text="${alertaHogar}">Mensaje de alerta</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-primary w-100 rounded-pill py-2" data-bs-dismiss="modal">
+            Entendido, crear o unirme a un hogar
+          </button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Scripts de Bootstrap y lógica limpia para abrir/cerrar el pop-up de alerta -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:if="${alertaHogar != null}">
+    document.addEventListener("DOMContentLoaded", function() {
+        var modalEl = document.getElementById('modalHogarRequerido');
+        if (modalEl) {
+            var myModal = new bootstrap.Modal(modalEl);
+            myModal.show();
+        }
+    });
+</script>
 </body>
 </html>

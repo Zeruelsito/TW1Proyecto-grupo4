@@ -105,6 +105,16 @@ public class ServicioHogarImpl implements ServicioHogar {
     return false;
   }
 
+  @Override
+  public Hogar buscarPorPin(String pin) {
+    return repositorioHogar.buscarPorPin(pin);
+  }
+
+  @Override
+  public Hogar buscarPorId(Long id) {
+    return repositorioHogar.buscarPorId(id);
+  }
+
   private boolean esIntegrante(Hogar hogar, Usuario usuario) {
     for (Usuario integrante : hogar.getIntegrantes()) {
       if (integrante.getId().equals(usuario.getId())) {

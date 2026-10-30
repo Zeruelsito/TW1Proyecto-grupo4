@@ -10,7 +10,6 @@ import static org.hamcrest.Matchers.nullValue;
 import com.tallerwebi.dominio.CambioParametro;
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.RepositorioHogar;
-import com.tallerwebi.infraestructura.RepositorioHogarImpl;
 import com.tallerwebi.infraestructura.config.HibernateInfraestructuraTestConfig;
 import jakarta.transaction.Transactional;
 import java.util.ArrayList;

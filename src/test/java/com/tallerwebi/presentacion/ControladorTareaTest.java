@@ -52,7 +52,6 @@ public class ControladorTareaTest {
         servicioTareaRepetitivaMock
       );
 
-    // Configuramos el ViewResolver para evitar el bucle de vista circular en Spring MVC
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
     viewResolver.setSuffix(".jsp");
@@ -71,7 +70,7 @@ public class ControladorTareaTest {
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(get("/tareas").sessionAttr("USUARIO_ID", 1L))
+      .perform(get("/tareas").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attributeExists("nombreUsuario"))
@@ -87,7 +86,10 @@ public class ControladorTareaTest {
 
     mockMvc
       .perform(
-        post("/tareas/crear").sessionAttr("USUARIO_ID", 1L).param("nombre", "Limpiar cocina")
+        post("/tareas/crear")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("nombre", "Limpiar cocina")
       )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/tareas"));
@@ -110,7 +112,10 @@ public class ControladorTareaTest {
 
     mockMvc
       .perform(
-        post("/tareas/crear").sessionAttr("USUARIO_ID", 1L).param("nombre", "Tarea inválida")
+        post("/tareas/crear")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("nombre", "Tarea inválida")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
@@ -123,7 +128,12 @@ public class ControladorTareaTest {
     doNothing().when(servicioCreditoTareaMock).completarTareaYGenerarCredito(10L, 1L);
 
     mockMvc
-      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "10"))
+      .perform(
+        post("/tareas/completar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("tareaId", "10")
+      )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/tareas"));
 
@@ -140,7 +150,7 @@ public class ControladorTareaTest {
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L)) // Sin param tareaId
+      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attribute("error", "Identificador de tarea inválido."));
@@ -162,7 +172,12 @@ public class ControladorTareaTest {
       .completarTareaYGenerarCredito(99L, 1L);
 
     mockMvc
-      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "99"))
+      .perform(
+        post("/tareas/completar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("tareaId", "99")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attribute("error", "La tarea seleccionada no existe."));
@@ -182,7 +197,12 @@ public class ControladorTareaTest {
       .completarTareaYGenerarCredito(5L, 1L);
 
     mockMvc
-      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).param("tareaId", "5"))
+      .perform(
+        post("/tareas/completar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("tareaId", "5")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attribute("error", "Esta tarea ya fue completada previamente."));

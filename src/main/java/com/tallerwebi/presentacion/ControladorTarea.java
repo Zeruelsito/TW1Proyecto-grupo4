@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorTarea {
@@ -43,10 +44,23 @@ public class ControladorTarea {
   }
 
   @GetMapping("/tareas")
-  public ModelAndView irATareas(HttpServletRequest request, HttpSession session) {
+  public ModelAndView irATareas(
+    HttpServletRequest request,
+    HttpSession session,
+    RedirectAttributes redirectAttributes
+  ) {
     Map<String, Object> model = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "Para ver la liquidación y otras secciones debes pertenecer a un hogar."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
+
     model.put(
       "nombreUsuario",
       usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
