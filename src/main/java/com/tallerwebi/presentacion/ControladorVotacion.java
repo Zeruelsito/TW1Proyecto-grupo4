@@ -6,8 +6,6 @@ import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ControladorVotacion {
@@ -34,7 +33,18 @@ public class ControladorVotacion {
   }
 
   @RequestMapping(path = "/propuestas", method = RequestMethod.GET)
-  public ModelAndView irAPropuestas(HttpServletRequest request) {
+  public ModelAndView irAPropuestas(
+    HttpServletRequest request,
+    RedirectAttributes redirectAttributes
+  ) {
+    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
+    if (hogarId == null) {
+      redirectAttributes.addFlashAttribute(
+        "alertaHogar",
+        "Para ver la liquidación y otras secciones debes pertenecer a un hogar."
+      );
+      return new ModelAndView("redirect:/dashboard");
+    }
     if (obtenerIdUsuario(request) == null) {
       return new ModelAndView("redirect:/login");
     }

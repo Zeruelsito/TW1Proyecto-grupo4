@@ -53,4 +53,14 @@ public class RepositorioHogarImpl implements RepositorioHogar {
     String hql = "FROM Hogar";
     return sessionFactory.getCurrentSession().createQuery(hql, Hogar.class).getResultList();
   }
+
+  @Override
+  public Hogar buscarPorPin(String pin) {
+    String hql = "SELECT DISTINCT h FROM Hogar h LEFT JOIN FETCH h.integrantes WHERE h.pin = :pin";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(hql, Hogar.class)
+      .setParameter("pin", pin)
+      .getSingleResultOrNull();
+  }
 }

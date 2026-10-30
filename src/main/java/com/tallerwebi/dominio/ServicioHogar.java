@@ -15,4 +15,6 @@ public interface ServicioHogar {
   List<Hogar> obtenerHogares(Long usuarioId);
   void crearHogar(Hogar hogar);
   boolean unirseAHogar(String nombreHogar, String pin, Usuario usuario);
+  Hogar buscarPorPin(String pin);
+  Hogar buscarPorId(Long id);
 }
