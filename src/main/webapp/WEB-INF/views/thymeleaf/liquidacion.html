@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Bento Card: Resultados de Transferencias -->
+            <!-- Bento Card: Resultados de Transferencias Sugeridas -->
             <div class="row g-4 mb-4">
                 <div class="col-12">
                     <div class="kumo-card p-4">
@@ -79,7 +79,7 @@
                             </span>
                         </div>
 
-                        <!-- Tabla de Transferencias con los formularios integrados -->
+                        <!-- Tabla de Transferencias Sugeridas -->
                         <div class="table-responsive" th:if="${not #lists.isEmpty(transferencias)}">
                             <table class="table align-middle mb-0">
                                 <thead>
@@ -96,21 +96,34 @@
                                     <td th:text="${t.receptor}">Receptor</td>
                                     <td th:text="${'$' + t.monto}">0.00</td>
                                     <td class="align-middle text-center">
-                                        <form th:action="@{/procesarPago}" method="post" accept-charset="UTF-8"
-                                              class="m-0"
-                                              th:if="${session.email != null and session.email == t.emailEmisor}">
-                                            <input type="hidden" name="nombreHogar"
-                                                   th:value="${casa != null ? casa.nombreHogar : 'Hogar'}"/>
-                                            <input type="hidden" name="emisor" th:value="${t.emisor}"/>
-                                            <input type="hidden" name="receptor" th:value="${t.receptor}"/>
-                                            <input type="hidden" name="monto" th:value="${t.monto}"/>
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-primary px-3 rounded-3 shadow-sm">
-                                                Generar URL
-                                            </button>
-                                        </form>
-                                        <span class="text-muted small"
-                                              th:unless="${session.email != null and session.email == t.emailEmisor}">Pendiente de pago
+                                        <!-- Si el usuario logueado es el emisor -->
+                                        <div th:if="${session.email != null and session.email == t.emailEmisor}">
+
+                                            <!-- Si ya existe un pago pendiente para esta transferencia -->
+                                            <div th:if="${clavesPendientes != null and clavesPendientes.contains(t.emisor + '_' + t.receptor + '_' + t.monto)}">
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 rounded-pill">
+                                                    <i class="bi bi-hourglass-split me-1"></i> Pago en proceso
+                                                </span>
+                                            </div>
+
+                                            <!-- Si no hay pago pendiente, muestra el botón Generar URL -->
+                                            <div th:unless="${clavesPendientes != null and clavesPendientes.contains(t.emisor + '_' + t.receptor + '_' + t.monto)}">
+                                                <form th:action="@{/pago}" method="post" accept-charset="UTF-8" class="m-0">
+                                                    <input type="hidden" name="nombreHogar" th:value="${casa != null ? casa.nombreHogar : 'Hogar'}"/>
+                                                    <input type="hidden" name="emisor" th:value="${t.emisor}"/>
+                                                    <input type="hidden" name="receptor" th:value="${t.receptor}"/>
+                                                    <input type="hidden" name="monto" th:value="${t.monto}"/>
+                                                    <button type="submit" class="btn btn-sm btn-primary px-3 rounded-3 shadow-sm">
+                                                        Generar URL
+                                                    </button>
+                                                </form>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- Si no es el usuario logueado -->
+                                        <span class="text-muted small" th:unless="${session.email != null and session.email == t.emailEmisor}">
+                                            Pendiente de pago
                                         </span>
                                     </td>
                                 </tr>
@@ -119,11 +132,74 @@
                         </div>
 
                         <!-- Mensaje en caso de estar al día -->
-                        <div th:if="${#lists.isEmpty(transferencias)}" class="text-center py-5">
-                            <i class="bi bi-emoji-smile fs-1 text-success"></i>
-                            <h5 class="fw-bold mt-2">¡Todos están al día!</h5>
-                            <p class="text-muted small">No hay deudas ni transferencias pendientes para realizar este
-                                mes.</p>
+                        <div th:if="${#lists.isEmpty(transferencias)}" class="text-center py-4">
+                            <p class="text-muted small mb-0">No hay transferencias sugeridas en este momento.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Card: Pagos Pendientes de Confirmación -->
+            <div class="row g-4 mb-4" th:if="${transferenciasPendientes != null and not #lists.isEmpty(transferenciasPendientes)}">
+                <div class="col-12">
+                    <div class="kumo-card p-4 border border-warning shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0 text-warning">
+                                <i class="bi bi-hourglass-split me-2"></i>Pagos Pendientes de Confirmación
+                            </h5>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2 fw-semibold rounded-pill"
+                                  th:text="${#lists.size(transferenciasPendientes)} + ' en espera'">
+                                1 en espera
+                            </span>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>Emisor</th>
+                                    <th>Receptor</th>
+                                    <th>Monto</th>
+                                    <th class="text-center">Acciones / Estado</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="tp : ${transferenciasPendientes}">
+                                    <td th:text="${tp.emisor}">Emisor</td>
+                                    <td th:text="${tp.receptor}">Receptor</td>
+                                    <td th:text="${'$' + tp.monto}">0.00</td>
+                                    <td class="align-middle text-center">
+
+                                        <!-- Si el usuario logueado coincide con el RECEPTOR -->
+                                        <div class="d-flex justify-content-center gap-2" th:if="${usuarioLogueado != null and usuarioLogueado == tp.receptor}">
+                                            <!-- Botón 1: Confirmar -->
+                                            <form th:action="@{/pago/confirmar-manual}" method="post" class="m-0">
+                                                <input type="hidden" name="id" th:value="${tp.id}"/>
+                                                <button type="submit" class="btn btn-sm btn-success px-3 rounded-3 shadow-sm" title="Confirmar pago manualmente">
+                                                    <i class="bi bi-check-lg me-1"></i> Confirmar
+                                                </button>
+                                            </form>
+
+                                            <!-- Botón 2: Volver a Sugeridas -->
+                                            <form th:action="@{/pago/devolver-sugeridas}" method="post" class="m-0">
+                                                <input type="hidden" name="id" th:value="${tp.id}"/>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger px-3 rounded-3 shadow-sm" title="Rechazar y volver a sugeridas">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i> No se recibió el pago
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <!-- Para el resto de los usuarios (cuando NO es el receptor) -->
+                                        <div th:unless="${usuarioLogueado != null and usuarioLogueado == tp.receptor}">
+        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill">
+            <i class="bi bi-clock me-1"></i> A la espera de confirmación
+        </span>
+                                        </div>
+
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

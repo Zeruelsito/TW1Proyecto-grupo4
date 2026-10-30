@@ -1,78 +1,126 @@
-//package com.tallerwebi.presentacion;
-//
-//import static org.hamcrest.MatcherAssert.assertThat;
-//import static org.hamcrest.Matchers.*;
-//import static org.mockito.ArgumentMatchers.any;
-//import static org.mockito.ArgumentMatchers.anyLong;
-//import static org.mockito.Mockito.*;
-//
-//import com.tallerwebi.dominio.*;
-//import jakarta.servlet.http.HttpSession;
-//import java.util.List;
-//import org.junit.jupiter.api.BeforeEach;
-//import org.junit.jupiter.api.Test;
-//import org.springframework.web.servlet.ModelAndView;
-//
-//public class ControladorLiquidacionTest {
-//
-//  private ControladorLiquidacion controladorLiquidacion;
-//  private ServicioLiquidacion servicioLiquidacionMock;
-//  private ServicioRegistroGasto servicioRegistroGastoMock;
-//  private ServicioHogar servicioHogarMock;
-//  private HttpSession sessionMock; // <-- Mock de la sesión
-//
-//  @BeforeEach
-//  public void init() {
-//    servicioLiquidacionMock = mock(ServicioLiquidacion.class);
-//    servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
-//    servicioHogarMock = mock(ServicioHogar.class);
-//
-//    sessionMock = mock(HttpSession.class);
-//
-//    controladorLiquidacion =
-//      new ControladorLiquidacion(
-//        servicioLiquidacionMock,
-//        servicioRegistroGastoMock,
-//        servicioHogarMock
-//      );
-//  }
-//
-//  @Test
-//  public void debedevolverVistaLiquidacionConTransferenciasSugeridas() {
-//    // Given
-//    TransferenciaSugerida transferenciaEsperada = new TransferenciaSugerida(
-//      "Maria",
-//      "Juan",
-//      3000.0
-//    );
-//    List<TransferenciaSugerida> transferenciasMock = List.of(transferenciaEsperada);
-//
-//    Usuario juan = new Usuario("Juan", "juan@kumo.com", "1234");
-//    juan.setId(1L);
-//    Usuario maria = new Usuario("Maria", "maria@kumo.com", "1212");
-//    maria.setId(2L);
-//
-//    // Actualizado: Se usa anyLong() ya que los métodos ahora piden el hogarId
-//    when(servicioRegistroGastoMock.obtenerIntegrantes(anyLong())).thenReturn(List.of(juan, maria));
-//    when(servicioRegistroGastoMock.obtenerTodosLosGastos(anyLong())).thenReturn(List.of());
-//
-//    when(servicioLiquidacionMock.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
-//      .thenReturn(transferenciasMock);
-//
-//    // When: Se pasa la sesión mockeada al controlador
-//    ModelAndView modelAndView = controladorLiquidacion.irALiquidacion(sessionMock);
-//
-//    // Then
-//    assertThat(modelAndView.getViewName(), is(equalTo("liquidacion")));
-//    assertThat(modelAndView.getModel().get("transferencias"), is(notNullValue()));
-//
-//    @SuppressWarnings("unchecked")
-//    List<TransferenciaSugerida> transferenciasEnModelo = (List<TransferenciaSugerida>) modelAndView
-//      .getModel()
-//      .get("transferencias");
-//
-//    assertThat(transferenciasEnModelo, hasSize(1));
-//    assertThat(transferenciasEnModelo.get(0), is(equalTo(transferenciaEsperada)));
-//    assertThat(modelAndView.getModel().get("usuarioLogueado"), is(equalTo("Juan")));
-//  }
-//}
+package com.tallerwebi.presentacion;
+
+import com.tallerwebi.dominio.*;
+import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+public class ControladorLiquidacionTest {
+
+    private MockMvc mockMvc;
+
+    @Mock
+    private HttpSession session;
+
+    @Mock
+    private ServicioLiquidacion servicioLiquidacion;
+
+    @Mock
+    private ServicioRegistroGasto servicioRegistroGasto;
+
+    @Mock
+    private ServicioPagoPendiente servicioPagoPendiente;
+
+    @Mock
+    private ServicioHogar servicioHogar;
+
+    @Mock
+    private ServicioUsuario servicioUsuario;
+
+    @Mock
+    private ServicioPagoRealizado servicioPagoRealizado;
+
+    @InjectMocks
+    private ControladorLiquidacion controladorLiquidacion;
+
+    private AutoCloseable closeable;
+
+    @BeforeEach
+    public void setUp() {
+        closeable = MockitoAnnotations.openMocks(this);
+
+        // Configuramos un ViewResolver falso para evitar el error de vista circular
+        InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+        viewResolver.setPrefix("/WEB-INF/views/");
+        viewResolver.setSuffix(".jsp");
+
+        mockMvc = MockMvcBuilders.standaloneSetup(controladorLiquidacion)
+                .setViewResolvers(viewResolver)
+                .build();
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        closeable.close();
+    }
+
+    @Test
+    public void queRedirijaAlDashboardSiUsuarioSinHogarIntentaAccederALiquidacion() throws Exception {
+        Long usuarioId = 1L;
+        Usuario usuarioMock = new Usuario();
+        usuarioMock.setId(usuarioId);
+        usuarioMock.setNombre("Ezequiel");
+
+        when(servicioUsuario.obtenerUsuarioPorId(eq(usuarioId))).thenReturn(usuarioMock);
+        when(servicioHogar.obtenerHogares(eq(usuarioId))).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/liquidacion")
+                        .sessionAttr("USUARIO_ID", usuarioId))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard"));
+    }
+
+    @Test
+    public void queAlAccederALiquidacionConHogarActivoCargueGastosYTransferencias() throws Exception {
+        Long usuarioId = 1L;
+        Long hogarId = 10L;
+
+        Usuario usuarioMock = new Usuario();
+        usuarioMock.setId(usuarioId);
+        usuarioMock.setNombre("Ezequiel");
+
+        Hogar hogarMock = crearHogarConId(hogarId);
+
+        when(servicioUsuario.obtenerUsuarioPorId(eq(usuarioId))).thenReturn(usuarioMock);
+        when(servicioHogar.obtenerHogares(eq(usuarioId))).thenReturn(List.of(hogarMock));
+        when(servicioHogar.seleccionarHogarPorId(eq(hogarId))).thenReturn(hogarMock);
+
+        when(servicioRegistroGasto.obtenerTodosLosGastos(eq(hogarId))).thenReturn(Collections.emptyList());
+        when(servicioPagoPendiente.obtenerPendientes(any(Hogar.class))).thenReturn(Collections.emptyList());
+        when(servicioLiquidacion.obtenerLiquidacionDelMes(any(Hogar.class), any())).thenReturn(Collections.emptyList());
+        when(servicioPagoRealizado.obtenerHistorialPagos(eq(hogarId))).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(get("/liquidacion")
+                        .sessionAttr("USUARIO_ID", usuarioId)
+                        .sessionAttr("hogarActivoEnSession", hogarMock)
+                        .sessionAttr("HOGAR_ID", hogarId)) // <-- ¡Esta es la línea que faltaba agregar!
+                .andExpect(status().isOk())
+                .andExpect(view().name("liquidacion"))
+                .andExpect(model().attribute("usuarioLogueado", "Ezequiel"))
+                .andExpect(model().attribute("casa", notNullValue()))
+                .andExpect(model().attributeExists("transferenciasPendientes", "historialPagos"));
+    }
+
+    private Hogar crearHogarConId(Long id) {
+        Hogar hogar = new Hogar();
+        hogar.setId(id);
+        return hogar;
+    }
+}

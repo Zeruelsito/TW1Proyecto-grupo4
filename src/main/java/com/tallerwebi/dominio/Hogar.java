@@ -100,4 +100,8 @@ public class Hogar {
   public void setPin(String pin) {
     this.pin = pin;
   }
+
+  public void setNombre(String nombreHogar) {
+    this.nombreHogar = nombreHogar;
+  }
 }
