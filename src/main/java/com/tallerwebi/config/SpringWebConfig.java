@@ -44,6 +44,7 @@ public class SpringWebConfig implements WebMvcConfigurer {
         "/nuevo-usuario", // Vista de registro (GET)
         "/registrarme", // El POST del registro (POST)
         "/home",
+        "/webhook/mercadopago",
         "/css/**", // Archivos estáticos
         "/js/**",
         "/webjars/**"

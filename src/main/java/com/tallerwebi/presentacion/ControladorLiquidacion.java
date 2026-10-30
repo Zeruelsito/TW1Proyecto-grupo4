@@ -5,10 +5,7 @@ import com.mercadopago.exceptions.MPException;
 import com.tallerwebi.dominio.*;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -25,6 +22,7 @@ public class ControladorLiquidacion {
 
   private final ServicioLiquidacion servicioLiquidacion;
   private final ServicioRegistroGasto servicioRegistroGasto;
+  private final ServicioPagoPendiente servicioPagoPendiente;
   private final ServicioHogar servicioHogar;
   private final ServicioUsuario servicioUsuario;
   private final ServicioPagoRealizado servicioPagoRealizado; // <-- NUEVO: Servicio inyectado
@@ -36,7 +34,8 @@ public class ControladorLiquidacion {
     ServicioRegistroGasto servicioRegistroGasto,
     ServicioHogar servicioHogar,
     ServicioUsuario servicioUsuario,
-    ServicioPagoRealizado servicioPagoRealizado
+    ServicioPagoRealizado servicioPagoRealizado,
+    ServicioPagoPendiente servicioPagoPendiente
   ) {
     this.session = session;
     this.servicioLiquidacion = servicioLiquidacion;
@@ -44,6 +43,7 @@ public class ControladorLiquidacion {
     this.servicioHogar = servicioHogar;
     this.servicioUsuario = servicioUsuario;
     this.servicioPagoRealizado = servicioPagoRealizado;
+    this.servicioPagoPendiente = servicioPagoPendiente;
   }
 
   @GetMapping("/liquidacion")
@@ -68,16 +68,24 @@ public class ControladorLiquidacion {
       if (hogar != null) {
         modelo.put("casa", hogar);
         List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogar.getId());
+        List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(
+          hogar
+        );
         List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
           hogar,
           gastos
         );
-
+        modelo.put("transferenciasPendientes", transferenciasPendientes);
+        Set<String> clavesPendientes = new HashSet<>();
+        for (PagoPendiente p : transferenciasPendientes) {
+          String clave = p.getEmisor() + "_" + p.getReceptor() + "_" + p.getMonto();
+          clavesPendientes.add(clave);
+        }
+        modelo.put("clavesPendientes", clavesPendientes);
         if (transferencias != null) {
           modelo.put("transferencias", transferencias);
         }
 
-        // NUEVO: Obtenemos y pasamos el historial de pagos a la vista de liquidación
         List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(
           hogar.getId()
         );
@@ -86,57 +94,5 @@ public class ControladorLiquidacion {
     }
 
     return new ModelAndView("liquidacion", modelo);
-  }
-
-  @PostMapping("/procesar-liquidacion")
-  public String procesarPagoLiquidacion() throws MPException, MPApiException {
-    return "redirect:/procesarPago";
-  }
-
-  @PostMapping("/procesarPago")
-  public ModelAndView mostrarPasarela(
-    @RequestParam("nombreHogar") String nombreHogar,
-    @RequestParam("emisor") String emisor,
-    @RequestParam("receptor") String receptor,
-    @RequestParam("monto") Double monto
-  ) {
-    ModelAndView modelAndView = new ModelAndView("procesarPago");
-    modelAndView.addObject("nombreHogar", nombreHogar);
-    modelAndView.addObject("emisor", emisor);
-    modelAndView.addObject("receptor", receptor);
-    modelAndView.addObject("monto", monto);
-    return modelAndView;
-  }
-
-  @GetMapping("/exitoso")
-  public String pagoExitoso(
-    @RequestParam(value = "payment_id", required = false) String paymentId,
-    Model model
-  ) {
-    model.addAttribute("paymentId", paymentId);
-    return "pago-exitoso";
-  }
-
-  @PostMapping("/simular-exito")
-  public ModelAndView simularExito(
-    @RequestParam("nombreHogar") String nombreHogar,
-    @RequestParam("emisor") String emisor,
-    @RequestParam("receptor") String receptor,
-    @RequestParam("monto") Double monto
-  ) {
-    // NUEVO: Buscamos el hogar y guardamos el pago en la base de datos
-    Hogar casa = (Hogar) session.getAttribute("hogarActivoEnSession");
-    if (casa != null) {
-      PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
-      servicioPagoRealizado.registrarPagoExitoso(pago);
-    }
-
-    // Redirigimos de vuelta a la liquidación para que la tabla se actualice sola
-    return new ModelAndView("redirect:/liquidacion");
-  }
-
-  @PostMapping("/simular-error")
-  public ModelAndView simularErrorPago() {
-    return new ModelAndView("errorControladorLiquidacion");
   }
 }

@@ -8,89 +8,56 @@ import com.mercadopago.client.preference.PreferenceRequest;
 import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.preference.Preference;
-import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
-import java.util.Collections;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-@Transactional
 public class ServicioMercadoPagoImpl implements ServicioMercadoPago {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(ServicioMercadoPagoImpl.class);
+  private final PreferenceClient client;
 
-  @Value("${MP_ACCESS_TOKEN}")
-  private String accessToken;
+  @Autowired
+  public ServicioMercadoPagoImpl(
+    @Value(
+      "APP_USR-5982680599461888-102114-d7684bf5791dddd4432384969f0d21f4-3760410508"
+    ) String accessToken
+  ) {
+    MercadoPagoConfig.setAccessToken(accessToken);
+    this.client = new PreferenceClient();
+  }
+
+  // 2. Constructor para Pruebas Unitarias (permite inyectar el mock de PreferenceClient)
+  public ServicioMercadoPagoImpl(PreferenceClient client) {
+    this.client = client;
+  }
 
   @Override
-  public String crearUrl(String titulo, Double precio) throws MPException, MPApiException {
-    validarParametros(titulo, precio);
-
-    if (LOGGER.isInfoEnabled()) {
-      LOGGER.info(
-        "Iniciando creación de preferencia de pago para: '{}' con monto: {}",
-        titulo,
-        precio
-      );
-    }
-
-    MercadoPagoConfig.setAccessToken(accessToken);
-
-    PreferenceRequest preferenceRequest = construirPreferenceRequest(titulo, precio);
-    PreferenceClient client = new PreferenceClient();
-
-    try {
-      Preference preference = client.create(preferenceRequest);
-      return preference.getSandboxInitPoint();
-    } catch (MPApiException e) {
-      if (LOGGER.isErrorEnabled()) {
-        String errorContent = (e.getApiResponse() != null)
-          ? e.getApiResponse().getContent()
-          : "Sin contenido";
-        LOGGER.error(
-          "Error al comunicarse com la API de Mercado Pago - Status: {} | Detalle: {}",
-          e.getStatusCode(),
-          errorContent,
-          e
-        );
-      }
-      throw e;
-    }
-  }
-
-  private void validarParametros(String titulo, Double precio) {
-    if (titulo == null || titulo.trim().isEmpty()) {
-      throw new IllegalArgumentException("El título del pago no puede ser nulo o vacío");
-    }
-    if (precio == null || precio.compareTo(0.0) <= 0) {
-      throw new IllegalArgumentException("El precio debe ser mayor a cero");
-    }
-  }
-
-  private PreferenceRequest construirPreferenceRequest(String titulo, Double precio) {
-    PreferenceItemRequest itemRequest = PreferenceItemRequest
+  public Preference crearUrl(String titulo, BigDecimal precio) throws MPException, MPApiException {
+    PreferenceItemRequest item = PreferenceItemRequest
       .builder()
       .title(titulo)
       .quantity(1)
-      .unitPrice(BigDecimal.valueOf(precio))
       .currencyId("ARS")
+      .unitPrice(precio)
       .build();
 
-    return PreferenceRequest
+    PreferenceRequest request = PreferenceRequest
       .builder()
-      .items(Collections.singletonList(itemRequest))
+      .items(List.of(item))
+      .autoReturn("approved")
       .backUrls(
         PreferenceBackUrlsRequest
           .builder()
-          .success("http://localhost:8080/pagos/exitoso")
-          .failure("http://localhost:8080/pagos/errorControladorMp")
-          .pending("http://localhost:8080/pagos/pendiente")
+          .success("https://improve-monsoon-feeble.ngrok-free.dev/spring/pago/succesControladorMP")
+          .failure("https://improve-monsoon-feeble.ngrok-free.dev/spring/pago/errorControladorMP")
+          .pending("https://improve-monsoon-feeble.ngrok-free.dev/spring/pago/pending")
           .build()
       )
-      .autoReturn("approved")
       .build();
+
+    return client.create(request);
   }
 }
