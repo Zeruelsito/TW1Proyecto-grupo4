@@ -45,7 +45,7 @@ public class ControladorMercadoPago {
   @Autowired
   private ServicioPagoPendiente servicioPagoPendiente;
 
-  @Autowired 
+  @Autowired
   private ServicioBajaIntegrante servicioBajaIntegrante;
 
   @Autowired
@@ -62,6 +62,7 @@ public class ControladorMercadoPago {
     @RequestParam("receptor") String receptor,
     @RequestParam("monto") Double monto
   ) {
+    session.removeAttribute(BAJA_USUARIO_SESSION_KEY); // Limpiar cualquier baja pendiente en la sesión
     String titulo = "Transferencia";
     session.setAttribute("emisorPago", emisor);
     session.setAttribute("receptorPago", receptor);
@@ -70,7 +71,7 @@ public class ControladorMercadoPago {
     try {
       Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
 
-      return new ModelAndView("redirect:" + preference.getSandboxInitPoint());
+      return new ModelAndView("redirect:" + preference.getInitPoint());
     } catch (MPApiException e) {
       if (logger.isErrorEnabled()) {
         String errorContent = (e.getApiResponse() != null)
@@ -108,41 +109,11 @@ public class ControladorMercadoPago {
       logger.warn("No se pudo validar el pago de la baja del usuario {}", usuarioId, e);
       return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
     }
- 
+
+    ModelAndView mav = pago(emisor, receptor, monto);
     session.setAttribute(BAJA_USUARIO_SESSION_KEY, usuarioId);
-    return iniciarPago(emisor, receptor, monto);
+    return mav;
   }
- 
-  private ModelAndView iniciarPago(String emisor, String receptor, Double monto) {
-    String titulo = "Transferencia";
-    session.setAttribute("emisorPago", emisor);
-    session.setAttribute("receptorPago", receptor);
-    session.setAttribute("montoPago", monto);
- 
-    try {
-      Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
- 
-      return new ModelAndView("redirect:" + preference.getSandboxInitPoint());
-    } catch (MPApiException e) {
-      if (logger.isErrorEnabled()) {
-        String errorContent = (e.getApiResponse() != null)
-          ? e.getApiResponse().getContent()
-          : "Sin contenido de respuesta";
-        logger.error("Error de API de Mercado Pago: {}", errorContent, e);
-      }
-      Map<String, Object> modelo = new HashMap<>();
-      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
-      return new ModelAndView("errorControladorMP", modelo);
-    } catch (MPException e) {
-      if (logger.isErrorEnabled()) {
-        logger.error("Error general de Mercado Pago", e);
-      }
-      Map<String, Object> modelo = new HashMap<>();
-      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
-      return new ModelAndView("errorControladorMP", modelo);
-    }
-  }
- 
 
   @GetMapping("/pago/succesControladorMP")
   public ModelAndView pagoExitoso(
