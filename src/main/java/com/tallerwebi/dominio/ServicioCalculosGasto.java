@@ -22,4 +22,26 @@ public interface ServicioCalculosGasto {
   );
 
   void calcularHorasDeTareasDeUsuarios(List<Usuario> usuariosConPorcentajes, Double valorHoraTarea);
+
+  //maca
+  Double calcularCuotaMensualPorUsuario(
+    Usuario usuario,
+    Double montoGastosOcasionales,
+    Double valorPisoMinimoSeguro,
+    List<Usuario> integrantes
+  );
+
+  Double calcularPorcentajeDeAporteDeGastosPorUsuario(
+    Usuario usuario,
+    List<Usuario> integrantes,
+    Double valorPisoMinimoSeguro
+  );
+
+  Double calcularValorDeHorasDeTareaPorUsuario(
+    Usuario usuario,
+    Double valorHoraTarea,
+    Double montoGastosOcasionales,
+    Double valorPisoMinimoSeguro,
+    List<Usuario> integrantes
+  );
 }

@@ -3,13 +3,19 @@ package com.tallerwebi.presentacion;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.tallerwebi.dominio.Hogar;
+import com.tallerwebi.dominio.ServicioCalculosGasto;
 import com.tallerwebi.dominio.ServicioCreditoTarea;
+import com.tallerwebi.dominio.ServicioHogar;
+import com.tallerwebi.dominio.ServicioLiquidacion;
+import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.ServicioTareaRepetitiva;
 import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Tarea;
@@ -35,6 +41,10 @@ public class ControladorTareaTest {
   private HttpSession sessionMock;
   private ServicioTareaRepetitiva servicioTareaRepetitivaMock;
   private ServicioUsuario servicioUsuarioMock;
+  private ServicioHogar servicioHogarMock;
+  private ServicioLiquidacion servicioLiquidacionMock;
+  private ServicioRegistroGasto servicioRegistroGastoMock;
+  private ServicioCalculosGasto servicioCalculosGastoMock;
   private ControladorTarea controladorTarea;
 
   @BeforeEach
@@ -44,12 +54,20 @@ public class ControladorTareaTest {
     requestMock = mock(HttpServletRequest.class);
     sessionMock = mock(HttpSession.class);
     servicioUsuarioMock = mock(ServicioUsuario.class);
+    servicioHogarMock = mock(ServicioHogar.class);
+    servicioLiquidacionMock = mock(ServicioLiquidacion.class);
+    servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
+    servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
 
     controladorTarea =
       new ControladorTarea(
         servicioCreditoTareaMock,
         servicioUsuarioMock,
-        servicioTareaRepetitivaMock
+        servicioTareaRepetitivaMock,
+        servicioHogarMock,
+        servicioLiquidacionMock,
+        servicioRegistroGastoMock,
+        servicioCalculosGastoMock
       );
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
@@ -81,6 +99,19 @@ public class ControladorTareaTest {
   }
 
   @Test
+  public void queRedirijaSiNoHayHogarIdEnSesionAlIrATareas() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+
+    mockMvc
+      .perform(get("/tareas").sessionAttr("USUARIO_ID", 1L))
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/tareas"))
+      .andExpect(flash().attributeExists("alertaHogar"));
+  }
+
+  @Test
   public void queCreeTareaExitosamenteYRedirija() throws Exception {
     doNothing().when(servicioCreditoTareaMock).registrarTarea(any(Tarea.class));
 
@@ -89,7 +120,7 @@ public class ControladorTareaTest {
         post("/tareas/crear")
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
-          .param("nombre", "Limpiar cocina")
+          .param("titulo", "Limpiar cocina")
       )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/tareas"));
@@ -101,7 +132,6 @@ public class ControladorTareaTest {
   public void queManejeExcepcionValorCreditoInvalidoAlCrearTarea() throws Exception {
     Usuario usuario = new Usuario();
     usuario.setNombre("Carlos");
-
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(0.0);
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
@@ -115,17 +145,22 @@ public class ControladorTareaTest {
         post("/tareas/crear")
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
-          .param("nombre", "Tarea inválida")
+          .param("titulo", "")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
-      .andExpect(model().attributeExists("error"))
-      .andExpect(model().attribute("error", "El valor del crédito debe ser mayor a $0."));
+      .andExpect(model().attribute("error", "El título de la tarea no puede estar vacío."));
   }
 
   @Test
   public void queCompletarTareaExitosamenteRedirija() throws Exception {
-    doNothing().when(servicioCreditoTareaMock).completarTareaYGenerarCredito(10L, 1L);
+    Hogar hogar = new Hogar("Hogar 1");
+    hogar.setPrecioHoraTarea(1000.0);
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
+
+    doNothing()
+      .when(servicioCreditoTareaMock)
+      .completarTareaYGenerarCredito(eq(10L), eq(1L), eq(2.0), anyDouble());
 
     mockMvc
       .perform(
@@ -133,11 +168,13 @@ public class ControladorTareaTest {
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
           .param("tareaId", "10")
+          .param("horasDedicadas", "2.0")
       )
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/tareas"));
 
-    verify(servicioCreditoTareaMock, times(1)).completarTareaYGenerarCredito(10L, 1L);
+    verify(servicioCreditoTareaMock, times(1))
+      .completarTareaYGenerarCredito(eq(10L), eq(1L), eq(2.0), anyDouble());
   }
 
   @Test
@@ -150,12 +187,18 @@ public class ControladorTareaTest {
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
     mockMvc
-      .perform(post("/tareas/completar").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
+      .perform(
+        post("/tareas/completar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("horasDedicadas", "2.0")
+      )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attribute("error", "Identificador de tarea inválido."));
 
-    verify(servicioCreditoTareaMock, never()).completarTareaYGenerarCredito(anyLong(), anyLong());
+    verify(servicioCreditoTareaMock, never())
+      .completarTareaYGenerarCredito(anyLong(), anyLong(), anyDouble(), anyDouble());
   }
 
   @Test
@@ -163,13 +206,15 @@ public class ControladorTareaTest {
     Usuario usuario = new Usuario();
     usuario.setNombre("Carlos");
 
+    Hogar hogar = new Hogar("Hogar 1");
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(100.0);
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
     doThrow(new TareaNoEncontradaException())
       .when(servicioCreditoTareaMock)
-      .completarTareaYGenerarCredito(99L, 1L);
+      .completarTareaYGenerarCredito(eq(99L), eq(1L), eq(2.0), anyDouble());
 
     mockMvc
       .perform(
@@ -177,6 +222,7 @@ public class ControladorTareaTest {
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
           .param("tareaId", "99")
+          .param("horasDedicadas", "2.0")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
@@ -188,13 +234,15 @@ public class ControladorTareaTest {
     Usuario usuario = new Usuario();
     usuario.setNombre("Carlos");
 
+    Hogar hogar = new Hogar("Hogar 1");
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(200.0);
     when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
 
     doThrow(new TareaYaCompletadaException())
       .when(servicioCreditoTareaMock)
-      .completarTareaYGenerarCredito(5L, 1L);
+      .completarTareaYGenerarCredito(eq(5L), eq(1L), eq(2.0), anyDouble());
 
     mockMvc
       .perform(
@@ -202,10 +250,64 @@ public class ControladorTareaTest {
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
           .param("tareaId", "5")
+          .param("horasDedicadas", "2.0")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
       .andExpect(model().attribute("error", "Esta tarea ya fue completada previamente."));
+  }
+
+  @Test
+  public void queManejeExcepcionValorCreditoInvalidoAlCompletar() throws Exception {
+    Usuario usuario = new Usuario();
+    usuario.setNombre("Carlos");
+
+    Hogar hogar = new Hogar("Hogar 1");
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(200.0);
+    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
+
+    doThrow(new ValorCreditoInvalidoException())
+      .when(servicioCreditoTareaMock)
+      .completarTareaYGenerarCredito(eq(5L), eq(1L), eq(0.0), anyDouble());
+
+    mockMvc
+      .perform(
+        post("/tareas/completar")
+          .sessionAttr("USUARIO_ID", 1L)
+          .sessionAttr("HOGAR_ID", 1L)
+          .param("tareaId", "5")
+          .param("horasDedicadas", "0.0")
+      )
+      .andExpect(status().isOk())
+      .andExpect(view().name("tareas"))
+      .andExpect(
+        model().attribute("error", "La cantidad de horas ingresadas debe ser mayor a cero.")
+      );
+  }
+
+  @Test
+  public void queLiquideCreditosParcialesExitosamente() throws Exception {
+    Hogar hogar = new Hogar("Hogar 1");
+    Usuario usuario = new Usuario();
+    usuario.setId(1L);
+
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
+    when(servicioRegistroGastoMock.obtenerTodosLosGastos(1L)).thenReturn(Collections.emptyList());
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+    when(servicioLiquidacionMock.obtenerDeudaUsuario(usuario, hogar, Collections.emptyList()))
+      .thenReturn(5000.0);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(10000.0);
+
+    mockMvc
+      .perform(
+        post("/tareas/liquidar-creditos").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L)
+      )
+      .andExpect(status().is3xxRedirection())
+      .andExpect(redirectedUrl("/tareas"));
+
+    verify(servicioCreditoTareaMock, times(1)).liquidarCreditosParciales(eq(1L), eq(5000.0));
   }
 
   @Test
@@ -215,12 +317,11 @@ public class ControladorTareaTest {
     when(requestMock.getParameter("tareaRepetitivaId")).thenReturn("7");
 
     Tarea tarea = new Tarea();
-    tarea.setHorasDedicadas(2.0);
 
     ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
 
     assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
-    verify(servicioCreditoTareaMock).registrarTareaDesdeCatalogo(7L, 2.0, 1L);
+    verify(servicioCreditoTareaMock).registrarTareaDesdeCatalogo(7L, null, 1L);
   }
 
   @Test
@@ -230,11 +331,10 @@ public class ControladorTareaTest {
     when(requestMock.getParameter("tareaRepetitivaId")).thenReturn("99");
 
     Tarea tarea = new Tarea();
-    tarea.setHorasDedicadas(1.0);
 
     doThrow(new TareaNoEncontradaException())
       .when(servicioCreditoTareaMock)
-      .registrarTareaDesdeCatalogo(99L, 1.0, 91L);
+      .registrarTareaDesdeCatalogo(99L, null, 91L);
 
     ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
 

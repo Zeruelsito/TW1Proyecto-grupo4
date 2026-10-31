@@ -39,7 +39,6 @@ public class ServicioCreditoTareaTest {
 
     tareasEnMemoria = new ArrayList<>();
 
-    // Simulamos comportamiento de los repositorios para que el servicio opere correctamente en memoria
     when(repositorioTareaMock.obtenerTodas()).thenAnswer(invocation -> tareasEnMemoria);
     doAnswer(invocation -> {
         Tarea t = invocation.getArgument(0);
@@ -72,8 +71,8 @@ public class ServicioCreditoTareaTest {
 
   @Test
   public void debeGenerarCreditoMonetarioAlCompletarUnaTarea() {
-    //given (2.5 hs a $1000/h = $2500)
-    Tarea tarea = givenUnaTareaValida();
+    //given
+    Tarea tarea = new Tarea("Limpieza de cocina");
     servicioCreditoTarea.registrarTarea(tarea);
 
     Long usuarioId = 10L;
@@ -81,8 +80,8 @@ public class ServicioCreditoTareaTest {
     usuario.setId(usuarioId);
     when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
 
-    //when
-    servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuarioId);
+    //when (completamos aportando 2.5 hs a tarifa 1000.0)
+    servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuarioId, 2.5, 1000.0);
 
     //then
     thenObtengoElCreditoEsperado(usuarioId);
@@ -90,9 +89,8 @@ public class ServicioCreditoTareaTest {
 
   @Test
   public void debeDescontarCreditoAcumuladoDelMontoBrutoACompartir() {
-    // 1 hs = $1000 y 0.5 hs = $500 (Total $1500)
-    Tarea tarea1 = new Tarea("Lavar los platos", 1.0, 1000.0, null);
-    Tarea tarea2 = new Tarea("Sacar la basura", 0.5, 1000.0, null);
+    Tarea tarea1 = new Tarea("Lavar los platos");
+    Tarea tarea2 = new Tarea("Sacar la basura");
     servicioCreditoTarea.registrarTarea(tarea1);
     servicioCreditoTarea.registrarTarea(tarea2);
 
@@ -101,8 +99,8 @@ public class ServicioCreditoTareaTest {
     usuario.setId(usuarioId);
     when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
 
-    servicioCreditoTarea.completarTareaYGenerarCredito(tarea1.getId(), usuarioId);
-    servicioCreditoTarea.completarTareaYGenerarCredito(tarea2.getId(), usuarioId);
+    servicioCreditoTarea.completarTareaYGenerarCredito(tarea1.getId(), usuarioId, 1.0, 1000.0);
+    servicioCreditoTarea.completarTareaYGenerarCredito(tarea2.getId(), usuarioId, 0.5, 1000.0);
 
     Double montoBrutoGasto = 5000.0;
     Double montoNeto = servicioCreditoTarea.calcularMontoNetoAPagar(montoBrutoGasto, usuarioId);
@@ -112,8 +110,7 @@ public class ServicioCreditoTareaTest {
 
   @Test
   public void debeLanzarExcepcionSiSeIntentaCompletarUnaTareaYaCompletada() {
-    //given
-    Tarea tarea = new Tarea("Limpiar baño", 3.0, 1000.0, null);
+    Tarea tarea = new Tarea("Limpiar baño");
     servicioCreditoTarea.registrarTarea(tarea);
 
     Long usuario1 = 10L;
@@ -126,17 +123,32 @@ public class ServicioCreditoTareaTest {
     when(repositorioUsuarioMock.buscarPorId(usuario1)).thenReturn(u1);
     when(repositorioUsuarioMock.buscarPorId(usuario2)).thenReturn(u2);
 
-    //when
-    servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuario1);
+    servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuario1, 3.0, 1000.0);
 
-    //then
-    thenDebeLanzarExceptionAlCompletarUnaTareaDosVeces(tarea.getId(), usuario2);
+    assertThrows(
+      TareaYaCompletadaException.class,
+      () -> {
+        servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuario2, 1.0, 1000.0);
+      }
+    );
   }
 
   @Test
-  public void debeLanzarExcepcionSiLasHorasDedicadasSonInvalidas() {
-    //given + when + then
-    thenDebeLanzarExceptionAlRegistrarUnaTareaInvalida(givenUnaTareaInvalida());
+  public void debeLanzarExcepcionSiLasHorasDedicadasSonInvalidasAlCompletar() {
+    Tarea tarea = new Tarea("Pintar pared");
+    servicioCreditoTarea.registrarTarea(tarea);
+
+    Long usuarioId = 10L;
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(usuarioId);
+    when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
+
+    assertThrows(
+      ValorCreditoInvalidoException.class,
+      () -> {
+        servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuarioId, -1.0, 1000.0);
+      }
+    );
   }
 
   @Test
@@ -144,29 +156,27 @@ public class ServicioCreditoTareaTest {
     Hogar hogar = givenTengoUnHogar(1L, 1000.00, "casa de ori");
     givenUnaTareaDelCatalogo(7L, "compra semanal", hogar, 1500.00);
 
-    servicioCreditoTarea.registrarTareaDesdeCatalogo(7L, 2.0, 1L);
+    servicioCreditoTarea.registrarTareaDesdeCatalogo(7L, null, 1L);
+
+    // Al completar la tarea del catálogo indicamos 2 horas
+    Long usuarioId = 10L;
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(usuarioId);
+    when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
+
+    Long tareaId = tareasEnMemoria.get(0).getId();
+    servicioCreditoTarea.completarTareaYGenerarCredito(tareaId, usuarioId, 2.0, 1000.0);
+
     assertThat(tareasEnMemoria.get(0).getValorCredito(), equalTo(3000.0));
   }
 
   @Test
   public void noDebeRegistrarUnaTareaDelCatalogoQueNoExiste() {
-    //no tiene given asi no registra una tarea
     assertThrows(
       TareaNoEncontradaException.class,
       () -> {
-        servicioCreditoTarea.registrarTareaDesdeCatalogo(999L, 2.0, 1L);
+        servicioCreditoTarea.registrarTareaDesdeCatalogo(999L, null, 1L);
       }
-    );
-  }
-
-  @Test
-  public void noDebeRegistrarUnaTareaDelCatalogoSiNoHayValorPorHoraNiPrecioDelHogar() {
-    Hogar hogarSinPrecio = givenTengoUnHogar(1L, 0.0, "casa de ori");
-    givenUnaTareaDelCatalogo(7L, "limpiar el baño", hogarSinPrecio, null);
-
-    assertThrows(
-      ValorCreditoInvalidoException.class,
-      () -> servicioCreditoTarea.registrarTareaDesdeCatalogo(7L, 1.0, 1L)
     );
   }
 
@@ -190,36 +200,8 @@ public class ServicioCreditoTareaTest {
     return hogar;
   }
 
-  private Tarea givenUnaTareaInvalida() {
-    Tarea tareaInvalida = new Tarea("Pintar pared", -1.0, 1000.0, null);
-    return tareaInvalida;
-  }
-
-  private void thenDebeLanzarExceptionAlRegistrarUnaTareaInvalida(Tarea tarea) {
-    assertThrows(
-      ValorCreditoInvalidoException.class,
-      () -> {
-        servicioCreditoTarea.registrarTarea(tarea);
-      }
-    );
-  }
-
   private void thenObtengoElCreditoEsperado(Long usuarioId) {
     Double creditoObtenido = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
     assertThat(creditoObtenido, equalTo(2500.0));
-  }
-
-  private Tarea givenUnaTareaValida() {
-    Tarea tarea = new Tarea("Limpieza de cocina", 2.5, 1000.0, null);
-    return tarea;
-  }
-
-  private void thenDebeLanzarExceptionAlCompletarUnaTareaDosVeces(Long tareaId, Long usuario2) {
-    assertThrows(
-      TareaYaCompletadaException.class,
-      () -> {
-        servicioCreditoTarea.completarTareaYGenerarCredito(tareaId, usuario2);
-      }
-    );
   }
 }

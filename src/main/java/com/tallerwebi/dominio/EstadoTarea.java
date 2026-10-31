@@ -2,7 +2,8 @@ package com.tallerwebi.dominio;
 
 public enum EstadoTarea {
   PENDIENTE("Pendiente"),
-  COMPLETADA("Completada");
+  COMPLETADA("Completada"),
+  LIQUIDADA("Liquidada");
 
   private final String descripcion;
 

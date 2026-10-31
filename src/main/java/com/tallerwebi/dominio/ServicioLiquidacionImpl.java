@@ -144,7 +144,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
   private double obtenerCreditoTareas(Usuario usuario) {
     if (servicioCreditoTarea != null && usuario.getId() != null) {
-      return servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuario.getId());
+      return servicioCreditoTarea.obtenerCreditoLiquidadoPorUsuario(usuario.getId());
     }
     return 0.0;
   }
@@ -224,5 +224,23 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       this.nombre = nombre;
       this.monto = monto;
     }
+  }
+
+  @Override
+  public double obtenerDeudaUsuario(Usuario usuario, Hogar hogar, List<Gasto> gastos) {
+    if (usuario == null || hogar == null) {
+      return 0.0;
+    }
+    double totalPagado = calcularTotalPagadoPorUsuario(usuario, gastos);
+    double creditoLiquidado = obtenerCreditoTareas(usuario);
+    double consumo = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
+
+    double balanceNeto = (totalPagado + creditoLiquidado) - consumo;
+
+    // Si el balance es negativo, representa la deuda exacta que tiene el usuario
+    if (balanceNeto < -MARGEN_TOLERANCIA) {
+      return -balanceNeto;
+    }
+    return 0.0;
   }
 }

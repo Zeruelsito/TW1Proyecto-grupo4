@@ -145,6 +145,91 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
   }
 
   @Override
+  public Double calcularCuotaMensualPorUsuario(
+    Usuario usuario,
+    Double montoGastosOcasionales,
+    Double valorPisoMinimoSeguro,
+    List<Usuario> integrantes
+  ) {
+    if (usuario == null || integrantes == null || integrantes.isEmpty()) {
+      return 0.0;
+    }
+
+    double gastosSeguros = (montoGastosOcasionales != null) ? montoGastosOcasionales : 0.0;
+    double pisoMinimoSeguro = (valorPisoMinimoSeguro != null) ? valorPisoMinimoSeguro : 0.0;
+
+    double partePisoPorUsuario = pisoMinimoSeguro / integrantes.size();
+    double porcentajeAporte = calcularPorcentajeDeAporteDeGastosPorUsuario(
+      usuario,
+      integrantes,
+      pisoMinimoSeguro
+    );
+
+    return partePisoPorUsuario + ((porcentajeAporte * gastosSeguros) / 100.0);
+  }
+
+  @Override
+  public Double calcularPorcentajeDeAporteDeGastosPorUsuario(
+    Usuario usuario,
+    List<Usuario> integrantes,
+    Double valorPisoMinimoSeguro
+  ) {
+    if (usuario == null || integrantes == null || integrantes.isEmpty()) {
+      return 0.0;
+    }
+
+    double pisoMinimoSeguro = (valorPisoMinimoSeguro != null) ? valorPisoMinimoSeguro : 0.0;
+
+    double sumaCapacidadesHogar = integrantes
+      .stream()
+      .mapToDouble(integrante -> calculoCapacidadRelativaDePago(integrante, pisoMinimoSeguro))
+      .sum();
+
+    if (sumaCapacidadesHogar <= 0) {
+      // Si nadie supera el piso mínimo, los gastos opcionales se reparten en partes iguales
+      return 100.0 / integrantes.size();
+    }
+
+    double capacidadUsuario = calculoCapacidadRelativaDePago(usuario, pisoMinimoSeguro);
+    return (capacidadUsuario / sumaCapacidadesHogar) * 100.0;
+  }
+
+  @Override
+  public Double calcularValorDeHorasDeTareaPorUsuario(
+    Usuario usuario,
+    Double valorHoraTarea,
+    Double montoGastosOcasionales,
+    Double valorPisoMinimoSeguro,
+    List<Usuario> integrantes
+  ) {
+    if (
+      usuario == null ||
+      integrantes == null ||
+      integrantes.isEmpty() ||
+      valorHoraTarea == null ||
+      valorHoraTarea <= 0
+    ) {
+      return 0.0;
+    }
+
+    double porcentajeDeAporteMinimo = (100.0 / integrantes.size()) / 2.0;
+    double porcentajeDeUsuario = calcularPorcentajeDeAporteDeGastosPorUsuario(
+      usuario,
+      integrantes,
+      valorPisoMinimoSeguro
+    );
+
+    if (porcentajeDeUsuario >= porcentajeDeAporteMinimo) {
+      return 0.0;
+    }
+
+    double gastosSeguros = (montoGastosOcasionales != null) ? montoGastosOcasionales : 0.0;
+    double valorADeber = (gastosSeguros * (porcentajeDeAporteMinimo - porcentajeDeUsuario)) / 100.0;
+
+    return valorADeber;
+  }
+
+  @Override
   public void calcularHorasDeTareasDeUsuarios(
     List<Usuario> usuariosConPorcentajes,
     Double valorHoraTarea

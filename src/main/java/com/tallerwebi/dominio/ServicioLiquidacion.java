@@ -6,4 +6,5 @@ import java.util.Map;
 public interface ServicioLiquidacion {
   List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances);
   List<TransferenciaSugerida> obtenerLiquidacionDelMes(Hogar hogar, List<Gasto> gastos);
+  double obtenerDeudaUsuario(Usuario usuario, Hogar hogar, List<Gasto> gastos);
 }

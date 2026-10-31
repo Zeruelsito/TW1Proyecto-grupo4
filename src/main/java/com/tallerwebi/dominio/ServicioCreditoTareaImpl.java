@@ -31,58 +31,47 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
 
   @Override
   public void registrarTarea(Tarea tarea) {
-    validarHorasDedicadas(tarea.getHorasDedicadas());
-
     tarea.setEstado(EstadoTarea.PENDIENTE);
     if (tarea.getFechaRegistro() == null) {
       tarea.setFechaRegistro(LocalDateTime.now());
     }
-
     repositorioTarea.guardar(tarea);
   }
 
   @Override
   public void registrarTareaDesdeCatalogo(
     Long tareaRepetitivaId,
-    Double horasDedicadas,
+    Double horasDedicadasIgnoradas,
     Long hogarId
   ) {
     TareaRepetitiva plantilla = buscarPlantillaDelHogar(tareaRepetitivaId, hogarId);
-    validarHorasDedicadas(horasDedicadas);
 
-    Double valorPorHora = plantilla.obtenerValorPorHora();
-    if (valorPorHora == null || valorPorHora <= 0) {
-      throw new ValorCreditoInvalidoException();
-    }
-
-    Tarea tarea = new Tarea(plantilla.getTitulo(), horasDedicadas, valorPorHora, null);
+    Tarea tarea = new Tarea(plantilla.getTitulo());
     tarea.setTareaRepetitiva(plantilla);
     registrarTarea(tarea);
   }
 
   @Override
-  public void completarTareaYGenerarCredito(Long tareaId, Long usuarioId) {
-    Tarea tarea = repositorioTarea.buscarPorId(tareaId);
-    if (tarea == null) {
-      throw new TareaNoEncontradaException();
-    }
+  public void completarTareaYGenerarCredito(
+    Long tareaId,
+    Long usuarioId,
+    Double horasDedicadas,
+    Double tarifaPorHora
+  ) {
+    Tarea tarea = obtenerTareaValidadaParaCompletar(tareaId, horasDedicadas);
+    Usuario usuario = obtenerUsuarioValidado(usuarioId);
 
-    validarEstadoPendiente(tarea);
+    double tarifaFinal = determinarTarifaFinal(tarea, tarifaPorHora);
 
-    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
-    if (usuario == null) {
-      throw new UsuarioNoEncontrado();
-    }
-
+    tarea.setHorasDedicadas(horasDedicadas, tarifaFinal);
     tarea.setEstado(EstadoTarea.COMPLETADA);
+    tarea.setUsuarioRealizador(usuario);
 
-    tarea.setUsuarioRealizador(usuario); // Seteamos el objeto Usuario directamente
     if (tarea.getTareaRepetitiva() != null) {
       tarea.getTareaRepetitiva().setUsuarioAsignado(usuario);
     }
 
     tarea.setFechaRegistro(LocalDateTime.now());
-
     repositorioTarea.guardar(tarea);
   }
 
@@ -93,15 +82,55 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       return 0.0;
     }
 
-    List<Tarea> tareasDelUsuario = repositorioTarea.obtenerPorUsuario(usuario);
-    double creditoTotal = 0.0;
+    // Suma el valor en pesos de todas las tareas completadas
+    double totalGenerado = repositorioTarea
+      .obtenerPorUsuario(usuario)
+      .stream()
+      .filter(t -> EstadoTarea.COMPLETADA.equals(t.getEstado()))
+      .mapToDouble(t -> t.getValorCredito() != null ? t.getValorCredito() : 0.0)
+      .sum();
 
-    for (Tarea tarea : tareasDelUsuario) {
-      if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {
-        creditoTotal += tarea.getValorCredito() != null ? tarea.getValorCredito() : 0.0;
-      }
+    // Resta el dinero que el usuario ya decidió descontar en la liquidación este mes
+    double totalLiquidado = usuario.getCreditoLiquidado() != null
+      ? usuario.getCreditoLiquidado()
+      : 0.0;
+    return Math.max(0.0, totalGenerado - totalLiquidado);
+  }
+
+  @Override
+  public Double obtenerCreditoLiquidadoPorUsuario(Long usuarioId) {
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null) {
+      return 0.0;
     }
-    return creditoTotal;
+    // Devuelve el total de plata que ya se reclamó/liquidó este mes para la tira informativa
+    return usuario.getCreditoLiquidado() != null ? usuario.getCreditoLiquidado() : 0.0;
+  }
+
+  @Override
+  public void liquidarCreditosParciales(Long usuarioId, double montoMaximo) {
+    if (montoMaximo <= 0) {
+      return;
+    }
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null) {
+      return;
+    }
+
+    // Incrementa el acumulado de plata liquidada del usuario sin tocar las tareas del historial
+    double actualLiquidado = usuario.getCreditoLiquidado() != null
+      ? usuario.getCreditoLiquidado()
+      : 0.0;
+    usuario.setCreditoLiquidado(actualLiquidado + montoMaximo);
+    repositorioUsuario.guardar(usuario);
+  }
+
+  @Override
+  public void liquidarCreditosDeUsuario(Long usuarioId) {
+    double creditoAcumulado = obtenerCreditoAcumuladoPorUsuario(usuarioId);
+    if (creditoAcumulado > 0) {
+      liquidarCreditosParciales(usuarioId, creditoAcumulado);
+    }
   }
 
   @Override
@@ -117,12 +146,6 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
   }
 
   /* --- Métodos Auxiliares Privados --- */
-
-  private void validarHorasDedicadas(Double horas) {
-    if (horas == null || horas <= 0) {
-      throw new ValorCreditoInvalidoException();
-    }
-  }
 
   private void validarEstadoPendiente(Tarea tarea) {
     if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {
@@ -143,5 +166,37 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       throw new TareaNoEncontradaException();
     }
     return plantilla;
+  }
+
+  private Usuario obtenerUsuarioValidado(Long usuarioId) {
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null) {
+      throw new UsuarioNoEncontrado();
+    }
+    return usuario;
+  }
+
+  private double determinarTarifaFinal(Tarea tarea, Double tarifaPorHora) {
+    if (
+      tarea.getTareaRepetitiva() != null && tarea.getTareaRepetitiva().obtenerValorPorHora() != null
+    ) {
+      return tarea.getTareaRepetitiva().obtenerValorPorHora();
+    }
+    return (tarifaPorHora != null && tarifaPorHora > 0) ? tarifaPorHora : 1000.0;
+  }
+
+  private Tarea obtenerTareaValidadaParaCompletar(Long tareaId, Double horasDedicadas) {
+    if (tareaId == null) {
+      throw new TareaNoEncontradaException();
+    }
+    Tarea tarea = repositorioTarea.buscarPorId(tareaId);
+    if (tarea == null) {
+      throw new TareaNoEncontradaException();
+    }
+    validarEstadoPendiente(tarea);
+    if (horasDedicadas == null || horasDedicadas <= 0) {
+      throw new ValorCreditoInvalidoException();
+    }
+    return tarea;
   }
 }
