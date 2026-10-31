@@ -125,7 +125,17 @@ public class ControladorMercadoPago {
     String emisor = (String) session.getAttribute("emisorPago");
     String receptor = (String) session.getAttribute("receptorPago");
     Double monto = (Double) session.getAttribute("montoPago");
-
+    Long bajaUsuarioId = (Long) session.getAttribute(BAJA_USUARIO_SESSION_KEY);
+    
+    if (bajaUsuarioId != null) {
+      session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
+      if (STATUS_APPROVED.equals(status) && monto != null) {
+        servicioBajaIntegrante.registrarPago(bajaUsuarioId, emisor, receptor, monto);
+        return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId + "&pagoRegistrado=true");
+      }
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId);
+    }
+    
     if (casa != null && monto != null) {
       PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
       servicioPagoRealizado.registrarPagoExitoso(pago);
