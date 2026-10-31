@@ -1,6 +1,5 @@
 package com.tallerwebi.dominio;
 
-import com.tallerwebi.dominio.Hogar;
 import jakarta.persistence.*;
 
 @Entity

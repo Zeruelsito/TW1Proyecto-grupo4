@@ -30,6 +30,7 @@ public class Usuario {
   private LocalDateTime fechaAlta;
   private LocalDateTime fechaBaja;
   private Double cuotaMensual;
+  private Double creditoLiquidado = 0.0;
 
   public Double getHorasTareaARealizar() {
     return horasTareaARealizar;
@@ -183,5 +184,13 @@ public class Usuario {
 
   public void setCuotaMensual(Double cuotaMensual) {
     this.cuotaMensual = cuotaMensual;
+  }
+
+  public Double getCreditoLiquidado() {
+    return creditoLiquidado;
+  }
+
+  public void setCreditoLiquidado(Double creditoLiquidado) {
+    this.creditoLiquidado = creditoLiquidado;
   }
 }

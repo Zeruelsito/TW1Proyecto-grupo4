@@ -34,6 +34,16 @@ public class Tarea {
 
   public Tarea() {
     this.estado = EstadoTarea.PENDIENTE;
+    this.valorCredito = 0.0;
+    this.fechaRegistro = LocalDateTime.now();
+  }
+
+  // Constructor simplificado para tareas manuales
+  public Tarea(String titulo) {
+    this.titulo = titulo;
+    this.estado = EstadoTarea.PENDIENTE;
+    this.valorCredito = 0.0;
+    this.fechaRegistro = LocalDateTime.now();
   }
 
   public Tarea(
@@ -79,12 +89,15 @@ public class Tarea {
     return horasDedicadas;
   }
 
+  public void setHorasDedicadas(Double horasDedicadas, Double tarifaPorHora) {
+    this.horasDedicadas = horasDedicadas;
+    if (horasDedicadas != null && tarifaPorHora != null) {
+      this.valorCredito = horasDedicadas * tarifaPorHora;
+    }
+  }
+
   public void setHorasDedicadas(Double horasDedicadas) {
     this.horasDedicadas = horasDedicadas;
-    if (horasDedicadas != null) {
-      Double tarifaPrueba = 1000.0;
-      this.valorCredito = horasDedicadas * tarifaPrueba;
-    }
   }
 
   public Double getValorCredito() {
@@ -111,7 +124,6 @@ public class Tarea {
     this.usuarioRealizador = usuarioRealizador;
   }
 
-  // Helper para mantener compatibilidad con reportes antiguos que esperan el ID numérico
   public Long getUsuarioRealizadorId() {
     return usuarioRealizador != null ? usuarioRealizador.getId() : null;
   }

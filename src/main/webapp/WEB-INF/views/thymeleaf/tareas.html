@@ -7,6 +7,12 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+    <style>
+        /* Estilos específicos de acoplamiento a la paleta Kumo para el Bento Grid */
+        .kumo-card-purple { background-color: var(--kumo-purple); color: #3b2575; }
+        .kumo-card-green { background-color: var(--kumo-green); color: #1a5c3e; }
+        .kumo-card-pink { background-color: var(--kumo-pink); color: #8a2b43; border: 1px solid #f5c6cb !important; }
+    </style>
 </head>
 <body class="p-3">
 
@@ -41,8 +47,8 @@
             <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
-                    <h2 class="fw-bold mb-0">Registro de Trabajo Doméstico</h2>
-                    <p class="text-muted small">Cargá las tareas que realizaste y las horas dedicadas para recibir tu crédito descontable.</p>
+                    <h2 class="fw-bold mb-0">Tablero de Tareas del Hogar</h2>
+                    <p class="text-muted small">Registrá tareas pendientes para la casa o tomá una pendiente, indica cuánto tardaste y acredita tu crédito.</p>
                 </div>
                 <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
                     <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
@@ -52,26 +58,101 @@
                 </div>
             </div>
 
-            <!-- Banner Resumen de Crédito Ganado (Bento Card) -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="kumo-card bg-primary text-white p-3 d-flex align-items-center justify-content-between rounded-4 shadow-sm">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-white text-primary rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                <i class="bi bi-coin fs-4"></i>
+            <!-- Bento Box Grid con Colores de la Paleta Kumo -->
+            <div class="row g-3 mb-4">
+                <!-- Card 1: Crédito Ganado con Botón de Canje -->
+                <div class="col-md-4">
+                    <div class="kumo-card kumo-card-purple p-3 h-100 rounded-4 shadow-sm d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="text-uppercase small fw-bold" style="opacity: 0.8;">Crédito Acumulado</span>
+                                <div class="bg-white text-dark rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-coin fs-5"></i>
+                                </div>
                             </div>
-                            <div>
-                                <h6 class="mb-0 text-white-50 text-uppercase small">Tu Crédito Monetario Acumulado</h6>
-                                <h3 class="fw-bold mb-0 text-white" th:text="'$' + ${#numbers.formatDecimal(creditoAcumulado, 1, 'POINT', 2, 'COMMA')}">$0,00</h3>
+                            <h3 class="fw-bold mb-0" th:text="'$' + ${#numbers.formatDecimal(creditoAcumulado, 1, 'POINT', 2, 'COMMA')}">$0,00</h3>
+                        </div>
+                        
+                        <!-- Botón para decidir cuándo descontar / liquidar -->
+                        <div class="mt-3">
+                            <form th:action="@{/tareas/liquidar-creditos}" method="post">
+                                <button type="submit" class="btn btn-dark btn-sm w-100 rounded-3 py-2 fw-semibold shadow-sm"
+                                        th:disabled="${!puedeLiquidar}">
+                                    <i class="bi bi-wallet2 me-1"></i> Descontar en Liquidación
+                                </button>
+                            </form>
+                            <small class="d-block mt-2 text-center" style="opacity: 0.85; font-size: 0.75rem;" th:if="${creditoAcumulado > 0 && !puedeLiquidar}">
+                                No tenés deudas pendientes en la liquidación para descontar.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Tu Cuota de Brecha / Aporte Requerido -->
+                <div class="col-md-4">
+                    <div class="kumo-card bg-white p-3 h-100 rounded-4 shadow-sm border d-flex flex-column justify-content-between">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted text-uppercase small fw-semibold">Tu Aporte de Brecha</span>
+                            <div class="bg-light text-dark rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                <i class="bi bi-percent fs-5"></i>
                             </div>
                         </div>
-                        <span class="badge bg-light text-primary rounded-pill px-3 py-2 fw-semibold">
-                            <i class="bi bi-arrow-down-left-circle me-1"></i> Descontable de Liquidación
-                        </span>
+                        <div>
+                            <h3 class="fw-bold mb-0 text-dark" th:text="'$' + ${#numbers.formatDecimal(dineroRequeridoBrecha, 1, 'POINT', 2, 'COMMA')}">$0,00</h3>
+                            <p class="small text-muted mb-0 mt-1">
+                                Equivale a <span class="fw-bold" th:text="${horasRequeridasBrecha}">0</span> hs de tarea al mes
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Estado de Aportes -->
+                <div class="col-md-4">
+                    <div class="kumo-card p-3 h-100 rounded-4 shadow-sm d-flex flex-column justify-content-between"
+                         th:classappend="${tieneRetencionDeCreditos} ? 'kumo-card-pink' : 'kumo-card-green'">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-uppercase small fw-bold">Estado de Aportes</span>
+                            <div class="bg-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;"
+                                 th:classappend="${tieneRetencionDeCreditos} ? 'text-danger' : 'text-success'">
+                                <i class="bi" th:classappend="${tieneRetencionDeCreditos} ? 'bi-exclamation-circle-fill' : 'bi-shield-check-fill'"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div th:if="${tieneRetencionDeCreditos}">
+                                <h4 class="fw-bold mb-0" th:text="'Te faltan $' + ${#numbers.formatDecimal(dineroFaltante, 1, 'POINT', 2, 'COMMA')}">$0,00</h4>
+                                <p class="small mb-0 mt-1" style="opacity: 0.9;">
+                                    (Aprox. <span class="fw-bold" th:text="${horasFaltantes}">0</span> hs de tareas normales). Créditos retenidos.
+                                </p>
+                            </div>
+                            <div th:unless="${tieneRetencionDeCreditos}">
+                                <h4 class="fw-bold mb-0"><i class="bi bi-check-circle-fill me-1"></i> Aportes al día</h4>
+                                <p class="small mb-0 mt-1" style="opacity: 0.9;">
+                                    ¡Cuota cubierta! Créditos habilitados.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
+            <!-- Tira Informativa: Crédito Liquidado en el Mes -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="kumo-card py-3 px-4 rounded-4 shadow-sm border bg-white d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-light text-success p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi bi-check2-all fs-5"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark small text-uppercase">Crédito ya aplicado a la liquidación este mes</h6>
+                                <p class="text-muted small mb-0">Este monto ya fue restado de tus gastos asignados en la sección de Liquidación.</p>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <h4 class="fw-bold mb-0 text-success" th:text="'$' + ${#numbers.formatDecimal(creditoLiquidadoMes != null ? creditoLiquidadoMes : 0.0, 1, 'POINT', 2, 'COMMA')}">$0,00</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Error Banner -->
             <div th:if="${error}" class="alert alert-danger rounded-4 mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
@@ -79,11 +160,11 @@
             </div>
 
             <div class="row g-4">
-                <!-- Formulario de Carga de Trabajo Realizado -->
+                <!-- Formulario para Registrar Tarea por Hacer -->
                 <div class="col-lg-4">
                     <div class="kumo-card">
                         <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2"></i>Tarea Realizada</h5>
+                            <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle me-2"></i>Nueva Tarea</h5>
                             <span class="badge kumo-badge-purple px-2 py-1 fw-bold" 
                                 th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">
                                 $1.000,00/h
@@ -91,26 +172,21 @@
                         </div>
                         <form th:action="@{/tareas/crear}" th:object="${nuevaTarea}" method="post">
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">¿Qué tarea realizaste?</label>
+                                <label class="form-label small fw-semibold">¿Qué tarea hay que hacer?</label>
                                 <select id="tareaRepetitivaId" name="tareaRepetitivaId" class="form-select rounded-3 mb-2">
-                                    <option value="">Otra (escribir)</option>
+                                    <option value="">Otra tarea (escribir)</option>
                                     <option th:each="tr : ${catalogo}" th:value="${tr.id}"
                                             th:text="${tr.titulo + ' · $' + #numbers.formatDecimal(tr.obtenerValorPorHora() != null ? tr.obtenerValorPorHora() : 0, 1, 'POINT', 2, 'COMMA') + '/h'}">
                                         Limpiar el baño · $5.000,00/h
                                     </option>
                                 </select>
                                 <div id="bloqueTitulo">
-                                  <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Limpieza profunda de cocina" required>
+                                  <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Comprar filtro para la cafetera">
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold">Tiempo dedicado (en horas)</label>
-                                <input type="number" step="0.5" class="form-control rounded-3" th:field="*{horasDedicadas}" placeholder="Ej: 2.5" required>
-                            </div>
-
                             <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">
-                                Registrar Trabajo
+                                Agregar al Tablero
                             </button>
                         </form>
                     </div>
@@ -119,38 +195,40 @@
                 <!-- Tablero de Trabajo Doméstico -->
                 <div class="col-lg-8">
                     <div class="row g-3">
-                        <!-- Columna Pendientes de Aprobación/Acreditación -->
+                        <!-- Columna Tareas Pendientes / Por Hacer -->
                         <div class="col-md-6">
                             <div class="kumo-card bg-light border-0">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 text-uppercase small"><i class="bi bi-hourglass-split me-1"></i> Registradas sin acreditar</h6>
+                                    <h6 class="fw-bold mb-0 text-uppercase small"><i class="bi bi-list-task me-1"></i> Tareas por Hacer</h6>
                                 </div>
 
                                 <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).PENDIENTE}" class="kumo-card mb-3 p-3">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="fw-bold mb-0" th:text="${t.titulo}">Limpieza de cocina</h6>
-                                        <span class="badge kumo-badge-pink fw-bold" th:text="'$' + ${t.valorCredito}">$2500</span>
+                                        <h6 class="fw-bold mb-0" th:text="${t.titulo}">Limpiar cocina</h6>
+                                        <span class="badge bg-secondary">Pendiente</span>
                                     </div>
-                                    <p class="small text-muted mb-2">
-                                        <i class="bi bi-clock me-1"></i> <span th:text="${t.horasDedicadas}">2</span> hs dedicadas 
-                                        (<span th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">$1000/h</span>)
-                                    </p>
+                                    <p class="small text-muted mb-2"><i class="bi bi-clock me-1"></i> A definir al realizarla</p>
                                     
-                                    <form th:action="@{/tareas/completar}" method="post">
+                                    <!-- Formulario para realizar la tarea ingresando horas -->
+                                    <form th:action="@{/tareas/completar}" method="post" class="mt-2">
                                         <input type="hidden" name="tareaId" th:value="${t.id}" />
-                                        <button type="submit" class="btn btn-outline-success btn-sm w-100 rounded-3 mt-1">
-                                            <i class="bi bi-check-lg me-1"></i> Confirmar y Acreditar Crédito
+                                        <div class="mb-2">
+                                            <label class="form-label small text-muted mb-1">¿Cuántas horas te tomó?</label>
+                                            <input type="number" step="0.5" name="horasDedicadas" class="form-control form-control-sm rounded-3" placeholder="Ej: 1.5" required />
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-success btn-sm w-100 rounded-3">
+                                            <i class="bi bi-check-lg me-1"></i> Realizar y Acreditar Crédito
                                         </button>
                                     </form>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Columna Créditos Acreditados -->
+                        <!-- Columna Créditos Acreditados / Realizadas -->
                         <div class="col-md-6">
                             <div class="kumo-card bg-light border-0">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="fw-bold mb-0 text-uppercase small text-success"><i class="bi bi-check-circle-fill me-1"></i> Créditos Acreditados</h6>
+                                    <h6 class="fw-bold mb-0 text-uppercase small text-success"><i class="bi bi-check-circle-fill me-1"></i> Realizadas y Acreditadas</h6>
                                 </div>
 
                                 <div th:each="t : ${tareas}" th:if="${t.estado == T(com.tallerwebi.dominio.EstadoTarea).COMPLETADA}" class="kumo-card mb-3 p-3 opacity-75">
@@ -158,7 +236,10 @@
                                         <h6 class="fw-bold mb-0 text-decoration-line-through" th:text="${t.titulo}">Lavar los platos</h6>
                                         <span class="badge kumo-badge-green fw-bold" th:text="'$' + ${t.valorCredito}">$1000</span>
                                     </div>
-                                    <p class="small text-muted mb-0"><i class="bi bi-person-check me-1"></i> Acreditado a la cuenta</p>
+                                    <p class="small text-muted mb-0">
+                                        <i class="bi bi-person-check me-1"></i> <span th:text="${t.usuarioRealizador != null ? t.usuarioRealizador.nombre : 'Usuario'}"></span> 
+                                        (<span th:text="${t.horasDedicadas}">1</span> hs)
+                                    </p>
                                 </div>
                             </div>
 
