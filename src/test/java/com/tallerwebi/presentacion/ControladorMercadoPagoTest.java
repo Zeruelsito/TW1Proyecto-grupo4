@@ -37,6 +37,7 @@ public class ControladorMercadoPagoTest {
     servicioMercadoPagoMock = mock(ServicioMercadoPago.class);
     servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
     servicioPagoPendienteMock = mock(ServicioPagoPendiente.class);
+    servicioBajaIntegranteMock = mock(ServicioBajaIntegrante.class);
 
     controladorMercadoPago = new ControladorMercadoPago(servicioMercadoPagoMock);
 
@@ -45,6 +46,7 @@ public class ControladorMercadoPagoTest {
     // podemos asignarlos manualmente aquí para el test unitario puro.
     setPrivateField(controladorMercadoPago, "servicioPagoRealizado", servicioPagoRealizadoMock);
     setPrivateField(controladorMercadoPago, "servicioPagoPendiente", servicioPagoPendienteMock);
+    setPrivateField(controladorMercadoPago, "servicioBajaIntegrante", servicioBajaIntegranteMock);
 
     session = new MockHttpSession();
     setPrivateField(controladorMercadoPago, "session", session);
@@ -175,7 +177,7 @@ public class ControladorMercadoPagoTest {
     when(simulacion.tieneTransferenciaPendiente("Juan", "Maria", 1000.0)).thenReturn(true);
     when(servicioBajaIntegranteMock.simularBaja(7L)).thenReturn(simulacion);
     Preference mockPreference = mock(Preference.class);
-    when(mockPreference.getInitPoint()).thenReturn("https://sandbox.mp/pref");
+    when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
     when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
       .thenReturn(mockPreference);
  
