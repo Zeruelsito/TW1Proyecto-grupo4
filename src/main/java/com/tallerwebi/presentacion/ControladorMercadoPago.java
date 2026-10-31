@@ -71,7 +71,7 @@ public class ControladorMercadoPago {
     try {
       Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
 
-      return new ModelAndView("redirect:" + preference.getInitPoint());
+      return new ModelAndView("redirect:" + preference.getSandboxInitPoint());
     } catch (MPApiException e) {
       if (logger.isErrorEnabled()) {
         String errorContent = (e.getApiResponse() != null)
