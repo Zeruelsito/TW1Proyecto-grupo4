@@ -34,6 +34,9 @@ public class ControladorMercadoPago {
   private static final String STATUS_REJECTED = "rejected";
   private static final String STATUS_PENDING = "pending";
 
+  private static final String BAJA_USUARIO_SESSION_KEY = "bajaUsuarioIdPago";
+  private static final String REDIRECT_SIMULAR_BAJA = "redirect:/hogar/baja/simular?usuarioId=";
+
   private final ServicioMercadoPago servicioMercadoPago;
 
   @Autowired
@@ -41,6 +44,9 @@ public class ControladorMercadoPago {
 
   @Autowired
   private ServicioPagoPendiente servicioPagoPendiente;
+
+  @Autowired 
+  private ServicioBajaIntegrante servicioBajaIntegrante;
 
   @Autowired
   private HttpSession session;
@@ -84,6 +90,59 @@ public class ControladorMercadoPago {
       return new ModelAndView("errorControladorMP", modelo);
     }
   }
+
+  // 1.b Endpoint para pagar con Mercado Pago la liquidación final de una baja
+  @PostMapping("/pago/baja")
+  public ModelAndView pagoBaja(
+    @RequestParam("usuarioId") Long usuarioId,
+    @RequestParam("emisor") String emisor,
+    @RequestParam("receptor") String receptor,
+    @RequestParam("monto") Double monto
+  ) {
+    try {
+      SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(usuarioId);
+      if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
+        return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
+      }
+    } catch (RuntimeException e) {
+      logger.warn("No se pudo validar el pago de la baja del usuario {}", usuarioId, e);
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
+    }
+ 
+    session.setAttribute(BAJA_USUARIO_SESSION_KEY, usuarioId);
+    return iniciarPago(emisor, receptor, monto);
+  }
+ 
+  private ModelAndView iniciarPago(String emisor, String receptor, Double monto) {
+    String titulo = "Transferencia";
+    session.setAttribute("emisorPago", emisor);
+    session.setAttribute("receptorPago", receptor);
+    session.setAttribute("montoPago", monto);
+ 
+    try {
+      Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
+ 
+      return new ModelAndView("redirect:" + preference.getSandboxInitPoint());
+    } catch (MPApiException e) {
+      if (logger.isErrorEnabled()) {
+        String errorContent = (e.getApiResponse() != null)
+          ? e.getApiResponse().getContent()
+          : "Sin contenido de respuesta";
+        logger.error("Error de API de Mercado Pago: {}", errorContent, e);
+      }
+      Map<String, Object> modelo = new HashMap<>();
+      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
+      return new ModelAndView("errorControladorMP", modelo);
+    } catch (MPException e) {
+      if (logger.isErrorEnabled()) {
+        logger.error("Error general de Mercado Pago", e);
+      }
+      Map<String, Object> modelo = new HashMap<>();
+      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
+      return new ModelAndView("errorControladorMP", modelo);
+    }
+  }
+ 
 
   @GetMapping("/pago/succesControladorMP")
   public ModelAndView pagoExitoso(
