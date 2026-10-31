@@ -175,7 +175,7 @@ public class ControladorMercadoPagoTest {
     when(simulacion.tieneTransferenciaPendiente("Juan", "Maria", 1000.0)).thenReturn(true);
     when(servicioBajaIntegranteMock.simularBaja(7L)).thenReturn(simulacion);
     Preference mockPreference = mock(Preference.class);
-    when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
+    when(mockPreference.getInitPoint()).thenReturn("https://sandbox.mp/pref");
     when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
       .thenReturn(mockPreference);
  
