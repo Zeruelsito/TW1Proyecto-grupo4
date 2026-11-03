@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kumo - Mi Perfil</title>
+    <!-- Bootstrap 5 CSS e Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+    <style>
+        body {
+            background-color: #F7F4EE !important;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        /* Estilos personalizados para emparejar con el menú oscuro de la app */
+        #sidebar {
+            background-color: #121619;
+            min-height: 100vh;
+        }
+        #sidebar .nav-link {
+            color: #adb5bd;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+        #sidebar .nav-link:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.07);
+        }
+        #sidebar .nav-link.active {
+            color: #ffffff;
+            background-color: #4f46e5; /* Color activo característico */
+        }
+        .income-box {
+            background-color: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+    </style>
+</head>
+
+
+<body class="p-3">
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Menú Lateral exacto de la aplicación -->
+        <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
+            <div>
+                <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
+                <ul class="nav flex-column mt-4">
+                    <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
+                    <li class="nav-item"><a class="nav-link active" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
+                </ul>
+            </div>
+            <div class="px-3">
+                <a th:href="@{/logout}" class="nav-link text-danger">
+                    <i class="bi bi-box-arrow-left me-2"></i> Salir
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenido Principal optimizado en espacio -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-5 py-5 d-flex justify-content-center align-items-center min-vh-100">
+            <div class="w-100" style="max-width: 620px;">
+
+                <!-- Tarjeta de Perfil -->
+                <div class="kumo-card p-4 p-md-5 shadow-sm rounded-4 border-0 bg-white">
+                    <div class="d-flex align-items-center mb-4">
+                        <i class="bi bi-person-gear fs-2 text-primary me-2"></i>
+                        <div>
+                            <h4 class="fw-bold mb-0">Mi Perfil</h4>
+                            <p class="text-muted small mb-0">Modifica tus datos personales e ingresos mensuales</p>
+                        </div>
+                    </div>
+
+                    <!-- Banner de Éxito -->
+                    <div th:if="${exito != null}" class="alert alert-success rounded-3 small py-2 mb-3" role="alert">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        <span th:text="${exito}">Perfil actualizado correctamente</span>
+                    </div>
+
+                    <!-- Banner de Error -->
+                    <div th:if="${error != null}" class="alert alert-danger rounded-3 small py-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <span th:text="${error}">Error al guardar los cambios</span>
+                    </div>
+
+                    <form th:action="@{/perfil/guardar}" method="POST" th:object="${usuario}">
+                        <input type="hidden" th:field="*{id}" />
+
+                        <!-- Nombre Completo -->
+                        <div class="mb-3">
+                            <label for="nombre" class="form-label small fw-semibold">Nombre</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                <input th:field="*{nombre}" id="nombre" type="text" class="form-control rounded-end-3 border-start-0" placeholder="Tu nombre" required />
+                            </div>
+                        </div>
+
+                        <!-- Correo Electrónico -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label small fw-semibold">Correo electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                <input th:field="*{email}" id="email" type="email" class="form-control rounded-end-3 border-start-0" placeholder="tu@email.com" required autocomplete="email" />
+                            </div>
+                        </div>
+
+                        <!-- Nueva Contraseña -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label small fw-semibold">Nueva Contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                                <input name="nuevaPassword" id="password" type="password" class="form-control border-start-0 border-end-0" placeholder="Dejar en blanco para mantener la actual" />
+                                <button class="btn btn-outline-secondary bg-light border-start-0 rounded-end-3 text-muted" type="button" onclick="togglePassword()">
+                                    <i class="bi bi-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ingreso Mensual Estimado -->
+                        <div class="p-3 mb-4 rounded-3 income-box">
+                            <label for="ingresoMensual" class="form-label small fw-semibold text-success mb-1">
+                                <i class="bi bi-wallet2 me-1"></i> Ingreso Mensual Estimado
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-transparent text-success fw-bold fs-5">$</span>
+                                <input th:field="*{ingresoMensual}" id="ingresoMensual" type="number" step="0.01" min="0" class="form-control border-0 bg-transparent text-success fw-bold fs-5" placeholder="0.00" />
+                                <span class="input-group-text border-0 bg-transparent text-muted small fw-semibold">ARS</span>
+                            </div>
+                            <span class="form-text text-muted small d-block mt-1">Este monto servirá para calcular el balance y la distribución de gastos comunes.</span>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex gap-3 justify-content-end">
+                            <a th:href="${urlAnterior != null ? urlAnterior : '/home'}" class="btn btn-light border w-50 rounded-3 py-2 fw-semibold text-center">
+                                Cancelar
+                            </a>
+                            <button class="btn btn-dark w-50 rounded-3 py-2 fw-semibold shadow-sm" type="submit">
+                                <i class="bi bi-floppy me-1"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function togglePassword() {
+        const passInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('toggleIcon');
+        if (passInput.type === 'password') {
+            passInput.type = 'text';
+            toggleIcon.classList.replace('bi-eye', 'bi-eye-slash');
+        } else {
+            passInput.type = 'password';
+            toggleIcon.classList.replace('bi-eye-slash', 'bi-eye');
+        }
+    }
+</script>
+</body>
+
+</html>

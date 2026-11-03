@@ -49,3 +49,31 @@ body {
 .kumo-badge-purple { background-color: var(--kumo-purple); color: #4a2b8a; }
 .kumo-badge-yellow { background-color: var(--kumo-yellow); color: #8a6d2b; }
 .kumo-badge-green { background-color: var(--kumo-green); color: #2b8a5d; }
+.user-dropdown .dropdown-menu {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+  width: 220px;
+  right: 0;
+  left: auto !important;
+  margin-top: 8px !important;
+  pointer-events: none;
+}
+
+.user-dropdown .dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.user-dropdown .kumo-card {
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.user-dropdown .kumo-card:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}

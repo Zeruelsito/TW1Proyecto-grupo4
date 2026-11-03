@@ -33,6 +33,7 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
+                    <li class="nav-item"><a class="nav-link" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -50,11 +51,31 @@
                     <h2 class="fw-bold mb-0">Tablero de Tareas del Hogar</h2>
                     <p class="text-muted small">Registrá tareas pendientes para la casa o tomá una pendiente, indica cuánto tardaste y acredita tu crédito.</p>
                 </div>
-                <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
-                        <span th:text="${nombreUsuario != null ? #strings.substring(nombreUsuario, 0, 1) : 'U'}">U</span>
+
+                <!-- Menú Desplegable de Usuario Integrado -->
+                <div class="dropdown user-dropdown position-relative">
+                    <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+                        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                            <span th:text="${nombreUsuario != null ? #strings.substring(nombreUsuario, 0, 1) : 'U'}">U</span>
+                        </div>
+                        <span class="fw-medium small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</span>
+                        <i class="bi bi-chevron-down small text-muted ms-1"></i>
                     </div>
-                    <span class="fw-medium small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</span>
+
+                    <!-- Menú Desplegable con Acciones (Sin el texto "Actualmente en") -->
+                    <div class="dropdown-menu shadow-sm border-0 rounded-4 p-2 mt-2">
+                        <div class="px-3 py-2 border-bottom mb-2">
+                            <p class="mb-0 fw-bold text-dark small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</p>
+                        </div>
+                        <li><a class="dropdown-item rounded-2 py-2 small fw-medium" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i>Mi Hogar</a></li>
+                        <li><a class="dropdown-item rounded-2 py-2 small fw-medium" th:href="@{/perfil}"><i class="bi bi-person me-2"></i>Mi Perfil</a></li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <a class="dropdown-item rounded-2 py-2 small fw-medium text-danger" th:href="@{/logout}">
+                                <i class="bi bi-box-arrow-left me-2"></i> Salir
+                            </a>
+                        </li>
+                    </div>
                 </div>
             </div>
 
@@ -174,8 +195,8 @@
                     <div class="kumo-card">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle me-2"></i>Nueva Tarea</h5>
-                            <span class="badge kumo-badge-purple px-2 py-1 fw-bold" 
-                                th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">
+                            <span class="badge kumo-badge-purple px-2 py-1 fw-bold"
+                                  th:text="'$' + ${#numbers.formatDecimal(precioHoraHogar != null ? precioHoraHogar : 0, 1, 'POINT', 2, 'COMMA')} + '/h'">
                                 $1.000,00/h
                             </span>
                         </div>
@@ -190,7 +211,7 @@
                                     </option>
                                 </select>
                                 <div id="bloqueTitulo">
-                                  <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Comprar filtro para la cafetera">
+                                    <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Comprar filtro para la cafetera">
                                 </div>
                             </div>
 
@@ -217,7 +238,7 @@
                                         <span class="badge bg-secondary">Pendiente</span>
                                     </div>
                                     <p class="small text-muted mb-2"><i class="bi bi-clock me-1"></i> A definir al realizarla</p>
-                                    
+
                                     <!-- Formulario para realizar la tarea ingresando horas -->
                                     <form th:action="@{/tareas/completar}" method="post" class="mt-2">
                                         <input type="hidden" name="tareaId" th:value="${t.id}" />
@@ -246,7 +267,7 @@
                                         <span class="badge kumo-badge-green fw-bold" th:text="'$' + ${t.valorCredito}">$1000</span>
                                     </div>
                                     <p class="small text-muted mb-0">
-                                        <i class="bi bi-person-check me-1"></i> <span th:text="${t.usuarioRealizador != null ? t.usuarioRealizador.nombre : 'Usuario'}"></span> 
+                                        <i class="bi bi-person-check me-1"></i> <span th:text="${t.usuarioRealizador != null ? t.usuarioRealizador.nombre : 'Usuario'}"></span>
                                         (<span th:text="${t.horasDedicadas}">1</span> hs)
                                     </p>
                                 </div>
@@ -262,18 +283,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  (function () {
-    var select = document.getElementById('tareaRepetitivaId');
-    var bloqueTitulo = document.getElementById('bloqueTitulo');
-    var inputTitulo = document.getElementById('titulo');
-    function actualizar() {
-      var esCatalogo = select.value !== '';
-      bloqueTitulo.style.display = esCatalogo ? 'none' : '';
-      inputTitulo.required = !esCatalogo;
-    }
-    select.addEventListener('change', actualizar);
-    actualizar();
-  })();
+    (function () {
+        var select = document.getElementById('tareaRepetitivaId');
+        var bloqueTitulo = document.getElementById('bloqueTitulo');
+        var inputTitulo = document.getElementById('titulo');
+        function actualizar() {
+            var esCatalogo = select.value !== '';
+            bloqueTitulo.style.display = esCatalogo ? 'none' : '';
+            inputTitulo.required = !esCatalogo;
+        }
+        select.addEventListener('change', actualizar);
+        actualizar();
+    })();
 </script>
 </body>
 </html>
