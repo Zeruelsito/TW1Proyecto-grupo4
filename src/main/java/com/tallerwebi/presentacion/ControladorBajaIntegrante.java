@@ -66,23 +66,6 @@ public class ControladorBajaIntegrante {
     return new ModelAndView("redirect:/hogar/baja?confirmada=true");
   }
 
-  @PostMapping("/hogar/baja/registrar-pago")
-  public ModelAndView registrarPago(
-    @RequestParam("usuarioId") Long usuarioId,
-    @RequestParam("emisor") String emisor,
-    @RequestParam("receptor") String receptor,
-    @RequestParam("monto") Double monto
-  ) {
-    try {
-      servicioBajaIntegrante.registrarPago(usuarioId, emisor, receptor, monto);
-    } catch (RuntimeException excepcion) {
-      return simulacionConError(usuarioId, mensajeDeError(excepcion));
-    }
-    return new ModelAndView(
-      "redirect:/hogar/baja/simular?usuarioId=" + usuarioId + "&pagoRegistrado=true"
-    );
-  }
-
   private ModelAndView simulacionConError(Long usuarioId, String error) {
     ModelAndView mav = simular(usuarioId, null);
     mav.addObject("error", error);

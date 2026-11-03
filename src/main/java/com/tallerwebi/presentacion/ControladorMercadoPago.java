@@ -34,6 +34,9 @@ public class ControladorMercadoPago {
   private static final String STATUS_REJECTED = "rejected";
   private static final String STATUS_PENDING = "pending";
 
+  private static final String BAJA_USUARIO_SESSION_KEY = "bajaUsuarioIdPago";
+  private static final String REDIRECT_SIMULAR_BAJA = "redirect:/hogar/baja/simular?usuarioId=";
+
   private final ServicioMercadoPago servicioMercadoPago;
 
   @Autowired
@@ -41,6 +44,9 @@ public class ControladorMercadoPago {
 
   @Autowired
   private ServicioPagoPendiente servicioPagoPendiente;
+
+  @Autowired
+  private ServicioBajaIntegrante servicioBajaIntegrante;
 
   @Autowired
   private HttpSession session;
@@ -56,6 +62,7 @@ public class ControladorMercadoPago {
     @RequestParam("receptor") String receptor,
     @RequestParam("monto") Double monto
   ) {
+    session.removeAttribute(BAJA_USUARIO_SESSION_KEY); // Limpiar cualquier baja pendiente en la sesión
     String titulo = "Transferencia";
     session.setAttribute("emisorPago", emisor);
     session.setAttribute("receptorPago", receptor);
@@ -85,6 +92,29 @@ public class ControladorMercadoPago {
     }
   }
 
+  // 1.b Endpoint para pagar con Mercado Pago la liquidación final de una baja
+  @PostMapping("/pago/baja")
+  public ModelAndView pagoBaja(
+    @RequestParam("usuarioId") Long usuarioId,
+    @RequestParam("emisor") String emisor,
+    @RequestParam("receptor") String receptor,
+    @RequestParam("monto") Double monto
+  ) {
+    try {
+      SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(usuarioId);
+      if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
+        return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
+      }
+    } catch (RuntimeException e) {
+      logger.warn("No se pudo validar el pago de la baja del usuario {}", usuarioId, e);
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
+    }
+
+    ModelAndView mav = pago(emisor, receptor, monto);
+    session.setAttribute(BAJA_USUARIO_SESSION_KEY, usuarioId);
+    return mav;
+  }
+
   @GetMapping("/pago/succesControladorMP")
   public ModelAndView pagoExitoso(
     @RequestParam(value = "collection_id", required = false) String collectionId,
@@ -95,7 +125,17 @@ public class ControladorMercadoPago {
     String emisor = (String) session.getAttribute("emisorPago");
     String receptor = (String) session.getAttribute("receptorPago");
     Double monto = (Double) session.getAttribute("montoPago");
-
+    Long bajaUsuarioId = (Long) session.getAttribute(BAJA_USUARIO_SESSION_KEY);
+    
+    if (bajaUsuarioId != null) {
+      session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
+      if (STATUS_APPROVED.equals(status) && monto != null) {
+        servicioBajaIntegrante.registrarPago(bajaUsuarioId, emisor, receptor, monto);
+        return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId + "&pagoRegistrado=true");
+      }
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId);
+    }
+    
     if (casa != null && monto != null) {
       PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
       servicioPagoRealizado.registrarPagoExitoso(pago);
