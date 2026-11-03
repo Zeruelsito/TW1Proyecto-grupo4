@@ -10,16 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.tallerwebi.dominio.Hogar;
-import com.tallerwebi.dominio.ServicioCalculosGasto;
-import com.tallerwebi.dominio.ServicioCreditoTarea;
-import com.tallerwebi.dominio.ServicioHogar;
-import com.tallerwebi.dominio.ServicioLiquidacion;
-import com.tallerwebi.dominio.ServicioRegistroGasto;
-import com.tallerwebi.dominio.ServicioTareaRepetitiva;
-import com.tallerwebi.dominio.ServicioUsuario;
-import com.tallerwebi.dominio.Tarea;
-import com.tallerwebi.dominio.Usuario;
+import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import com.tallerwebi.dominio.excepcion.TareaYaCompletadaException;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
@@ -45,6 +36,7 @@ public class ControladorTareaTest {
   private ServicioLiquidacion servicioLiquidacionMock;
   private ServicioRegistroGasto servicioRegistroGastoMock;
   private ServicioCalculosGasto servicioCalculosGastoMock;
+  private ServicioPagoPendiente servicioPagoPendienteMock;
   private ControladorTarea controladorTarea;
 
   @BeforeEach
@@ -58,6 +50,7 @@ public class ControladorTareaTest {
     servicioLiquidacionMock = mock(ServicioLiquidacion.class);
     servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
     servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
+    servicioPagoPendienteMock = mock(ServicioPagoPendiente.class);
 
     controladorTarea =
       new ControladorTarea(
@@ -67,7 +60,8 @@ public class ControladorTareaTest {
         servicioHogarMock,
         servicioLiquidacionMock,
         servicioRegistroGastoMock,
-        servicioCalculosGastoMock
+        servicioCalculosGastoMock,
+        servicioPagoPendienteMock
       );
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();

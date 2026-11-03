@@ -2,10 +2,12 @@ package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.Hogar;
+import com.tallerwebi.dominio.PagoPendiente;
 import com.tallerwebi.dominio.ServicioCalculosGasto;
 import com.tallerwebi.dominio.ServicioCreditoTarea;
 import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.ServicioLiquidacion;
+import com.tallerwebi.dominio.ServicioPagoPendiente;
 import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.ServicioTareaRepetitiva;
 import com.tallerwebi.dominio.ServicioUsuario;
@@ -49,6 +51,7 @@ public class ControladorTarea {
   private final ServicioLiquidacion servicioLiquidacion;
   private final ServicioRegistroGasto servicioRegistroGasto;
   private final ServicioCalculosGasto servicioCalculosGasto;
+  private final ServicioPagoPendiente servicioPagoPendiente;
 
   @Autowired
   public ControladorTarea(
@@ -58,7 +61,8 @@ public class ControladorTarea {
     ServicioHogar servicioHogar,
     ServicioLiquidacion servicioLiquidacion,
     ServicioRegistroGasto servicioRegistroGasto,
-    ServicioCalculosGasto servicioCalculosGasto
+    ServicioCalculosGasto servicioCalculosGasto,
+    ServicioPagoPendiente servicioPagoPendiente
   ) {
     this.servicioCreditoTarea = servicioCreditoTarea;
     this.servicioTareaRepetitiva = servicioTareaRepetitiva;
@@ -67,6 +71,7 @@ public class ControladorTarea {
     this.servicioLiquidacion = servicioLiquidacion;
     this.servicioRegistroGasto = servicioRegistroGasto;
     this.servicioCalculosGasto = servicioCalculosGasto;
+    this.servicioPagoPendiente = servicioPagoPendiente;
   }
 
   @GetMapping("/tareas")
@@ -179,7 +184,6 @@ public class ControladorTarea {
         : 0.0;
       double creditoTotalBruto = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
 
-      // Descontamos exactamente lo necesario para saldar la deuda en liquidación
       double montoALiquidar = Math.min(creditoTotalBruto, deuda);
 
       if (montoALiquidar > 0) {
@@ -227,17 +231,13 @@ public class ControladorTarea {
       ? servicioLiquidacion.obtenerDeudaUsuario(usuarioActual, hogar, gastos)
       : 0.0;
 
-    // CÁLCULO EXACTO: El crédito acumulado libre es el total bruto menos lo que se requería para la brecha/deuda.
-    // Usamos el mÃ¡ximo entre la brecha obligatoria y la deuda real de liquidaciÃ³n que el crédito debió absorber.
     Double baseACompensar = Math.max(dineroRequeridoBrecha, deudaUsuario);
 
-    // Si ya se liquidó parte este mes, lo tenemos en cuenta para que no reste doble
-    Double creditoAcumuladoNeto = Math.max(
+    double creditoAcumuladoNeto = Math.max(
       0.0,
       (creditoTotalBruto != null ? creditoTotalBruto : 0.0) - baseACompensar
     );
 
-    // Si ya se aplicó liquidación parcial, el excedente real disponible se ajusta con lo liquidado
     if (
       creditoLiquidadoMes != null && creditoLiquidadoMes > 0 && creditoTotalBruto > baseACompensar
     ) {
@@ -246,8 +246,10 @@ public class ControladorTarea {
 
     model.put("creditoAcumulado", creditoAcumuladoNeto);
 
-    // El botón se habilita si hay deuda real en liquidación y créditos suficientes para cubrirla
-    boolean puedeLiquidar = (creditoTotalBruto > 0) && (deudaUsuario > 0);
+    boolean tienePagoPendiente = tienePagoPendienteActivo(hogar, usuarioActual);
+    model.put("tienePagoPendiente", tienePagoPendiente);
+
+    boolean puedeLiquidar = (creditoTotalBruto > 0) && (deudaUsuario > 0) && !tienePagoPendiente;
     model.put("puedeLiquidar", puedeLiquidar);
     model.put("deudaUsuario", deudaUsuario);
 
@@ -267,6 +269,25 @@ public class ControladorTarea {
     model.put("horasFaltantes", horasFaltantes);
     model.put("dineroFaltante", dineroFaltante);
     model.put("tieneRetencionDeCreditos", tieneRetencionDeCreditos);
+  }
+
+  private boolean tienePagoPendienteActivo(Hogar hogar, Usuario usuarioActual) {
+    if (servicioPagoPendiente == null || hogar == null || usuarioActual == null) {
+      return false;
+    }
+    List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(hogar);
+    return transferenciasPendientes.stream().anyMatch(p -> coincideEmisor(p, usuarioActual));
+  }
+
+  private boolean coincideEmisor(PagoPendiente pagoPendiente, Usuario usuarioActual) {
+    String nombreEmisor = pagoPendiente.getEmisor();
+    if (nombreEmisor == null) {
+      return false;
+    }
+    return (
+      nombreEmisor.equals(usuarioActual.getNombre()) ||
+      nombreEmisor.equals(usuarioActual.getEmail())
+    );
   }
 
   private Double obtenerPrecioHoraHogar(Hogar hogar) {
@@ -319,7 +340,7 @@ public class ControladorTarea {
   ) {
     Map<String, Double> resultado = new HashMap<>();
     Double dineroRequeridoBrecha = 0.0;
-    Double horasRequeridasBrecha = 0.0;
+    double horasRequeridasBrecha = 0.0;
 
     if (usuarioActual != null && !integrantes.isEmpty() && servicioCalculosGasto != null) {
       dineroRequeridoBrecha =

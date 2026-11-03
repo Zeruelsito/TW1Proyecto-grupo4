@@ -42,8 +42,6 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     for (Usuario usuario : integrantes) {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
       double creditoTareas = obtenerCreditoTareas(usuario);
-
-      // NUEVO: Calculamos el consumo real en base a los participantes de cada gasto
       double consumoIndividual = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
 
       double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - consumoIndividual;
@@ -78,7 +76,6 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       .collect(Collectors.toList());
   }
 
-  // NUEVO MÉTODO: Calcula cuánto debe consumir cada usuario según los gastos en los que participa
   private double calcularConsumoIndividualPorUsuario(
     Usuario usuario,
     Hogar hogar,
@@ -96,17 +93,12 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     return totalConsumo;
   }
 
-  // MÉTODO AUXILIAR para mantener baja la complejidad ciclomática (PMD)
   private double acumularSiParticipa(Gasto gasto, Usuario usuario, List<Usuario> integrantesHogar) {
     List<Usuario> participantes = gasto.getParticipantes();
-
-    // Si el gasto viejo no tiene participantes asignados, se divide entre todos por defecto
     if (participantes == null || participantes.isEmpty()) {
       participantes = integrantesHogar;
     }
-
     boolean participa = participantes.stream().anyMatch(p -> p.getId().equals(usuario.getId()));
-
     if (participa && !participantes.isEmpty()) {
       return gasto.getMonto() / participantes.size();
     }
@@ -237,7 +229,6 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
     double balanceNeto = (totalPagado + creditoLiquidado) - consumo;
 
-    // Si el balance es negativo, representa la deuda exacta que tiene el usuario
     if (balanceNeto < -MARGEN_TOLERANCIA) {
       return -balanceNeto;
     }
