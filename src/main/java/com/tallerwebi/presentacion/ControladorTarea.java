@@ -173,12 +173,43 @@ public class ControladorTarea {
       List<Gasto> gastos = obtenerGastosHogar(hogar, hogarId);
       Usuario usuario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
 
+      // Deuda real que tiene el usuario en la liquidación del hogar
       double deuda = (hogar != null && usuario != null)
         ? servicioLiquidacion.obtenerDeudaUsuario(usuario, hogar, gastos)
         : 0.0;
-      double creditoTotalBruto = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
 
-      double montoALiquidar = Math.min(creditoTotalBruto, deuda);
+      // Calculamos la brecha obligatoria que el usuario debía cubrir con tareas
+      List<Usuario> integrantes = obtenerIntegrantesHogar(hogar);
+      double totalGastosOcasionales = calcularTotalGastosOcasionales(gastos);
+      Double pisoMinimo = calcularPisoMinimo(hogarId);
+      Double precioHora = obtenerPrecioHoraHogar(hogar);
+
+      Map<String, Double> metricasBrecha = calcularMetricasBrecha(
+        usuario,
+        integrantes,
+        totalGastosOcasionales,
+        pisoMinimo,
+        precioHora
+      );
+      double dineroRequeridoBrecha = metricasBrecha.get(CLAVE_DINERO_BRECHA);
+
+      // Crédito total bruto generado por tareas
+      double creditoTotalBruto = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
+      double creditoLiquidadoMes = servicioCreditoTarea.obtenerCreditoLiquidadoPorUsuario(
+        usuarioId
+      );
+
+      // El crédito REALMENTE LIBRE (excedente) es el total bruto menos lo que se usó obligatoriamente para cubrir la brecha
+      double creditoLibreExcedente = Math.max(0.0, creditoTotalBruto - dineroRequeridoBrecha);
+
+      // Del excedente libre, descontamos lo que aún no se haya liquidado este mes
+      double creditoDisponibleParaLiquidar = Math.max(
+        0.0,
+        creditoLibreExcedente - creditoLiquidadoMes
+      );
+
+      // El monto a liquidar será estrictamente lo que falte pagar de la deuda, limitado al excedente libre real
+      double montoALiquidar = Math.min(creditoDisponibleParaLiquidar, deuda);
 
       if (montoALiquidar > 0) {
         servicioCreditoTarea.liquidarCreditosParciales(usuarioId, montoALiquidar);

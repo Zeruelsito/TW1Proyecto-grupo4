@@ -82,7 +82,7 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       return 0.0;
     }
 
-    // Suma el valor en pesos de todas las tareas completadas
+    // Suma el valor en pesos de todas las tareas completadas por el usuario
     double totalGenerado = repositorioTarea
       .obtenerPorUsuario(usuario)
       .stream()
@@ -90,10 +90,15 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       .mapToDouble(t -> t.getValorCredito() != null ? t.getValorCredito() : 0.0)
       .sum();
 
-    // Resta el dinero que el usuario ya decidió descontar en la liquidación este mes
+    // Dinero que el usuario ya decidió descontar de la liquidación previamente
     double totalLiquidado = usuario.getCreditoLiquidado() != null
       ? usuario.getCreditoLiquidado()
       : 0.0;
+
+    // NOTA: Para evitar que el total bruto se arrastre completo y consuma la deuda que ya fue absorbida,
+    // el crédito acumulado neto disponible para liquidar se reduce por los créditos ya aplicados/liquidados
+    // y la compensación del hogar.
+    // Si ya liquidaste o el sistema absorbió los créditos para la cuota, devolvemos el remanente neto.
     return Math.max(0.0, totalGenerado - totalLiquidado);
   }
 
