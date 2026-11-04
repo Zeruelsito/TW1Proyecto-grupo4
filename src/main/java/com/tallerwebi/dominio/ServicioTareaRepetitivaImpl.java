@@ -72,7 +72,6 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
     return catalogo;
   }
 
-  
   @Override
   public void quitarPlantilla(Long plantillaId, Long hogarId, Long usuarioId) {
     TareaRepetitiva plantilla = buscarPorId(
@@ -83,7 +82,7 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
       throw new TareaNoEncontradaException();
     }
     plantilla.setActiva(false);
-  } 
+  }
 
   private TareaRepetitiva buscarPorId(Long tareaId, List<TareaRepetitiva> tareas) {
     for (TareaRepetitiva tarea : tareas) {
@@ -127,7 +126,7 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
     return cantidad;
   }
 
-  private void crearPlantilla( // crearPlantillaSiNoExiste 
+  private void crearPlantilla( // crearPlantillaSiNoExiste
     String titulo,
     Long hogarId,
     AlcanceTarea alcance,

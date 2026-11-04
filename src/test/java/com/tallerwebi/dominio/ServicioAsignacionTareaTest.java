@@ -156,8 +156,10 @@ public class ServicioAsignacionTareaTest {
 
     servicio.guardarComoPlantillaPersonal("lavar mi ropa", HOGAR_ID, propietario);
 
-    verify(repositorioTareaRepetitiva).guardar(
-        argThat(plantilla ->plantilla.getAlcance() == AlcanceTarea.PERSONAL &&
+    verify(repositorioTareaRepetitiva)
+      .guardar(
+        argThat(plantilla ->
+          plantilla.getAlcance() == AlcanceTarea.PERSONAL &&
           propietario.equals(plantilla.getPropietario())
         )
       );
@@ -169,7 +171,8 @@ public class ServicioAsignacionTareaTest {
     TareaRepetitiva personal = new TareaRepetitiva(2L, "Lavar mi ropa");
     personal.setAlcance(AlcanceTarea.PERSONAL);
 
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(delHogar, personal));
+    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID))
+      .thenReturn(List.of(delHogar, personal));
 
     List<TareaRepetitiva> tareas = servicio.obtenerTodas(HOGAR_ID);
 
@@ -193,7 +196,8 @@ public class ServicioAsignacionTareaTest {
     tareaB.setAlcance(AlcanceTarea.PERSONAL);
     tareaB.setPropietario(pepe);
 
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(delHogar, tareaA, tareaB));
+    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID))
+      .thenReturn(List.of(delHogar, tareaA, tareaB));
 
     List<TareaRepetitiva> catalogo = servicio.obtenerCatalogo(HOGAR_ID, 11L);
 
@@ -212,7 +216,6 @@ public class ServicioAsignacionTareaTest {
     assertThat(tareas, equalTo(List.of(activa)));
   }
 
-  
   @Test
   public void debeRotarAunqueElUsuarioAsignadoSeaOtraInstanciaConElMismoId() {
     Usuario oriDeLaLista = new Usuario();
@@ -226,25 +229,10 @@ public class ServicioAsignacionTareaTest {
     tarea.setUsuarioAsignado(oriDeLaBase);
     when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(tarea));
 
-    
     servicio.asignarEquitativamente(1L, List.of(oriDeLaLista, pepe), HOGAR_ID);
 
-   
     assertThat(tarea.getUsuarioAsignado(), equalTo(pepe));
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   @Test
   public void debeQuitarUnaPlantillaMarcandolaComoInactiva() {
@@ -258,7 +246,8 @@ public class ServicioAsignacionTareaTest {
 
   @Test
   public void noDebeQuitarUnaPlantillaQueNoExiste() {
-    assertThrows(TareaNoEncontradaException.class,
+    assertThrows(
+      TareaNoEncontradaException.class,
       () -> servicio.quitarPlantilla(99L, HOGAR_ID, 11L)
     );
   }
@@ -278,5 +267,4 @@ public class ServicioAsignacionTareaTest {
     );
     assertThat(personal.isActiva(), equalTo(true));
   }
-
 }
