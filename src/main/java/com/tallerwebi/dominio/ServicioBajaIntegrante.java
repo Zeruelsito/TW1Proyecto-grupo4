@@ -9,5 +9,5 @@ public interface ServicioBajaIntegrante {
 
   void confirmarBaja(Long usuarioId);
 
-  void registrarPago(Long usuarioId, String emisor, String receptor, Double monto);
+  void registrarPago(Long usuarioId, Usuario emisor, Usuario receptor, Double monto);
 }

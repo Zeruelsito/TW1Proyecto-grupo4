@@ -184,6 +184,8 @@
                                                     <input type="hidden" name="nombreHogar" th:value="${casa != null ? casa.nombreHogar : 'Hogar'}"/>
                                                     <input type="hidden" name="emisor" th:value="${t.emisor}"/>
                                                     <input type="hidden" name="receptor" th:value="${t.receptor}"/>
+                                                    <input type="hidden" name="emisorId" th:value="${t.emisorId}"/>
+                                                    <input type="hidden" name="receptorId" th:value="${t.receptorId}"/>
                                                     <input type="hidden" name="monto" th:value="${t.monto}"/>
                                                     <button type="submit" class="btn btn-sm btn-primary px-3 rounded-3 shadow-sm">
                                                         Generar URL
@@ -237,13 +239,14 @@
                                 </thead>
                                 <tbody>
                                 <tr th:each="tp : ${transferenciasPendientes}">
-                                    <td th:text="${tp.emisor}">Emisor</td>
-                                    <td th:text="${tp.receptor}">Receptor</td>
+                                    <!-- Modificado para acceder a .nombre del objeto Usuario -->
+                                    <td th:text="${tp.emisor != null ? tp.emisor.nombre : ''}">Emisor</td>
+                                    <td th:text="${tp.receptor != null ? tp.receptor.nombre : ''}">Receptor</td>
                                     <td th:text="${'$' + tp.monto}">0.00</td>
                                     <td class="align-middle text-center">
 
                                         <!-- Si el usuario logueado coincide con el RECEPTOR -->
-                                        <div class="d-flex justify-content-center gap-2" th:if="${nombreUsuario != null and nombreUsuario == tp.receptor}">
+                                        <div class="d-flex justify-content-center gap-2" th:if="${nombreUsuario != null and tp.receptor != null and nombreUsuario == tp.receptor.nombre}">
                                             <!-- Botón 1: Confirmar -->
                                             <form th:action="@{/pago/confirmar-manual}" method="post" class="m-0">
                                                 <input type="hidden" name="id" th:value="${tp.id}"/>
@@ -262,7 +265,7 @@
                                         </div>
 
                                         <!-- Para el resto de los usuarios (cuando NO es el receptor) -->
-                                        <div th:unless="${nombreUsuario != null and nombreUsuario == tp.receptor}">
+                                        <div th:unless="${nombreUsuario != null and tp.receptor != null and nombreUsuario == tp.receptor.nombre}">
                                             <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill">
                                                 <i class="bi bi-clock me-1"></i> A la espera de confirmación
                                             </span>
@@ -302,11 +305,11 @@
                                 </thead>
                                 <tbody>
                                 <tr th:each="p : ${historialPagos}">
-                                    <td class="fw-semibold text-danger" th:text="${p.emisor}">Emisor</td>
-                                    <td class="fw-semibold text-success" th:text="${p.receptor}">Receptor</td>
+                                    <!-- Modificado para acceder a .nombre del objeto Usuario -->
+                                    <td class="fw-semibold text-danger" th:text="${p.emisor != null ? p.emisor.nombre : ''}">Emisor</td>
+                                    <td class="fw-semibold text-success" th:text="${p.receptor != null ? p.receptor.nombre : ''}">Receptor</td>
                                     <td class="fw-bold" th:text="${'$' + p.monto}">0.00</td>
-                                    <td th:text="${#temporals.format(p.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026 12:00
-                                    </td>
+                                    <td th:text="${p.fecha != null ? #temporals.format(p.fecha, 'dd/MM/yyyy HH:mm') : ''}">01/01/2026 12:00</td>
                                     <td>
                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
                                             Abonado / Exitoso

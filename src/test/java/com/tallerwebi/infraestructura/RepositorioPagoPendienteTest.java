@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.*;
 
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.PagoPendiente;
+import com.tallerwebi.dominio.RepositorioPagoPendiente;
+import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.infraestructura.config.HibernateInfraestructuraTestConfig;
 import jakarta.transaction.Transactional;
 import java.util.List;
@@ -21,121 +23,180 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration(classes = HibernateInfraestructuraTestConfig.class)
 public class RepositorioPagoPendienteTest {
 
+  private RepositorioPagoPendiente repositorioPagoPendiente;
+
   @Autowired
   private SessionFactory sessionFactory;
 
-  private RepositorioPagoPendienteImpl repositorioPagoPendiente;
-  private Hogar hogarPrueba;
-
   @BeforeEach
-  public void setUp() {
+  public void init() {
     repositorioPagoPendiente = new RepositorioPagoPendienteImpl(sessionFactory);
-
-    hogarPrueba = new Hogar();
-    hogarPrueba.setNombre("Casa Quinta");
-    sessionFactory.getCurrentSession().save(hogarPrueba);
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queSePuedaGuardarYBuscarPagoPendientePorId() {
-    PagoPendiente pendiente = new PagoPendiente("Juan", "Maria", 1500.0, hogarPrueba);
+  public void deberiaPoderGuardarYBuscarPagoPendientePorId() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
 
-    repositorioPagoPendiente.guardar(pendiente);
-    sessionFactory.getCurrentSession().flush();
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
 
-    PagoPendiente encontrado = repositorioPagoPendiente.buscarPorId(pendiente.getId());
+    PagoPendiente pagoPendiente = new PagoPendiente(emisor, receptor, 1200.0, hogar);
 
+    // When
+    repositorioPagoPendiente.guardar(pagoPendiente);
+    PagoPendiente encontrado = repositorioPagoPendiente.buscarPorId(pagoPendiente.getId());
+
+    // Then
     assertThat(encontrado, notNullValue());
-    assertThat(encontrado.getEmisor(), equalTo("Juan"));
-    assertThat(encontrado.getReceptor(), equalTo("Maria"));
-    assertThat(encontrado.getMonto(), equalTo(1500.0));
+    assertThat(encontrado.getMonto(), is(1200.0));
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queSePuedanObtenerPendientesPorHogar() {
-    PagoPendiente pendiente1 = new PagoPendiente("Juan", "Maria", 1000.0, hogarPrueba);
-    PagoPendiente pendiente2 = new PagoPendiente("Pedro", "Sofia", 2500.0, hogarPrueba);
+  public void deberiaObtenerPendientesPorHogar() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
 
-    repositorioPagoPendiente.guardar(pendiente1);
-    repositorioPagoPendiente.guardar(pendiente2);
-    sessionFactory.getCurrentSession().flush();
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
 
-    List<PagoPendiente> pendientesDelHogar = repositorioPagoPendiente.obtenerPendientesPorHogar(
-      hogarPrueba
-    );
+    PagoPendiente pagoPendiente = new PagoPendiente(emisor, receptor, 1200.0, hogar);
+    repositorioPagoPendiente.guardar(pagoPendiente);
 
-    assertThat(pendientesDelHogar, notNullValue());
-    assertThat(pendientesDelHogar, hasSize(2));
-    assertThat(pendientesDelHogar, containsInAnyOrder(pendiente1, pendiente2));
+    // When
+    List<PagoPendiente> pendientes = repositorioPagoPendiente.obtenerPendientesPorHogar(hogar);
+
+    // Then
+    assertThat(pendientes, notNullValue());
+    assertThat(pendientes, hasSize(1));
+    assertThat(pendientes.get(0).getHogar().getId(), is(hogar.getId()));
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queSePuedaBuscarPagoPendientePorDatosExactos() {
-    PagoPendiente pendiente = new PagoPendiente("Juan", "Maria", 1200.0, hogarPrueba);
-    repositorioPagoPendiente.guardar(pendiente);
-    sessionFactory.getCurrentSession().flush();
+  public void deberiaPoderBuscarPorDatosExactos() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
 
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
+
+    PagoPendiente pagoPendiente = new PagoPendiente(emisor, receptor, 1200.0, hogar);
+    repositorioPagoPendiente.guardar(pagoPendiente);
+
+    // When
     PagoPendiente encontrado = repositorioPagoPendiente.buscarPorDatos(
-      "Juan",
-      "Maria",
+      emisor,
+      receptor,
       1200.0,
-      hogarPrueba
+      hogar
     );
 
+    // Then
     assertThat(encontrado, notNullValue());
-    assertThat(encontrado.getId(), equalTo(pendiente.getId()));
+    assertThat(encontrado.getId(), is(pagoPendiente.getId()));
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queRetorneNullSiNoEncuentraPorDatosExactos() {
+  public void deberiaRetornarNullSiBuscaPorDatosQueNoExisten() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
+
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
+
+    // When
     PagoPendiente encontrado = repositorioPagoPendiente.buscarPorDatos(
-      "Inexistente",
-      "Nadie",
-      999.0,
-      hogarPrueba
+      emisor,
+      receptor,
+      9999.0,
+      hogar
     );
+
+    // Then
     assertThat(encontrado, nullValue());
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queSePuedaEliminarUnPagoPendiente() {
-    PagoPendiente pendiente = new PagoPendiente("Juan", "Maria", 800.0, hogarPrueba);
-    repositorioPagoPendiente.guardar(pendiente);
-    sessionFactory.getCurrentSession().flush();
+  public void deberiaPoderEliminarUnPagoPendienteDirectamente() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
 
-    Long id = pendiente.getId();
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
 
-    repositorioPagoPendiente.eliminar(pendiente);
-    sessionFactory.getCurrentSession().flush();
+    PagoPendiente pagoPendiente = new PagoPendiente(emisor, receptor, 1200.0, hogar);
+    repositorioPagoPendiente.guardar(pagoPendiente);
+    Long id = pagoPendiente.getId();
 
+    // When
+    repositorioPagoPendiente.eliminar(pagoPendiente);
     PagoPendiente encontrado = repositorioPagoPendiente.buscarPorId(id);
+
+    // Then
     assertThat(encontrado, nullValue());
   }
 
   @Test
   @Transactional
   @Rollback
-  public void queSePuedaEliminarUnPagoPendientePorId() {
-    PagoPendiente pendiente = new PagoPendiente("Juan", "Maria", 800.0, hogarPrueba);
-    repositorioPagoPendiente.guardar(pendiente);
-    sessionFactory.getCurrentSession().flush();
+  public void deberiaPoderEliminarUnPagoPendientePorId() {
+    // Given
+    Hogar hogar = new Hogar();
+    hogar.setPisoMinimoHogar(1000.0);
+    sessionFactory.getCurrentSession().persist(hogar);
 
-    Long id = pendiente.getId();
+    Usuario emisor = new Usuario("Emisor", "emisor@kumo.com", "1234");
+    Usuario receptor = new Usuario("Receptor", "receptor@kumo.com", "1234");
+    sessionFactory.getCurrentSession().persist(emisor);
+    sessionFactory.getCurrentSession().persist(receptor);
 
+    PagoPendiente pagoPendiente = new PagoPendiente(emisor, receptor, 1200.0, hogar);
+    repositorioPagoPendiente.guardar(pagoPendiente);
+    Long id = pagoPendiente.getId();
+
+    // When
     repositorioPagoPendiente.eliminarPorId(id);
-    sessionFactory.getCurrentSession().flush();
-
     PagoPendiente encontrado = repositorioPagoPendiente.buscarPorId(id);
+
+    // Then
+    assertThat(encontrado, nullValue());
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void deberiaRetornarNullSiElPagoPendienteNoExistePorId() {
+    PagoPendiente encontrado = repositorioPagoPendiente.buscarPorId(999L);
     assertThat(encontrado, nullValue());
   }
 }

@@ -3,6 +3,7 @@ package com.tallerwebi.infraestructura; // O el paquete que uses para repositori
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.PagoPendiente;
 import com.tallerwebi.dominio.RepositorioPagoPendiente;
+import com.tallerwebi.dominio.Usuario;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,16 +34,16 @@ public class RepositorioPagoPendienteImpl implements RepositorioPagoPendiente {
   }
 
   @Override
-  public PagoPendiente buscarPorDatos(String emisor, String receptor, Double monto, Hogar hogar) {
+  public PagoPendiente buscarPorDatos(Usuario emisor, Usuario receptor, Double monto, Hogar hogar) {
     try {
       return sessionFactory
         .getCurrentSession()
         .createQuery(
-          "FROM PagoPendiente p WHERE p.emisor = :emisor AND p.receptor = :receptor AND p.monto = :monto AND p.hogar = :hogar",
+          "FROM PagoPendiente p WHERE p.emisor.id = :emisorId AND p.receptor.id = :receptorId AND p.monto = :monto AND p.hogar = :hogar",
           PagoPendiente.class
         )
-        .setParameter("emisor", emisor)
-        .setParameter("receptor", receptor)
+        .setParameter("emisorId", emisor != null ? emisor.getId() : null)
+        .setParameter("receptorId", receptor != null ? receptor.getId() : null)
         .setParameter("monto", monto)
         .setParameter("hogar", hogar)
         .uniqueResult();

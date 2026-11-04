@@ -37,6 +37,11 @@ public class ControladorMercadoPago {
   private static final String BAJA_USUARIO_SESSION_KEY = "bajaUsuarioIdPago";
   private static final String REDIRECT_SIMULAR_BAJA = "redirect:/hogar/baja/simular?usuarioId=";
 
+  // Constantes de sesión para los pagos (Soluciona el aviso de AvoidDuplicateLiterals)
+  private static final String SESSION_EMISOR_PAGO = "emisorPago";
+  private static final String SESSION_RECEPTOR_PAGO = "receptorPago";
+  private static final String SESSION_MONTO_PAGO = "montoPago";
+
   private final ServicioMercadoPago servicioMercadoPago;
 
   @Autowired
@@ -62,11 +67,11 @@ public class ControladorMercadoPago {
     @RequestParam("receptor") String receptor,
     @RequestParam("monto") Double monto
   ) {
-    session.removeAttribute(BAJA_USUARIO_SESSION_KEY); // Limpiar cualquier baja pendiente en la sesión
+    session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
     String titulo = "Transferencia";
-    session.setAttribute("emisorPago", emisor);
-    session.setAttribute("receptorPago", receptor);
-    session.setAttribute("montoPago", monto);
+    session.setAttribute(SESSION_EMISOR_PAGO, emisor);
+    session.setAttribute(SESSION_RECEPTOR_PAGO, receptor);
+    session.setAttribute(SESSION_MONTO_PAGO, monto);
 
     try {
       Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
@@ -96,12 +101,18 @@ public class ControladorMercadoPago {
   @PostMapping("/pago/baja")
   public ModelAndView pagoBaja(
     @RequestParam("usuarioId") Long usuarioId,
-    @RequestParam("emisor") String emisor,
-    @RequestParam("receptor") String receptor,
+    @RequestParam("emisor") String emisorNombre,
+    @RequestParam("receptor") String receptorNombre,
     @RequestParam("monto") Double monto
   ) {
     try {
+      Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
+      Usuario emisor = buscarUsuarioEnCasa(casa, emisorNombre);
+      Usuario receptor = buscarUsuarioEnCasa(casa, receptorNombre);
+
       SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(usuarioId);
+
+      // Ahora le pasamos los objetos Usuario reales al método
       if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
         return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
       }
@@ -110,7 +121,7 @@ public class ControladorMercadoPago {
       return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
     }
 
-    ModelAndView mav = pago(emisor, receptor, monto);
+    ModelAndView mav = pago(emisorNombre, receptorNombre, monto);
     session.setAttribute(BAJA_USUARIO_SESSION_KEY, usuarioId);
     return mav;
   }
@@ -120,28 +131,68 @@ public class ControladorMercadoPago {
     @RequestParam(value = "collection_id", required = false) String collectionId,
     @RequestParam(value = "status", required = false) String status
   ) {
-    Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
-
-    String emisor = (String) session.getAttribute("emisorPago");
-    String receptor = (String) session.getAttribute("receptorPago");
-    Double monto = (Double) session.getAttribute("montoPago");
     Long bajaUsuarioId = (Long) session.getAttribute(BAJA_USUARIO_SESSION_KEY);
 
     if (bajaUsuarioId != null) {
-      session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
-      if (STATUS_APPROVED.equals(status) && monto != null) {
-        servicioBajaIntegrante.registrarPago(bajaUsuarioId, emisor, receptor, monto);
-        return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId + "&pagoRegistrado=true");
-      }
-      return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId);
+      return procesarPagoBaja(bajaUsuarioId, status);
     }
+
+    procesarPagoHogarNormal();
+    return new ModelAndView("succesControladorMP");
+  }
+
+  private ModelAndView procesarPagoBaja(Long bajaUsuarioId, String status) {
+    session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
+    Double monto = (Double) session.getAttribute(SESSION_MONTO_PAGO);
+
+    if (STATUS_APPROVED.equals(status) && monto != null) {
+      Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
+      Usuario emisor = buscarUsuarioEnCasa(
+        casa,
+        (String) session.getAttribute(SESSION_EMISOR_PAGO)
+      );
+      Usuario receptor = buscarUsuarioEnCasa(
+        casa,
+        (String) session.getAttribute(SESSION_RECEPTOR_PAGO)
+      );
+
+      servicioBajaIntegrante.registrarPago(bajaUsuarioId, emisor, receptor, monto);
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId + "&pagoRegistrado=true");
+    }
+    return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId);
+  }
+
+  private void procesarPagoHogarNormal() {
+    Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
+    Double monto = (Double) session.getAttribute(SESSION_MONTO_PAGO);
 
     if (casa != null && monto != null) {
-      PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
-      servicioPagoRealizado.registrarPagoExitoso(pago);
-    }
+      Usuario emisor = buscarUsuarioEnCasa(
+        casa,
+        (String) session.getAttribute(SESSION_EMISOR_PAGO)
+      );
+      Usuario receptor = buscarUsuarioEnCasa(
+        casa,
+        (String) session.getAttribute(SESSION_RECEPTOR_PAGO)
+      );
 
-    return new ModelAndView("succesControladorMP");
+      if (emisor != null && receptor != null) {
+        PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), casa);
+        servicioPagoRealizado.registrarPagoExitoso(pago);
+      }
+    }
+  }
+
+  private Usuario buscarUsuarioEnCasa(Hogar casa, String nombreUsuario) {
+    if (casa == null || casa.getIntegrantes() == null || nombreUsuario == null) {
+      return null;
+    }
+    return casa
+      .getIntegrantes()
+      .stream()
+      .filter(u -> nombreUsuario.equals(u.getNombre()))
+      .findFirst()
+      .orElse(null);
   }
 
   @GetMapping("/pago/errorControladorMP")
@@ -149,17 +200,21 @@ public class ControladorMercadoPago {
     return new ModelAndView("errorControladorMP");
   }
 
-  // Endpoint único para cuando el pago queda pendiente (Guarda el pendiente y redirige a la liquidación)
   @GetMapping("/pago/pending")
   public ModelAndView pagoPendiente() {
     Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
-    String emisor = (String) session.getAttribute("emisorPago");
-    String receptor = (String) session.getAttribute("receptorPago");
-    Double monto = (Double) session.getAttribute("montoPago");
+    String nombreEmisor = (String) session.getAttribute(SESSION_EMISOR_PAGO);
+    String nombreReceptor = (String) session.getAttribute(SESSION_RECEPTOR_PAGO);
+    Double monto = (Double) session.getAttribute(SESSION_MONTO_PAGO);
 
-    if (casa != null && monto != null) {
-      PagoPendiente pendiente = new PagoPendiente(emisor, receptor, monto, casa);
-      servicioPagoPendiente.guardarPendiente(pendiente);
+    if (casa != null && monto != null && nombreEmisor != null && nombreReceptor != null) {
+      Usuario emisor = buscarUsuarioEnCasa(casa, nombreEmisor);
+      Usuario receptor = buscarUsuarioEnCasa(casa, nombreReceptor);
+
+      if (emisor != null && receptor != null) {
+        PagoPendiente pendiente = new PagoPendiente(emisor, receptor, monto, casa);
+        servicioPagoPendiente.guardarPendiente(pendiente);
+      }
     }
 
     return new ModelAndView("redirect:/liquidacion");
@@ -170,11 +225,9 @@ public class ControladorMercadoPago {
     Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
 
     if (casa != null) {
-      // 1. Buscamos el pendiente exacto por su ID
       PagoPendiente pendiente = servicioPagoPendiente.buscarPorId(id);
 
       if (pendiente != null) {
-        // 2. Registrar como exitoso en el historial usando sus datos reales
         PagoRealizado pago = new PagoRealizado(
           pendiente.getEmisor(),
           pendiente.getReceptor(),
@@ -183,8 +236,6 @@ public class ControladorMercadoPago {
           casa
         );
         servicioPagoRealizado.registrarPagoExitoso(pago);
-
-        // 3. Borrarlo de pendientes por ID
         servicioPagoPendiente.eliminarPorId(id);
       }
     }
@@ -197,14 +248,11 @@ public class ControladorMercadoPago {
     Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
 
     if (casa != null) {
-      // Borra exactamente el registro pendiente seleccionado
       servicioPagoPendiente.eliminarPorId(id);
     }
 
     return new ModelAndView("redirect:/liquidacion");
   }
-
-  // --- WEBHOOK REFACTORIZADO PARA CUMPLIR CON PMD ---
 
   @PostMapping("/webhook/mercadopago")
   public ResponseEntity<String> recibirWebhook(@RequestBody Map<String, Object> payload) {

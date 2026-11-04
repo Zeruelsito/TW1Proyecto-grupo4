@@ -10,8 +10,14 @@ public class PagoPendiente {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  private String emisor; // <--- AGREGAR ESTO
-  private String receptor;
+  @ManyToOne
+  @JoinColumn(name = "emisor_id")
+  private Usuario emisor;
+
+  @ManyToOne
+  @JoinColumn(name = "receptor_id")
+  private Usuario receptor;
+
   private Double monto;
 
   @ManyToOne
@@ -20,14 +26,14 @@ public class PagoPendiente {
 
   public PagoPendiente() {}
 
-  public PagoPendiente(String emisor, String receptor, Double monto, Hogar hogar) {
+  public PagoPendiente(Usuario emisor, Usuario receptor, Double monto, Hogar hogar) {
     this.emisor = emisor;
     this.receptor = receptor;
     this.monto = monto;
     this.hogar = hogar;
   }
 
-  // Getters y Setters
+  // Getters y Setters actualizados a Usuario
   public Long getId() {
     return id;
   }
@@ -36,19 +42,19 @@ public class PagoPendiente {
     this.id = id;
   }
 
-  public String getEmisor() {
+  public Usuario getEmisor() {
     return emisor;
   }
 
-  public void setEmisor(String emisor) {
+  public void setEmisor(Usuario emisor) {
     this.emisor = emisor;
   }
 
-  public String getReceptor() {
+  public Usuario getReceptor() {
     return receptor;
   }
 
-  public void setReceptor(String receptor) {
+  public void setReceptor(Usuario receptor) {
     this.receptor = receptor;
   }
 

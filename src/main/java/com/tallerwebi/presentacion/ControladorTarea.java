@@ -305,7 +305,7 @@ public class ControladorTarea {
   }
 
   private boolean coincideEmisor(PagoPendiente pagoPendiente, Usuario usuarioActual) {
-    String nombreEmisor = pagoPendiente.getEmisor();
+    String nombreEmisor = pagoPendiente.getEmisor().getNombre();
     if (nombreEmisor == null) {
       return false;
     }

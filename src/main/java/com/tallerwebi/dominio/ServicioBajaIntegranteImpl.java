@@ -140,7 +140,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   @Override
-  public void registrarPago(Long usuarioId, String emisor, String receptor, Double monto) {
+  public void registrarPago(Long usuarioId, Usuario emisor, Usuario receptor, Double monto) {
     SimulacionBaja simulacion = simularBaja(usuarioId);
     if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
       throw new PagoNoCorrespondeALiquidacionException();
@@ -155,8 +155,14 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
       if (pago.getMonto() == null) {
         continue;
       }
-      balances.computeIfPresent(pago.getEmisor(), (nombre, saldo) -> saldo + pago.getMonto());
-      balances.computeIfPresent(pago.getReceptor(), (nombre, saldo) -> saldo - pago.getMonto());
+      balances.computeIfPresent(
+        pago.getEmisor().getNombre(),
+        (nombre, saldo) -> saldo + pago.getMonto()
+      );
+      balances.computeIfPresent(
+        pago.getReceptor().getNombre(),
+        (nombre, saldo) -> saldo - pago.getMonto()
+      );
     }
   }
 

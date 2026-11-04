@@ -12,8 +12,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class ControladorLiquidacion {
 
-  private HttpSession session;
-
   private final ServicioLiquidacion servicioLiquidacion;
   private final ServicioRegistroGasto servicioRegistroGasto;
   private final ServicioPagoPendiente servicioPagoPendiente;
@@ -31,7 +29,6 @@ public class ControladorLiquidacion {
     ServicioPagoRealizado servicioPagoRealizado,
     ServicioPagoPendiente servicioPagoPendiente
   ) {
-    this.session = session;
     this.servicioLiquidacion = servicioLiquidacion;
     this.servicioRegistroGasto = servicioRegistroGasto;
     this.servicioHogar = servicioHogar;
