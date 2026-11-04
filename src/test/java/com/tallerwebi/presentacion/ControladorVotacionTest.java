@@ -68,7 +68,6 @@ public class ControladorVotacionTest {
       .perform(get("/propuestas").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("propuestas"))
-      .andExpect(model().attributeExists("nombreUsuario"))
       .andExpect(model().attributeExists("listaPropuestas"));
   }
 

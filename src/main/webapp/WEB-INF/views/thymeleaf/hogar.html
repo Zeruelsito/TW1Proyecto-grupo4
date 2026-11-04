@@ -35,9 +35,100 @@
         </div>
 
         <div class="col-md-10 px-4">
-            <div class="my-3">
-                <h2 class="fw-bold mb-0">Administración del hogar</h2>
-                <p class="text-muted small">Parámetros del grupo, historial de cambios y selección de hogar.</p>
+            <!-- Header Bar Corregido y Unificado -->
+            <div class="d-flex justify-content-between align-items-center my-3">
+                <div>
+                    <h2 class="fw-bold mb-0">Administración del hogar</h2>
+                    <p class="text-muted small mb-0">Parámetros del grupo, historial de cambios y selección de hogar.</p>
+                </div>
+
+                <!-- CONTENEDOR DERECHO: Agrupa la campanita y el usuario en línea horizontal -->
+                <div class="d-flex align-items-center gap-3">
+                    <!-- CAMPANITA DE NOTIFICACIONES -->
+                    <div class="dropdown notification-dropdown position-relative">
+                        <div class="kumo-card py-2 px-3 d-flex align-items-center justify-content-center bg-white" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; width: 44px; height: 44px;">
+                            <div class="position-relative text-dark">
+                                <i class="bi bi-bell fs-5"></i>
+                                <!-- Badge con el total de alertas dinámico -->
+                                <span th:with="totalAlertas=${(vencidosNotif != null ? vencidosNotif.size() : 0) + (proximosNotif != null ? proximosNotif.size() : 0)}"
+                                      th:if="${totalAlertas > 0}"
+                                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                      style="font-size: 0.65rem;"
+                                      th:text="${totalAlertas}">
+                                    0
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Menú Desplegable de Notificaciones -->
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3 mt-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-danger me-1"></i> Notificaciones</h6>
+                                <a th:href="@{/vencimientos}" class="small text-decoration-none fw-semibold">Ver todos</a>
+                            </div>
+
+                            <!-- Si NO hay ninguna notificación -->
+                            <div th:if="${(vencidosNotif == null or #lists.isEmpty(vencidosNotif)) and (proximosNotif == null or #lists.isEmpty(proximosNotif))}" class="text-center py-3 text-muted small">
+                                <i class="bi bi-check-circle fs-3 text-success d-block mb-1"></i>
+                                ¡Todo al día! No hay vencimientos cercanos.
+                            </div>
+
+                            <!-- Sección: Gastos Vencidos -->
+                            <div th:if="${vencidosNotif != null and not #lists.isEmpty(vencidosNotif)}" class="mb-3">
+                                <span class="badge bg-danger text-white rounded-pill px-2 py-1 mb-2 small fw-bold">Vencidos</span>
+                                <div th:each="vencido : ${vencidosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-danger">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-semibold small text-dark" th:text="${vencido.descripcion}">Descripción</span>
+                                        <span class="fw-bold small text-danger" th:text="'$' + ${#numbers.formatDecimal(vencido.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
+                                    </div>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">
+                                        Venció el: <span th:text="${#temporals.format(vencido.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección: Próximos a Vencer -->
+                            <div th:if="${proximosNotif != null and not #lists.isEmpty(proximosNotif)}">
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-1 mb-2 small fw-bold">Próximos a vencer</span>
+                                <div th:each="prox : ${proximosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-warning">
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-semibold small text-dark" th:text="${prox.descripcion}">Descripción</span>
+                                        <span class="fw-bold small text-dark" th:text="'$' + ${#numbers.formatDecimal(prox.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
+                                    </div>
+                                    <div class="small text-muted" style="font-size: 0.75rem;">
+                                        Vence el: <span th:text="${#temporals.format(prox.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menú Desplegable de Usuario Integrado -->
+                    <div class="dropdown user-dropdown position-relative">
+                        <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+                            <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                                <span th:text="${nombreUsuario != null ? #strings.substring(nombreUsuario, 0, 1) : 'U'}">U</span>
+                            </div>
+                            <span class="fw-medium small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</span>
+                            <i class="bi bi-chevron-down small text-muted ms-1"></i>
+                        </div>
+
+                        <!-- Menú Desplegable con Acciones -->
+                        <div class="dropdown-menu shadow-sm border-0 rounded-4 p-2 mt-2">
+                            <div class="px-3 py-2 border-bottom mb-2">
+                                <p class="mb-0 fw-bold text-dark small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</p>
+                            </div>
+                            <li><a class="dropdown-item rounded-2 py-2 small fw-medium" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i>Mi Hogar</a></li>
+                            <li><a class="dropdown-item rounded-2 py-2 small fw-medium" th:href="@{/perfil}"><i class="bi bi-person me-2"></i>Mi Perfil</a></li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item rounded-2 py-2 small fw-medium text-danger" th:href="@{/logout}">
+                                    <i class="bi bi-box-arrow-left me-2"></i> Salir
+                                </a>
+                            </li>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="row g-4">
@@ -101,15 +192,15 @@
 
                         <table class="table align-middle small mb-0" th:unless="${#lists.isEmpty(historial)}">
                             <thead>
-                                <tr><th>Parámetro</th><th>Antes</th><th>Ahora</th><th>Fecha</th></tr>
+                            <tr><th>Parámetro</th><th>Antes</th><th>Ahora</th><th>Fecha</th></tr>
                             </thead>
                             <tbody>
-                                <tr th:each="c : ${historial}">
-                                    <td class="fw-semibold" th:text="${c.parametro}">Precio por hora</td>
-                                    <td th:text="'$' + ${c.valorAnterior}">$1000.0</td>
-                                    <td class="fw-bold" th:text="'$' + ${c.valorNuevo}">$1500.0</td>
-                                    <td th:text="${#temporals.format(c.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026 10:00</td>
-                                </tr>
+                            <tr th:each="c : ${historial}">
+                                <td class="fw-semibold" th:text="${c.parametro}">Precio por hora</td>
+                                <td th:text="'$' + ${c.valorAnterior}">$1000.0</td>
+                                <td class="fw-bold" th:text="'$' + ${c.valorNuevo}">$1500.0</td>
+                                <td th:text="${#temporals.format(c.fecha, 'dd/MM/yyyy HH:mm')}">01/01/2026 10:00</td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>

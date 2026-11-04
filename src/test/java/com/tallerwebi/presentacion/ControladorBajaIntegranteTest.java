@@ -112,5 +112,4 @@ public class ControladorBajaIntegranteTest {
       equalToIgnoringCase("No se puede dar de baja: el integrante todavía tiene saldo pendiente.")
     );
   }
-
 }
