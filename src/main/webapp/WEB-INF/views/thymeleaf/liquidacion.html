@@ -243,7 +243,7 @@
                                     <td class="align-middle text-center">
 
                                         <!-- Si el usuario logueado coincide con el RECEPTOR -->
-                                        <div class="d-flex justify-content-center gap-2" th:if="${usuarioLogueado != null and usuarioLogueado == tp.receptor}">
+                                        <div class="d-flex justify-content-center gap-2" th:if="${nombreUsuario != null and nombreUsuario == tp.receptor}">
                                             <!-- Botón 1: Confirmar -->
                                             <form th:action="@{/pago/confirmar-manual}" method="post" class="m-0">
                                                 <input type="hidden" name="id" th:value="${tp.id}"/>
@@ -262,7 +262,7 @@
                                         </div>
 
                                         <!-- Para el resto de los usuarios (cuando NO es el receptor) -->
-                                        <div th:unless="${usuarioLogueado != null and usuarioLogueado == tp.receptor}">
+                                        <div th:unless="${nombreUsuario != null and nombreUsuario == tp.receptor}">
                                             <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill">
                                                 <i class="bi bi-clock me-1"></i> A la espera de confirmación
                                             </span>
