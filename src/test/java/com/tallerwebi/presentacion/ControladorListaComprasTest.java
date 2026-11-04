@@ -33,8 +33,7 @@ public class ControladorListaComprasTest {
     servicioUsuarioMock = mock(ServicioUsuario.class);
     sessionMock = mock(HttpSession.class);
 
-    controladorListaCompras =
-      new ControladorListaCompras(servicioListaComprasMock, servicioUsuarioMock, sessionMock);
+    controladorListaCompras = new ControladorListaCompras(servicioListaComprasMock, sessionMock);
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
@@ -69,7 +68,6 @@ public class ControladorListaComprasTest {
       .perform(get("/lista-compras").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("lista-compras"))
-      .andExpect(model().attributeExists("nombreUsuario"))
       .andExpect(model().attributeExists("items"))
       .andExpect(model().attributeExists("cantidadEnCarrito"));
   }

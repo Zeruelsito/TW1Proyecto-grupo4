@@ -23,7 +23,7 @@ public class ControladorLiquidacion {
   private final ServicioPagoPendiente servicioPagoPendiente;
   private final ServicioHogar servicioHogar;
   private final ServicioUsuario servicioUsuario;
-  private final ServicioPagoRealizado servicioPagoRealizado; // <-- NUEVO: Servicio inyectado
+  private final ServicioPagoRealizado servicioPagoRealizado;
 
   @Autowired
   public ControladorLiquidacion(
@@ -48,7 +48,6 @@ public class ControladorLiquidacion {
   public ModelAndView irALiquidacion(HttpSession session, RedirectAttributes redirectAttributes) {
     Map<String, Object> modelo = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
 
     if (hogarId == null) {
@@ -58,11 +57,6 @@ public class ControladorLiquidacion {
       );
       return new ModelAndView("redirect:/dashboard");
     }
-
-    String nombreUser = (usuarioActual != null && usuarioActual.getNombre() != null)
-      ? usuarioActual.getNombre()
-      : "Usuario";
-    modelo.put("usuarioLogueado", nombreUser);
 
     List<Hogar> listaHogares = servicioHogar.obtenerHogares(usuarioId);
     modelo.put("listaHogares", listaHogares);

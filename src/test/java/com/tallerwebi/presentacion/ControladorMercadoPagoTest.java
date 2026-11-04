@@ -3,11 +3,13 @@ package com.tallerwebi.presentacion;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import com.mercadopago.exceptions.MPApiException;
-import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.payment.Payment;
 import com.mercadopago.resources.preference.Preference;
 import com.tallerwebi.dominio.*;
@@ -16,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -26,6 +27,7 @@ public class ControladorMercadoPagoTest {
   private ServicioMercadoPago servicioMercadoPagoMock;
   private ServicioPagoRealizado servicioPagoRealizadoMock;
   private ServicioPagoPendiente servicioPagoPendienteMock;
+  private ServicioBajaIntegrante servicioBajaIntegranteMock;
   private MockHttpSession session;
 
   @BeforeEach
@@ -33,6 +35,7 @@ public class ControladorMercadoPagoTest {
     servicioMercadoPagoMock = mock(ServicioMercadoPago.class);
     servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
     servicioPagoPendienteMock = mock(ServicioPagoPendiente.class);
+    servicioBajaIntegranteMock = mock(ServicioBajaIntegrante.class);
 
     controladorMercadoPago = new ControladorMercadoPago(servicioMercadoPagoMock);
 
@@ -41,6 +44,7 @@ public class ControladorMercadoPagoTest {
     // podemos asignarlos manualmente aquí para el test unitario puro.
     setPrivateField(controladorMercadoPago, "servicioPagoRealizado", servicioPagoRealizadoMock);
     setPrivateField(controladorMercadoPago, "servicioPagoPendiente", servicioPagoPendienteMock);
+    setPrivateField(controladorMercadoPago, "servicioBajaIntegrante", servicioBajaIntegranteMock);
 
     session = new MockHttpSession();
     setPrivateField(controladorMercadoPago, "session", session);
@@ -161,6 +165,80 @@ public class ControladorMercadoPagoTest {
       assertThat(response.getStatusCode().is2xxSuccessful(), is(true));
       assertThat(response.getBody(), equalTo("OK"));
     }
+  }
+
+  @Test
+  public void queUnPagoDeBajaValidoRedirijaAMercadoPagoYGuardeElUsuarioEnSesion() throws Exception {
+    SimulacionBaja simulacion = mock(SimulacionBaja.class);
+    when(simulacion.tieneTransferenciaPendiente("Juan", "Maria", 1000.0)).thenReturn(true);
+    when(servicioBajaIntegranteMock.simularBaja(7L)).thenReturn(simulacion);
+    Preference mockPreference = mock(Preference.class);
+    when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
+    when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
+      .thenReturn(mockPreference);
+
+    ModelAndView mav = controladorMercadoPago.pagoBaja(7L, "Juan", "Maria", 1000.0);
+
+    assertThat(mav.getViewName(), equalTo("redirect:https://sandbox.mp/pref"));
+    assertThat(session.getAttribute("bajaUsuarioIdPago"), equalTo(7L));
+  }
+
+  @Test
+  public void queUnPagoDeBajaQueNoCorrespondeNoVayaAMercadoPago() throws Exception {
+    SimulacionBaja simulacion = mock(SimulacionBaja.class);
+    when(simulacion.tieneTransferenciaPendiente(anyString(), anyString(), anyDouble()))
+      .thenReturn(false);
+    when(servicioBajaIntegranteMock.simularBaja(7L)).thenReturn(simulacion);
+
+    ModelAndView mav = controladorMercadoPago.pagoBaja(7L, "Juan", "Maria", 1000.0);
+
+    assertThat(mav.getViewName(), equalTo("redirect:/hogar/baja/simular?usuarioId=7"));
+    verify(servicioMercadoPagoMock, never()).crearUrl(anyString(), any(BigDecimal.class));
+  }
+
+  @Test
+  public void queUnPagoExitosoDeBajaSeRegistreEnLaBajaYVuelvaALaSimulacion() throws Exception {
+    session.setAttribute("bajaUsuarioIdPago", 7L);
+    session.setAttribute("emisorPago", "Juan");
+    session.setAttribute("receptorPago", "Maria");
+    session.setAttribute("montoPago", 1000.0);
+
+    ModelAndView mav = controladorMercadoPago.pagoExitoso("123", "approved");
+
+    assertThat(
+      mav.getViewName(),
+      equalTo("redirect:/hogar/baja/simular?usuarioId=7&pagoRegistrado=true")
+    );
+    verify(servicioBajaIntegranteMock, times(1)).registrarPago(7L, "Juan", "Maria", 1000.0);
+    verify(servicioPagoRealizadoMock, never()).registrarPagoExitoso(any(PagoRealizado.class));
+    assertThat(session.getAttribute("bajaUsuarioIdPago"), is(nullValue()));
+  }
+
+  @Test
+  public void queUnPagoDeBajaNoAprobadoNoSeRegistre() throws Exception {
+    session.setAttribute("bajaUsuarioIdPago", 7L);
+    session.setAttribute("emisorPago", "Juan");
+    session.setAttribute("receptorPago", "Maria");
+    session.setAttribute("montoPago", 1000.0);
+
+    ModelAndView mav = controladorMercadoPago.pagoExitoso("987654", "rejected");
+
+    assertThat(mav.getViewName(), equalTo("redirect:/hogar/baja/simular?usuarioId=7"));
+    verify(servicioBajaIntegranteMock, never())
+      .registrarPago(anyLong(), anyString(), anyString(), anyDouble());
+  }
+
+  @Test
+  public void queUnPagoNormalLimpieElUsuarioDeBajaDeLaSesion() throws Exception {
+    session.setAttribute("bajaUsuarioIdPago", 7L);
+    Preference mockPreference = mock(Preference.class);
+    when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
+    when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
+      .thenReturn(mockPreference);
+
+    controladorMercadoPago.pago("Juan", "Maria", 1000.0);
+
+    assertThat(session.getAttribute("bajaUsuarioIdPago"), is(nullValue()));
   }
 
   // Método auxiliar para inyectar campos privados (simulando @Autowired sin levantar Spring Context)

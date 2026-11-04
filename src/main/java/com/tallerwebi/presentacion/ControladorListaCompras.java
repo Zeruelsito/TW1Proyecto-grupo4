@@ -27,16 +27,10 @@ public class ControladorListaCompras {
   private static final String REDIRECT_GASTOS = "redirect:/gastos?descripcion=";
 
   private final ServicioListaCompras servicioListaCompras;
-  private final ServicioUsuario servicioUsuario;
   private final HttpSession session;
 
-  public ControladorListaCompras(
-    ServicioListaCompras servicioListaCompras,
-    ServicioUsuario servicioUsuario,
-    HttpSession session
-  ) {
+  public ControladorListaCompras(ServicioListaCompras servicioListaCompras, HttpSession session) {
     this.servicioListaCompras = servicioListaCompras;
-    this.servicioUsuario = servicioUsuario;
     this.session = session;
   }
 
@@ -131,12 +125,6 @@ public class ControladorListaCompras {
     long cantidadEnCarrito = items.stream().filter(ItemCompra::estaEnCarrito).count();
 
     ModelAndView mav = new ModelAndView(VISTA_LISTA_COMPRAS);
-    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(idUsuario);
-    mav.addObject(
-      "nombreUsuario",
-      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
-    );
     mav.addObject("items", items);
     mav.addObject("cantidadEnCarrito", cantidadEnCarrito);
     if (mensajeError != null) {

@@ -44,12 +44,6 @@ public class ControladorRegistroGasto {
     }
 
     ModelAndView mav = new ModelAndView("gastos");
-    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
-    mav.addObject(
-      "nombreUsuario",
-      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
-    );
     cargarDatosGenerales(mav, hogarId);
     mav.addObject("gasto", new Gasto());
     return mav;

@@ -47,11 +47,6 @@ public class ControladorDashboard {
       usuarioActual.setId(usuarioId);
     }
 
-    model.put(
-      "nombreUsuario",
-      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
-    );
-
     List<Hogar> hogaresUsuario = servicioHogar.obtenerHogares(usuarioId);
     model.put("hogaresUsuario", hogaresUsuario);
 

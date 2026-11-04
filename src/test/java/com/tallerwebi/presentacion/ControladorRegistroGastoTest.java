@@ -74,7 +74,6 @@ public class ControladorRegistroGastoTest {
       )
       .andExpect(status().isOk())
       .andExpect(view().name("gastos"))
-      .andExpect(model().attributeExists("nombreUsuario"))
       .andExpect(model().attributeExists("listaGastos"))
       .andExpect(model().attributeExists("gastosFijosRecurrentes"))
       .andExpect(model().attributeExists("integrantes"))

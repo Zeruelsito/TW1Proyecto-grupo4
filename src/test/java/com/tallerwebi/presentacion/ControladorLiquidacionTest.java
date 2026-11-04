@@ -121,7 +121,6 @@ public class ControladorLiquidacionTest {
       ) // <-- ¡Esta es la línea que faltaba agregar!
       .andExpect(status().isOk())
       .andExpect(view().name("liquidacion"))
-      .andExpect(model().attribute("usuarioLogueado", "Ezequiel"))
       .andExpect(model().attribute("casa", notNullValue()))
       .andExpect(model().attributeExists("transferenciasPendientes", "historialPagos"));
   }
