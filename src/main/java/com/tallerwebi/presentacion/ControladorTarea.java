@@ -1,5 +1,6 @@
 package com.tallerwebi.presentacion;
 
+import com.tallerwebi.dominio.AlcanceTarea;
 import com.tallerwebi.dominio.Gasto;
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.PagoPendiente;
@@ -112,6 +113,14 @@ public class ControladorTarea {
         servicioCreditoTarea.registrarTareaDesdeCatalogo(tareaRepetitivaId, null, hogarId);
       } else {
         servicioCreditoTarea.registrarTarea(tarea);
+        if (request.getParameter("guardarComoPlantilla") != null) {
+          guardarPlantilla(
+            tarea.getTitulo(),
+            request.getParameter("alcancePlantilla"),
+            usuarioId,
+            hogarId
+          );
+        }
       }
       return new ModelAndView(REDIRECT_TAREAS);
     } catch (TareaNoEncontradaException e) {
@@ -226,7 +235,8 @@ public class ControladorTarea {
   private void cargarDatosDashboardTareas(Map<String, Object> model, Long usuarioId, Long hogarId) {
     Double creditoTotalBruto = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
     model.put("tareas", servicioCreditoTarea.obtenerTodasLasTareas());
-    model.put("catalogo", servicioTareaRepetitiva.obtenerTodas(hogarId));
+    //model.put("catalogo", servicioTareaRepetitiva.obtenerTodas(hogarId));
+    model.put("catalogo", servicioTareaRepetitiva.obtenerCatalogo(hogarId, usuarioId));
 
     Double creditoLiquidadoMes = servicioCreditoTarea.obtenerCreditoLiquidadoPorUsuario(usuarioId);
     model.put("creditoLiquidadoMes", creditoLiquidadoMes);
@@ -415,5 +425,14 @@ public class ControladorTarea {
       return null;
     }
     return Long.valueOf(valor);
+  }
+
+  private void guardarPlantilla(String titulo, String alcance, Long usuarioId, Long hogarId) {
+    if (AlcanceTarea.PERSONAL.name().equals(alcance)) {
+      Usuario propietario = servicioUsuario.obtenerUsuarioPorId(usuarioId);
+      servicioTareaRepetitiva.guardarComoPlantillaPersonal(titulo, hogarId, propietario);
+    } else {
+      servicioTareaRepetitiva.guardarComoPlantilla(titulo, hogarId);
+    }
   }
 }
