@@ -180,9 +180,18 @@
                                         Limpiar el baño · $5.000,00/h
                                     </option>
                                 </select>
-                                <div id="bloqueTitulo">
-                                  <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Comprar filtro para la cafetera">
-                                </div>
+<div id="bloqueTitulo">
+  <input type="text" id="titulo" class="form-control rounded-3" th:field="*{titulo}" placeholder="Ej: Limpieza profunda de cocina" required>
+  <div class="form-check mt-2">
+    <input class="form-check-input" type="checkbox" id="guardarComoPlantilla" name="guardarComoPlantilla">
+    <label class="form-check-label small" for="guardarComoPlantilla">Guardar como tarea frecuente</label>
+  </div>
+  <label class="form-label small mt-2 mb-1" for="alcancePlantilla">¿Quién puede usarla?</label>
+  <select id="alcancePlantilla" name="alcancePlantilla" class="form-select form-select-sm rounded-3">
+    <option value="HOGAR">Del hogar (la ven todos)</option>
+    <option value="PERSONAL">Personal (solo yo)</option>
+  </select>
+</div>
                             </div>
 
                             <button type="submit" class="btn btn-dark w-100 rounded-3 py-2 mt-2">

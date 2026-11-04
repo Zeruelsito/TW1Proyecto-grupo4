@@ -5,6 +5,8 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -343,5 +345,26 @@ public class ControladorTareaTest {
       modelAndView.getModelMap().get("error"),
       equalTo("La tarea seleccionada no existe en tu hogar.")
     );
+  }
+
+  @Test
+  public void crearTareaConPlantillaPersonalDebeGuardarlaComoPersonalYRedirigir() {
+    when(requestMock.getSession()).thenReturn(sessionMock);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
+    when(requestMock.getParameter("guardarComoPlantilla")).thenReturn("on"); //guardar como tarea frecuente/repetitiva
+    when(requestMock.getParameter("alcancePlantilla")).thenReturn("PERSONAL");
+
+    Usuario usuario = new Usuario();
+    usuario.setId(1L);
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
+
+    Tarea tarea = new Tarea();
+    tarea.setTitulo("Lavar mi ropa");
+
+    ModelAndView modelAndView = controladorTarea.crearTarea(tarea, requestMock);
+
+    assertThat(modelAndView.getViewName(), equalTo("redirect:/tareas"));
+    verify(servicioTareaRepetitivaMock).guardarComoPlantillaPersonal("Lavar mi ropa", 1L, usuario);
+    verify(servicioTareaRepetitivaMock, never()).guardarComoPlantilla(anyString(), anyLong());
   }
 }

@@ -65,7 +65,7 @@
                                     <th class="text-end">Acción</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                                                        <tbody>
                                 <tr th:each="tarea : ${tareasRepetitivas}">
                                     <td class="fw-semibold" th:text="${tarea.titulo}">Compra de la semana</td>
                                     <td>
@@ -74,11 +74,18 @@
                                               th:text="${tarea.usuarioAsignado.nombre}">Matias</span>
                                     </td>
                                     <td class="text-end">
-                                        <form th:action="@{/tareas-repetitivas/rotar}" method="post">
-                                            <input type="hidden" name="tareaId" th:value="${tarea.id}" />
-                                            <button type="submit" class="btn btn-outline-dark btn-sm rounded-3"
-                                                    th:text="${tarea.usuarioAsignado == null} ? 'Asignar' : 'Rotar'">Asignar</button>
-                                        </form>
+                                        <div class="d-flex justify-content-end gap-2">
+                                            <form th:action="@{/tareas-repetitivas/rotar}" method="post">
+                                                <input type="hidden" name="tareaId" th:value="${tarea.id}" />
+                                                <button type="submit" class="btn btn-outline-dark btn-sm rounded-3"
+                                                        th:text="${tarea.usuarioAsignado == null} ? 'Asignar' : 'Rotar'">Asignar</button>
+                                            </form>
+                                            <form th:action="@{/tareas-repetitivas/quitar}" method="post">
+                                                <input type="hidden" name="tareaId" th:value="${tarea.id}" />
+                                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-3"
+                                                        onclick="return confirm('¿Querés quitar esta tarea del catálogo?')">Quitar</button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             </tbody>

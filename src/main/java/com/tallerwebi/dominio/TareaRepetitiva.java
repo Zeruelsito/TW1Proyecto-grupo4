@@ -22,6 +22,14 @@ public class TareaRepetitiva {
   @Enumerated(EnumType.STRING)
   private FrecuenciaTarea frecuencia;
 
+  private Boolean activa;
+
+  @Enumerated(EnumType.STRING)
+  private AlcanceTarea alcance;
+
+  @ManyToOne
+  private Usuario propietario;
+
   @ManyToOne
   private Hogar hogar;
 
@@ -91,5 +99,42 @@ public class TareaRepetitiva {
 
   public void setValorPorHora(Double valorPorHora) {
     this.valorPorHora = valorPorHora;
+  }
+
+  public AlcanceTarea getAlcance() {
+    if (alcance == null) {
+      return AlcanceTarea.HOGAR;
+    }
+    return alcance;
+  }
+
+  public void setAlcance(AlcanceTarea alcance) {
+    this.alcance = alcance;
+  }
+
+  public Usuario getPropietario() {
+    return propietario;
+  }
+
+  public void setPropietario(Usuario propietario) {
+    this.propietario = propietario;
+  }
+
+  public boolean esVisiblePara(Long usuarioId) {
+    if (!isActiva()) {
+      return false;
+    }
+    if (getAlcance() == AlcanceTarea.HOGAR) {
+      return true;
+    }
+    return propietario != null && propietario.getId().equals(usuarioId);
+  }
+
+  public boolean isActiva() {
+    return activa == null || activa;
+  }
+
+  public void setActiva(boolean activa) {
+    this.activa = activa;
   }
 }
