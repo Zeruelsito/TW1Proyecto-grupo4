@@ -169,8 +169,6 @@ public class ControladorMercadoPagoTest {
     }
   }
 
-
-  
   @Test
   public void queUnPagoDeBajaValidoRedirijaAMercadoPagoYGuardeElUsuarioEnSesion() throws Exception {
     SimulacionBaja simulacion = mock(SimulacionBaja.class);
@@ -180,34 +178,35 @@ public class ControladorMercadoPagoTest {
     when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
     when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
       .thenReturn(mockPreference);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoBaja(7L, "Juan", "Maria", 1000.0);
- 
+
     assertThat(mav.getViewName(), equalTo("redirect:https://sandbox.mp/pref"));
     assertThat(session.getAttribute("bajaUsuarioIdPago"), equalTo(7L));
   }
- 
+
   @Test
   public void queUnPagoDeBajaQueNoCorrespondeNoVayaAMercadoPago() throws Exception {
     SimulacionBaja simulacion = mock(SimulacionBaja.class);
-    when(simulacion.tieneTransferenciaPendiente(anyString(), anyString(), anyDouble())).thenReturn(false);
+    when(simulacion.tieneTransferenciaPendiente(anyString(), anyString(), anyDouble()))
+      .thenReturn(false);
     when(servicioBajaIntegranteMock.simularBaja(7L)).thenReturn(simulacion);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoBaja(7L, "Juan", "Maria", 1000.0);
- 
+
     assertThat(mav.getViewName(), equalTo("redirect:/hogar/baja/simular?usuarioId=7"));
     verify(servicioMercadoPagoMock, never()).crearUrl(anyString(), any(BigDecimal.class));
   }
- 
+
   @Test
   public void queUnPagoExitosoDeBajaSeRegistreEnLaBajaYVuelvaALaSimulacion() throws Exception {
     session.setAttribute("bajaUsuarioIdPago", 7L);
     session.setAttribute("emisorPago", "Juan");
     session.setAttribute("receptorPago", "Maria");
     session.setAttribute("montoPago", 1000.0);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoExitoso("123", "approved");
- 
+
     assertThat(
       mav.getViewName(),
       equalTo("redirect:/hogar/baja/simular?usuarioId=7&pagoRegistrado=true")
@@ -216,21 +215,21 @@ public class ControladorMercadoPagoTest {
     verify(servicioPagoRealizadoMock, never()).registrarPagoExitoso(any(PagoRealizado.class));
     assertThat(session.getAttribute("bajaUsuarioIdPago"), is(nullValue()));
   }
- 
+
   @Test
   public void queUnPagoDeBajaNoAprobadoNoSeRegistre() throws Exception {
     session.setAttribute("bajaUsuarioIdPago", 7L);
     session.setAttribute("emisorPago", "Juan");
     session.setAttribute("receptorPago", "Maria");
     session.setAttribute("montoPago", 1000.0);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoExitoso("987654", "rejected");
- 
+
     assertThat(mav.getViewName(), equalTo("redirect:/hogar/baja/simular?usuarioId=7"));
     verify(servicioBajaIntegranteMock, never())
       .registrarPago(anyLong(), anyString(), anyString(), anyDouble());
   }
- 
+
   @Test
   public void queUnPagoNormalLimpieElUsuarioDeBajaDeLaSesion() throws Exception {
     session.setAttribute("bajaUsuarioIdPago", 7L);
@@ -238,12 +237,11 @@ public class ControladorMercadoPagoTest {
     when(mockPreference.getSandboxInitPoint()).thenReturn("https://sandbox.mp/pref");
     when(servicioMercadoPagoMock.crearUrl(eq("Transferencia"), any(BigDecimal.class)))
       .thenReturn(mockPreference);
- 
+
     controladorMercadoPago.pago("Juan", "Maria", 1000.0);
- 
+
     assertThat(session.getAttribute("bajaUsuarioIdPago"), is(nullValue()));
   }
- 
 
   // Método auxiliar para inyectar campos privados (simulando @Autowired sin levantar Spring Context)
   private void setPrivateField(Object target, String fieldName, Object value) {

@@ -32,9 +32,46 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
 
   @Override
   public Gasto registrarGasto(Gasto gasto, Long hogarId) {
+    prepararYValidarGasto(gasto, hogarId);
+    repositorioGasto.guardar(gasto);
+    return gasto;
+  }
+
+  @Override
+  public Gasto registrarGastoConParticipantes(
+    Gasto gasto,
+    Long hogarId,
+    List<Long> participantesIds
+  ) {
+    prepararYValidarGasto(gasto, hogarId);
+    asignarParticipantes(gasto, hogarId, participantesIds);
+    repositorioGasto.guardar(gasto);
+    return gasto;
+  }
+
+  private void prepararYValidarGasto(Gasto gasto, Long hogarId) {
+    asignarHogar(gasto, hogarId);
+    resolverUsuarioPagador(gasto);
+    validarGasto(gasto);
+  }
+
+  private void asignarHogar(Gasto gasto, Long hogarId) {
     Hogar hogar = repositorioHogar.buscarPorId(hogarId);
     gasto.setHogar(hogar);
+  }
 
+  private void resolverUsuarioPagador(Gasto gasto) {
+    if (gasto.getUsuarioPagador() != null && gasto.getUsuarioPagador().getId() != null) {
+      Usuario usuarioPagadorManaged = repositorioUsuario.buscarPorId(
+        gasto.getUsuarioPagador().getId()
+      );
+      gasto.setUsuarioPagador(usuarioPagadorManaged);
+    } else {
+      gasto.setUsuarioPagador(null);
+    }
+  }
+
+  private void validarGasto(Gasto gasto) {
     if (gasto.getDescripcion() == null || gasto.getDescripcion().trim().isEmpty()) {
       throw new DescripcionGastoVaciaException();
     }
@@ -46,9 +83,6 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     if (gasto.getFecha() == null) {
       gasto.setFecha(LocalDateTime.now());
     }
-
-    repositorioGasto.guardar(gasto);
-    return gasto;
   }
 
   @Override
@@ -105,7 +139,6 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
       }
       if (nuevaFechaVencimiento != null) {
         gasto.setFechaVencimiento(nuevaFechaVencimiento);
-        // Si actualizamos la fecha al nuevo mes, podemos volver a ponerlo como pendiente de pago
         gasto.setPagado(false);
         gasto.setUsuarioPagador(null);
       }
@@ -135,36 +168,6 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   @Override
   public List<Gasto> obtenerVencimientosVencidos(LocalDateTime hoy, Long hogarId) {
     return repositorioGasto.obtenerPendientesVencidosAntesDe(hoy, hogarId);
-  }
-
-  @Override
-  public Gasto registrarGastoConParticipantes(
-    Gasto gasto,
-    Long hogarId,
-    List<Long> participantesIds
-  ) {
-    Hogar hogar = repositorioHogar.buscarPorId(hogarId);
-    gasto.setHogar(hogar);
-
-    validarGasto(gasto);
-    asignarParticipantes(gasto, hogarId, participantesIds);
-
-    repositorioGasto.guardar(gasto);
-    return gasto;
-  }
-
-  private void validarGasto(Gasto gasto) {
-    if (gasto.getDescripcion() == null || gasto.getDescripcion().trim().isEmpty()) {
-      throw new DescripcionGastoVaciaException();
-    }
-
-    if (gasto.getMonto() == null || gasto.getMonto() <= 0) {
-      throw new MontoGastoInvalidoException();
-    }
-
-    if (gasto.getFecha() == null) {
-      gasto.setFecha(LocalDateTime.now());
-    }
   }
 
   private void asignarParticipantes(Gasto gasto, Long hogarId, List<Long> participantesIds) {

@@ -44,7 +44,6 @@ public class ControladorLiquidacion {
   public ModelAndView irALiquidacion(HttpSession session, RedirectAttributes redirectAttributes) {
     Map<String, Object> modelo = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
 
     if (hogarId == null) {
@@ -54,11 +53,6 @@ public class ControladorLiquidacion {
       );
       return new ModelAndView("redirect:/dashboard");
     }
-
-    String nombreUser = (usuarioActual != null && usuarioActual.getNombre() != null)
-      ? usuarioActual.getNombre()
-      : "Usuario";
-    modelo.put("usuarioLogueado", nombreUser);
 
     List<Hogar> listaHogares = servicioHogar.obtenerHogares(usuarioId);
     modelo.put("listaHogares", listaHogares);

@@ -153,7 +153,7 @@ public class ServicioRegistroGastoTest {
 
     String sugerencia = servicioRegistroGasto.obtenerSugerenciaProximoPagador(HOGAR_ID);
 
-    assertThat(sugerencia, equalToIgnoringCase("ezequiel"));
+    assertThat(sugerencia, equalToIgnoringCase("macarena"));
   }
 
   @Test

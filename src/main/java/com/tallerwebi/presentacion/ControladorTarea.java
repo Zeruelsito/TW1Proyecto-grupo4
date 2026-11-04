@@ -82,7 +82,6 @@ public class ControladorTarea {
   ) {
     Map<String, Object> model = new HashMap<>();
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
     if (hogarId == null) {
       redirectAttributes.addFlashAttribute(
@@ -91,11 +90,6 @@ public class ControladorTarea {
       );
       return new ModelAndView(REDIRECT_TAREAS);
     }
-
-    model.put(
-      "nombreUsuario",
-      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
-    );
 
     cargarDatosDashboardTareas(model, usuarioId, hogarId);
     model.put(ATRIBUTO_NUEVA_TAREA, new Tarea());

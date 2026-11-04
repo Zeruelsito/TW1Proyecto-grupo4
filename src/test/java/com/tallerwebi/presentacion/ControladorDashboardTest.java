@@ -66,7 +66,6 @@ public class ControladorDashboardTest {
       .perform(get("/dashboard").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("dashboard"))
-      .andExpect(model().attributeExists("nombreUsuario"))
       .andExpect(model().attributeExists("hogaresUsuario"));
   }
 

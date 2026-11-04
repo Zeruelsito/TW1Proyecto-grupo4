@@ -19,7 +19,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class ControladorVotacion {
 
   private final ServicioVotacion servicioVotacion;
-  private final ServicioUsuario servicioUsuario;
   private final HttpSession session;
 
   public ControladorVotacion(
@@ -28,7 +27,6 @@ public class ControladorVotacion {
     HttpSession session
   ) {
     this.servicioVotacion = servicioVotacion;
-    this.servicioUsuario = servicioUsuario;
     this.session = session;
   }
 
@@ -103,13 +101,6 @@ public class ControladorVotacion {
 
   private ModelAndView armarVista(DatosPropuesta datos, String mensajeError) {
     ModelAndView mav = new ModelAndView("propuestas");
-    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(idUsuario);
-    mav.addObject(
-      "nombreUsuario",
-      usuarioActual.getNombre() != null ? usuarioActual.getNombre() : "Usuario"
-    );
-
     mav.addObject("listaPropuestas", servicioVotacion.obtenerTodasLasPropuestas());
     mav.addObject("datosPropuesta", datos);
     if (mensajeError != null) {

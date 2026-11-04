@@ -85,7 +85,6 @@ public class ControladorTareaTest {
       .perform(get("/tareas").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
       .andExpect(status().isOk())
       .andExpect(view().name("tareas"))
-      .andExpect(model().attributeExists("nombreUsuario"))
       .andExpect(model().attributeExists("tareas"))
       .andExpect(model().attributeExists("creditoAcumulado"))
       .andExpect(model().attributeExists("precioHoraHogar"))
