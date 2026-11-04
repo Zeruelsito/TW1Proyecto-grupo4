@@ -106,6 +106,35 @@ public class ControladorTareaRepetitivaTest {
     thenElModeloContieneLasTareasYLosIntegrantes(mav);
   }
 
+  /* 
+  @Test
+  public void dadaUnaTareaExistenteCuandoLaQuitoEntoncesLlamaAlServicioYRedirigeATareasRepetitivas() {
+    // no hay nada que preparar: el servicio es un mock
+
+ 
+    ModelAndView mav = controladorTareaRepetitiva.quitarTarea(1L, sessionMock);
+
+
+    verify(servicioTareaRepetitiva).quitarPlantilla(1L, HOGAR_ID, 1L);
+    assertThat(mav.getViewName(), equalTo("redirect:/tareas-repetitivas"));
+  }
+
+  @Test
+  public void dadaUnaTareaInexistenteCuandoLaQuitoEntoncesMuestraUnMensajeDeError() {
+    givenExistenIntegrantes();
+    doThrow(new TareaNoEncontradaException())
+      .when(servicioTareaRepetitiva)
+      .quitarPlantilla(99L, HOGAR_ID, 1L);
+
+   
+    ModelAndView mav = controladorTareaRepetitiva.quitarTarea(99L, sessionMock);
+
+
+    thenLaVistaEs("tareas-repetitivas", mav);
+    thenElMensajeDeErrorEs("La tarea seleccionada no existe.", mav);
+    thenElModeloContieneLasTareasYLosIntegrantes(mav);
+  } */
+
   private void givenElHogarNoTieneIntegrantes(Long tareaId) {
     List<Usuario> integrantes = new ArrayList<>();
     when(servicioRegistroGasto.obtenerIntegrantes(anyLong())).thenReturn(integrantes);

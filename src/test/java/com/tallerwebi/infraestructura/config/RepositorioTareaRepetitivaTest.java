@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import com.tallerwebi.dominio.AlcanceTarea;
 import com.tallerwebi.dominio.FrecuenciaTarea;
 import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.RepositorioTareaRepetitiva;
@@ -172,6 +173,30 @@ public class RepositorioTareaRepetitivaTest {
     assertThat(obtenidas.size(), equalTo(2));
     assertThat(obtenidas.get(0), equalTo(compra));
     assertThat(obtenidas.get(1), equalTo(sube));
+  }
+
+  @Test
+  public void deberiaConsiderarDelHogarUnaTareaSinAlcance() {
+    TareaRepetitiva tarea = crearTareaRepetitiva("compra semanal");
+
+    AlcanceTarea alcance = tarea.getAlcance();
+
+    assertThat(alcance, equalTo(AlcanceTarea.HOGAR));
+  }
+
+  @Test
+  public void deberiaSerVisibleSoloParaSuPropietarioUnaTareaPersonal() {
+    Usuario propietario = new Usuario();
+    propietario.setId(11L);
+    TareaRepetitiva tarea = crearTareaRepetitiva("lavar mi ropa");
+    tarea.setAlcance(AlcanceTarea.PERSONAL);
+    tarea.setPropietario(propietario);
+
+    boolean visibleParaElPropietario = tarea.esVisiblePara(11L);
+    boolean visibleParaOtro = tarea.esVisiblePara(12L);
+
+    assertThat(visibleParaElPropietario, equalTo(true));
+    assertThat(visibleParaOtro, equalTo(false));
   }
 
   private Hogar givenTengoUnHogar(String nombre, Double precioHora) {
