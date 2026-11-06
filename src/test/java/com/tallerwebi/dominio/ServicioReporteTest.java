@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import jakarta.servlet.http.HttpSession;
@@ -16,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 public class ServicioReporteTest {
 
@@ -50,7 +50,7 @@ public class ServicioReporteTest {
   }
 
   @Test
-  public void dadoUnMesКогдаGenerarReporteEntoncesRetornaReporteMensualConDatosCorrectos() {
+  public void dadoUnMesCuandoGenerarReporteEntoncesRetornaReporteMensualConDatosCorrectos() {
     // Given
     Hogar hogarMock = givenUnHogar();
     List<Usuario> integrantesMock = givenIntegrantesDelHogar();
@@ -62,10 +62,8 @@ public class ServicioReporteTest {
     when(servicioRegistroGasto.obtenerIntegrantes(HOGAR_ID)).thenReturn(integrantesMock);
     when(servicioRegistroGasto.obtenerTodosLosGastos(HOGAR_ID)).thenReturn(gastosMock);
     when(servicioCreditoTarea.obtenerTodasLasTareas()).thenReturn(tareasMock);
-    when(servicioHogar.obtenerHogar()).thenReturn(hogarMock);
-    when(servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(500.0);
-    when(servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(2L)).thenReturn(1000.0);
-    when(servicioLiquidacion.obtenerLiquidacionDelMes(eq(hogarMock), anyList()))
+    when(servicioHogar.seleccionarHogarPorId(HOGAR_ID)).thenReturn(hogarMock);
+    when(servicioLiquidacion.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
       .thenReturn(transferenciasMock);
 
     // When
@@ -76,7 +74,7 @@ public class ServicioReporteTest {
   }
 
   @Test
-  public void dadoQueNoHayHogarEnSesionКогдаGenerarReporteEntoncesObtieneHogarDeServicio() {
+  public void dadoQueNoHayHogarEnSesionCuandoGenerarReporteEntoncesObtieneHogarDeServicio() {
     // Given
     Hogar hogarMock = givenUnHogar();
     List<Usuario> integrantesMock = givenIntegrantesDelHogar();
@@ -86,7 +84,6 @@ public class ServicioReporteTest {
     when(servicioRegistroGasto.obtenerIntegrantes(HOGAR_ID)).thenReturn(integrantesMock);
     when(servicioRegistroGasto.obtenerTodosLosGastos(HOGAR_ID)).thenReturn(Collections.emptyList());
     when(servicioCreditoTarea.obtenerTodasLasTareas()).thenReturn(Collections.emptyList());
-    when(servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
     when(servicioLiquidacion.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
       .thenReturn(Collections.emptyList());
 
@@ -98,8 +95,90 @@ public class ServicioReporteTest {
     verify(servicioHogar, atLeastOnce()).obtenerHogar();
   }
 
+  // --- Punto 1: las tareas se filtran por hogar ---
   @Test
-  public void dadoUnReporteMensualКогдаExportarCsvEntoncesRetornaStringConFormatoCsv() {
+  public void dadoTareasDeOtroHogarCuandoGenerarReporteEntoncesNoAparecenEnElReporte() {
+    // Given
+    List<Usuario> integrantes = givenIntegrantesDelHogar();
+    Usuario maria = integrantes.get(0);
+
+    Usuario ajeno = new Usuario("Pedro", "pedro@otrohogar.com", "1234");
+    ajeno.setId(99L);
+
+    Tarea tareaDelHogar = givenTarea("Limpiar cocina", maria, EstadoTarea.COMPLETADA, 500.0);
+    Tarea tareaDeOtroHogar = givenTarea("Cortar pasto", ajeno, EstadoTarea.COMPLETADA, 800.0);
+
+    givenUnHogarConIntegrantesYTareas(integrantes, List.of(tareaDelHogar, tareaDeOtroHogar));
+
+    // When
+    ReporteMensual reporte = whenGenerarReporte(mesTest);
+
+    // Then
+    assertThat(reporte.getTareas(), hasSize(1));
+    assertThat(reporte.getTareas().get(0).getTitulo(), equalTo("Limpiar cocina"));
+  }
+
+  // --- Punto 2: la liquidación usa el hogar real, sin modificarlo ---
+  @Test
+  public void dadoUnHogarRealCuandoGenerarReporteEntoncesLaLiquidacionUsaSusParametros() {
+    // Given
+    List<Usuario> integrantes = givenIntegrantesDelHogar();
+    Hogar hogarReal = givenUnHogar();
+    hogarReal.setPrecioHoraTarea(7000.0);
+    hogarReal.setPisoMinimoHogar(60000.0);
+
+    givenUnHogarConIntegrantesYTareas(integrantes, Collections.emptyList());
+    when(servicioHogar.seleccionarHogarPorId(HOGAR_ID)).thenReturn(hogarReal);
+
+    // When
+    whenGenerarReporte(mesTest);
+
+    // Then
+    ArgumentCaptor<Hogar> captor = ArgumentCaptor.forClass(Hogar.class);
+    verify(servicioLiquidacion).obtenerLiquidacionDelMes(captor.capture(), anyList());
+    Hogar usado = captor.getValue();
+
+    assertThat(usado.getId(), equalTo(HOGAR_ID));
+    assertThat(usado.getPrecioHoraTarea(), equalTo(7000.0));
+    assertThat(usado.getPisoMinimoHogar(), equalTo(60000.0));
+    assertThat(usado.getIntegrantes(), hasSize(2));
+    // No se toca el hogar real ni el hogar en memoria del servicio
+    assertThat(usado, not(sameInstance(hogarReal)));
+    assertThat(hogarReal.getIntegrantes(), empty());
+    verify(servicioHogar, never()).obtenerHogar();
+  }
+
+  // --- Punto 3: el crédito del balance es solo del mes ---
+  @Test
+  public void dadoTareasRealizadasEnElMesCuandoGenerarReporteEntoncesElCreditoEsSoloDelMes() {
+    // Given
+    List<Usuario> integrantes = givenIntegrantesDelHogar();
+    Usuario maria = integrantes.get(0);
+
+    Tarea completada = givenTarea("Limpiar cocina", maria, EstadoTarea.COMPLETADA, 500.0);
+    Tarea liquidada = givenTarea("Lavar ropa", maria, EstadoTarea.LIQUIDADA, 300.0);
+    Tarea pendiente = givenTarea("Ordenar", maria, EstadoTarea.PENDIENTE, 1000.0);
+    Tarea deOtroMes = givenTarea("Pintar", maria, EstadoTarea.COMPLETADA, 2000.0);
+    deOtroMes.setFechaRegistro(LocalDateTime.of(2026, 9, 10, 10, 0));
+
+    givenUnHogarConIntegrantesYTareas(
+      integrantes,
+      List.of(completada, liquidada, pendiente, deOtroMes)
+    );
+
+    // When
+    ReporteMensual reporte = whenGenerarReporte(mesTest);
+
+    // Then
+    FilaBalance balanceMaria = reporte.getBalances().get(0);
+    FilaBalance balanceJuan = reporte.getBalances().get(1);
+    assertThat(balanceMaria.getCreditoTareas(), equalTo(800.0));
+    assertThat(balanceJuan.getCreditoTareas(), equalTo(0.0));
+    verify(servicioCreditoTarea, never()).obtenerCreditoAcumuladoPorUsuario(anyLong());
+  }
+
+  @Test
+  public void dadoUnReporteMensualCuandoExportarCsvEntoncesRetornaStringConFormatoCsv() {
     // Given
     ReporteMensual reporteMock = givenUnReporteMensualMock();
 
@@ -145,6 +224,24 @@ public class ServicioReporteTest {
     Tarea tarea = new Tarea("Limpiar cocina", 2.0, 500.0, u1);
     tarea.setFechaRegistro(LocalDateTime.of(2026, 10, 16, 11, 0));
     return List.of(tarea);
+  }
+
+  private Tarea givenTarea(String titulo, Usuario realizador, EstadoTarea estado, Double credito) {
+    Tarea tarea = new Tarea(titulo);
+    tarea.setUsuarioRealizador(realizador);
+    tarea.setEstado(estado);
+    tarea.setValorCredito(credito);
+    tarea.setFechaRegistro(LocalDateTime.of(2026, 10, 20, 9, 0));
+    return tarea;
+  }
+
+  private void givenUnHogarConIntegrantesYTareas(List<Usuario> integrantes, List<Tarea> tareas) {
+    when(session.getAttribute("HOGAR_ID")).thenReturn(HOGAR_ID);
+    when(servicioRegistroGasto.obtenerIntegrantes(HOGAR_ID)).thenReturn(integrantes);
+    when(servicioRegistroGasto.obtenerTodosLosGastos(HOGAR_ID)).thenReturn(Collections.emptyList());
+    when(servicioCreditoTarea.obtenerTodasLasTareas()).thenReturn(tareas);
+    when(servicioLiquidacion.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
+      .thenReturn(Collections.emptyList());
   }
 
   private List<TransferenciaSugerida> givenTransferenciasSugeridas() {
