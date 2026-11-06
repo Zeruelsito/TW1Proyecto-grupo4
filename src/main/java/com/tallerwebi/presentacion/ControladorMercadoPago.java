@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -99,21 +100,17 @@ public class ControladorMercadoPago {
 
   // 1.b Endpoint para pagar con Mercado Pago la liquidación final de una baja
   @PostMapping("/pago/baja")
-  public ModelAndView pagoBaja(
-    @RequestParam("usuarioId") Long usuarioId,
-    @RequestParam("emisor") String emisorNombre,
-    @RequestParam("receptor") String receptorNombre,
-    @RequestParam("monto") Double monto
-  ) {
+  public ModelAndView pagoBaja(@ModelAttribute("datosPagoBaja") DatosPagoBaja datos) {
+    Long usuarioId = datos.getUsuarioId();
+
     try {
       Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
-      Usuario emisor = buscarUsuarioEnCasa(casa, emisorNombre);
-      Usuario receptor = buscarUsuarioEnCasa(casa, receptorNombre);
+      Usuario emisor = buscarUsuarioEnCasa(casa, datos.getEmisor());
+      Usuario receptor = buscarUsuarioEnCasa(casa, datos.getReceptor());
 
       SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(usuarioId);
 
-      // Ahora le pasamos los objetos Usuario reales al método
-      if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
+      if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, datos.getMonto())) {
         return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
       }
     } catch (RuntimeException e) {
@@ -121,7 +118,7 @@ public class ControladorMercadoPago {
       return new ModelAndView(REDIRECT_SIMULAR_BAJA + usuarioId);
     }
 
-    ModelAndView mav = pago(emisorNombre, receptorNombre, monto);
+    ModelAndView mav = pago(datos.getEmisor(), datos.getReceptor(), datos.getMonto());
     session.setAttribute(BAJA_USUARIO_SESSION_KEY, usuarioId);
     return mav;
   }
