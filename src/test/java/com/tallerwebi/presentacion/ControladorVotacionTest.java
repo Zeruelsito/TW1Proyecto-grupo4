@@ -1,168 +1,90 @@
 package com.tallerwebi.presentacion;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.tallerwebi.dominio.Propuesta;
-import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.ServicioVotacion;
-import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-import jakarta.servlet.http.HttpSession;
-import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.servlet.view.InternalResourceViewResolver;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 public class ControladorVotacionTest {
 
-  private MockMvc mockMvc;
+  private static final Long USUARIO_ID = 1L;
+  private static final Long HOGAR_ID = 7L;
+
   private ServicioVotacion servicioVotacionMock;
-  private ServicioUsuario servicioUsuarioMock;
-  private HttpSession sessionMock;
-  private ControladorVotacion controladorVotacion;
+  private ControladorVotacion controlador;
+  private MockHttpSession session;
+  private RedirectAttributesModelMap redirectAttributes;
 
   @BeforeEach
-  public void setUp() {
+  public void init() {
     servicioVotacionMock = mock(ServicioVotacion.class);
-    servicioUsuarioMock = mock(ServicioUsuario.class);
-    sessionMock = mock(HttpSession.class);
+    controlador = new ControladorVotacion(servicioVotacionMock);
+    redirectAttributes = new RedirectAttributesModelMap();
 
-    controladorVotacion =
-      new ControladorVotacion(servicioVotacionMock, servicioUsuarioMock, sessionMock);
-
-    InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-    viewResolver.setPrefix("/WEB-INF/views/");
-    viewResolver.setSuffix(".jsp");
-
-    mockMvc =
-      MockMvcBuilders.standaloneSetup(controladorVotacion).setViewResolvers(viewResolver).build();
+    session = new MockHttpSession();
+    session.setAttribute("USUARIO_ID", USUARIO_ID);
+    session.setAttribute("HOGAR_ID", HOGAR_ID);
   }
 
   @Test
-  public void queRedirijaAlDashboardSiNoHayUsuarioLogueadoEnIrAPropuestas() throws Exception {
-    mockMvc
-      .perform(get("/propuestas"))
-      .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/dashboard"));
+  public void deberiaMostrarLasPropuestasDelHogarDelUsuario() {
+    ModelAndView mav = controlador.irAPropuestas(session, redirectAttributes);
+
+    assertThat(mav.getViewName(), equalTo("propuestas"));
+    verify(servicioVotacionMock).obtenerPropuestasDelHogar(HOGAR_ID);
   }
 
   @Test
-  public void queMuestreLaVistaDePropuestasSiElUsuarioEstaLogueado() throws Exception {
-    Usuario usuario = new Usuario();
-    usuario.setNombre("Juan");
+  public void deberiaGuardarLaPropuestaConElHogarYElCreadorDeLaSesion() {
+    controlador.guardarPropuesta(new DatosPropuesta(), session, redirectAttributes);
 
-    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
-    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
-    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
-    when(servicioVotacionMock.obtenerTodasLasPropuestas()).thenReturn(Collections.emptyList());
-
-    mockMvc
-      .perform(get("/propuestas").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
-      .andExpect(status().isOk())
-      .andExpect(view().name("propuestas"))
-      .andExpect(model().attributeExists("listaPropuestas"));
+    ArgumentCaptor<Propuesta> captor = ArgumentCaptor.forClass(Propuesta.class);
+    verify(servicioVotacionMock).guardarPropuesta(captor.capture());
+    assertThat(captor.getValue().getHogarId(), equalTo(HOGAR_ID));
+    assertThat(captor.getValue().getIdUsuarioCreador(), equalTo(USUARIO_ID));
   }
 
   @Test
-  public void queGuardePropuestaExitosamenteYRedirija() throws Exception {
-    doNothing().when(servicioVotacionMock).guardarPropuesta(any(Propuesta.class));
-
-    mockMvc
-      .perform(
-        post("/propuestas/guardar")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-          .param("titulo", "Nueva Propuesta")
-          .param("descripcion", "Descripcion de prueba")
-          .param("porcentajeQuorum", "50.0")
-      )
-      .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/propuestas"));
-
-    verify(servicioVotacionMock, times(1)).guardarPropuesta(any(Propuesta.class));
-  }
-
-  @Test
-  public void queManejeExcepcionPropuestaNoExisteAlGuardar() throws Exception {
-    Usuario usuario = new Usuario();
-    usuario.setNombre("Admin");
-
-    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
-    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
-    when(servicioVotacionMock.obtenerTodasLasPropuestas()).thenReturn(Collections.emptyList());
-
-    doThrow(new PropuestaNoExiste("La propuesta no existe"))
+  public void siLaPropuestaEsInvalidaDeberiaMostrarElError() {
+    doThrow(new PropuestaNoExiste("Error"))
       .when(servicioVotacionMock)
       .guardarPropuesta(any(Propuesta.class));
 
-    mockMvc
-      .perform(
-        post("/propuestas/guardar")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-          .param("titulo", "Invalida")
-      )
-      .andExpect(status().isOk())
-      .andExpect(view().name("propuestas"))
-      .andExpect(model().attributeExists("mensajeError"));
+    ModelAndView mav = controlador.guardarPropuesta(
+      new DatosPropuesta(),
+      session,
+      redirectAttributes
+    );
+
+    assertThat(mav.getModel().get("mensajeError"), equalTo("Error"));
   }
 
   @Test
-  public void quePermitaVotarExitosamente() throws Exception {
-    doNothing().when(servicioVotacionMock).votar(1L, 10L, true, "Excelente");
+  public void deberiaVotarConElUsuarioYElHogarDeLaSesion() {
+    controlador.votar(10L, true, "Dale", session, redirectAttributes);
 
-    mockMvc
-      .perform(
-        post("/propuestas/10/votar")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-          .param("esAfirmativo", "true")
-          .param("comentario", "Excelente")
-      )
-      .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/propuestas"));
-
-    verify(servicioVotacionMock).votar(1L, 10L, true, "Excelente");
+    verify(servicioVotacionMock).votar(USUARIO_ID, HOGAR_ID, 10L, true, "Dale");
   }
 
   @Test
-  public void queRedirijaAlLoginSiIntentaVotarSinSesion() throws Exception {
-    mockMvc
-      .perform(post("/propuestas/10/votar").param("esAfirmativo", "true"))
-      .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/login"));
-  }
-
-  @Test
-  public void queManejeExcepcionUsuarioYaVotoAlIntentarVotar() throws Exception {
-    Usuario usuario = new Usuario();
-    usuario.setNombre("Pedro");
-
-    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
-    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
-    when(servicioVotacionMock.obtenerTodasLasPropuestas()).thenReturn(Collections.emptyList());
-
-    doThrow(new UsuarioYaVoto("El usuario ya ha votado"))
+  public void siElVotoFallaDeberiaPasarElMensajeDeError() {
+    doThrow(new UsuarioYaVoto("Ya votaste"))
       .when(servicioVotacionMock)
-      .votar(eq(1L), eq(10L), eq(true), any());
+      .votar(USUARIO_ID, HOGAR_ID, 10L, true, null);
 
-    mockMvc
-      .perform(
-        post("/propuestas/10/votar")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-          .param("esAfirmativo", "true")
-      )
-      .andExpect(status().isOk())
-      .andExpect(view().name("propuestas"))
-      .andExpect(model().attribute("mensajeError", "El usuario ya ha votado"));
+    controlador.votar(10L, true, null, session, redirectAttributes);
+
+    assertThat(redirectAttributes.getFlashAttributes().get("mensajeError"), equalTo("Ya votaste"));
   }
 }
