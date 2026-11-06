@@ -1,14 +1,17 @@
 package com.tallerwebi.dominio;
 
+import com.tallerwebi.dominio.excepcion.HogarNoEncontradoException;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,7 +46,6 @@ public class ServicioReporteImpl implements ServicioReporte {
     this.session = session;
   }
 
-  // Método auxiliar para obtener el hogarId actual de la sesión
   private Long obtenerHogarIdActual() {
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
     if (hogarId == null) {
@@ -61,22 +63,47 @@ public class ServicioReporteImpl implements ServicioReporte {
 
     List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes(hogarId);
     List<Gasto> gastos = filtrarGastosDelMes(mes, hogarId);
-    List<Tarea> tareas = filtrarTareasDelMes(mes);
+    List<Tarea> tareas = filtrarTareasDelMes(mes, integrantes);
 
-    Hogar hogar = servicioHogar.obtenerHogar();
-    if (hogar == null) {
-      hogar = new Hogar("Hogar Compartido");
-    }
-    hogar.setIntegrantes(integrantes);
+    Hogar hogar = armarHogarParaLiquidacion(hogarId, integrantes);
 
     return new ReporteMensual(
       mes,
       gastos,
       tareas,
-      armarBalances(integrantes, gastos),
+      armarBalances(integrantes, gastos, tareas),
       servicioLiquidacion.obtenerLiquidacionDelMes(hogar, gastos),
       indexarNombres(integrantes)
     );
+  }
+
+  private Hogar armarHogarParaLiquidacion(Long hogarId, List<Usuario> integrantes) {
+    Hogar hogarReal = buscarHogarReal(hogarId);
+
+    Hogar copia;
+    if (hogarReal != null) {
+      copia = new Hogar(hogarReal.getNombreHogar());
+      if (hogarReal.getId() != null) {
+        copia.setId(hogarReal.getId());
+      }
+      copia.setPrecioHoraTarea(hogarReal.getPrecioHoraTarea());
+      copia.setPisoMinimoHogar(hogarReal.getPisoMinimoHogar());
+    } else {
+      copia = new Hogar("Hogar Compartido");
+    }
+    copia.setIntegrantes(new ArrayList<>(integrantes));
+    return copia;
+  }
+
+  private Hogar buscarHogarReal(Long hogarId) {
+    if (hogarId == null) {
+      return null;
+    }
+    try {
+      return servicioHogar.seleccionarHogarPorId(hogarId);
+    } catch (HogarNoEncontradoException e) {
+      return null;
+    }
   }
 
   private List<Gasto> filtrarGastosDelMes(YearMonth mes, Long hogarId) {
@@ -89,10 +116,18 @@ public class ServicioReporteImpl implements ServicioReporte {
     return delMes;
   }
 
-  private List<Tarea> filtrarTareasDelMes(YearMonth mes) {
+  private List<Tarea> filtrarTareasDelMes(YearMonth mes, List<Usuario> integrantes) {
+    Set<Long> idsIntegrantes = new HashSet<>();
+    for (Usuario integrante : integrantes) {
+      if (integrante.getId() != null) {
+        idsIntegrantes.add(integrante.getId());
+      }
+    }
+
     List<Tarea> delMes = new ArrayList<>();
     for (Tarea tarea : servicioCreditoTarea.obtenerTodasLasTareas()) {
-      if (esDelMes(tarea.getFechaRegistro(), mes)) {
+      boolean esDelHogar = idsIntegrantes.contains(tarea.getUsuarioRealizadorId());
+      if (esDelHogar && esDelMes(tarea.getFechaRegistro(), mes)) {
         delMes.add(tarea);
       }
     }
@@ -104,7 +139,11 @@ public class ServicioReporteImpl implements ServicioReporte {
     return delElemento.equals(mes);
   }
 
-  private List<FilaBalance> armarBalances(List<Usuario> integrantes, List<Gasto> gastos) {
+  private List<FilaBalance> armarBalances(
+    List<Usuario> integrantes,
+    List<Gasto> gastos,
+    List<Tarea> tareasDelMes
+  ) {
     List<FilaBalance> filas = new ArrayList<>();
     if (integrantes.isEmpty()) {
       return filas;
@@ -115,12 +154,27 @@ public class ServicioReporteImpl implements ServicioReporte {
         new FilaBalance(
           nombreDe(integrante),
           pagadoPor(integrante, gastos),
-          servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(integrante.getId()),
+          creditoDelMes(integrante, tareasDelMes),
           cuota
         )
       );
     }
     return filas;
+  }
+
+  private double creditoDelMes(Usuario integrante, List<Tarea> tareasDelMes) {
+    double credito = 0;
+    for (Tarea tarea : tareasDelMes) {
+      boolean esDelIntegrante =
+        integrante.getId() != null && integrante.getId().equals(tarea.getUsuarioRealizadorId());
+      boolean realizada =
+        EstadoTarea.COMPLETADA.equals(tarea.getEstado()) ||
+        EstadoTarea.LIQUIDADA.equals(tarea.getEstado());
+      if (esDelIntegrante && realizada && tarea.getValorCredito() != null) {
+        credito += tarea.getValorCredito();
+      }
+    }
+    return credito;
   }
 
   private double totalDe(List<Gasto> gastos) {
