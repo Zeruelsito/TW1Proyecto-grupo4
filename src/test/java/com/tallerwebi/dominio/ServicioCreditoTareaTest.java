@@ -23,6 +23,10 @@ public class ServicioCreditoTareaTest {
   private ServicioCreditoTarea servicioCreditoTarea;
   private RepositorioTareaRepetitiva repositorioTareaRepetitivaMock;
 
+  ServicioCalculosGasto servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
+  ServicioLiquidacion servicioLiquidacionMock = mock(ServicioLiquidacion.class);
+  ServicioRegistroGasto servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
+
   private List<Tarea> tareasEnMemoria;
 
   @BeforeEach
@@ -34,7 +38,10 @@ public class ServicioCreditoTareaTest {
       new ServicioCreditoTareaImpl(
         repositorioTareaMock,
         repositorioUsuarioMock,
-        repositorioTareaRepetitivaMock
+        repositorioTareaRepetitivaMock,
+        servicioCalculosGastoMock,
+        servicioLiquidacionMock,
+        servicioRegistroGastoMock
       );
 
     tareasEnMemoria = new ArrayList<>();

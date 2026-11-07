@@ -1,6 +1,7 @@
 package com.tallerwebi.dominio;
 
 import java.util.List;
+import java.util.Map;
 
 public interface ServicioCreditoTarea {
   void registrarTarea(Tarea tarea);
@@ -18,4 +19,12 @@ public interface ServicioCreditoTarea {
   void liquidarCreditosDeUsuario(Long usuarioId);
   Double obtenerCreditoLiquidadoPorUsuario(Long usuarioId);
   void liquidarCreditosParciales(Long usuarioId, double montoMaximo);
+
+  Map<String, Double> calcularMetricasBrechaUsuario(
+    Usuario usuario,
+    Hogar hogar,
+    List<Gasto> gastos,
+    Double precioHora
+  );
+  void procesarLiquidacionCreditos(Long usuarioId, Long hogarId, List<Gasto> gastos, Hogar hogar);
 }
