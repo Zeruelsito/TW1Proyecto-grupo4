@@ -137,7 +137,7 @@ public class ControladorMercadoPagoTest {
     when(sessionMock.getAttribute("receptorPago")).thenReturn("Juan");
 
     // When
-    ModelAndView mav = controladorMercadoPago.pagoExitoso("12345", "approved");
+    ModelAndView mav = controladorMercadoPago.pagoExitoso("approved");
 
     // Then
     assertThat(mav, notNullValue());
@@ -196,34 +196,34 @@ public class ControladorMercadoPagoTest {
     assertThat(mav.getViewName(), is("redirect:/liquidacion"));
     verify(servicioPagoPendienteMock, times(1)).eliminarPorId(pendienteId);
   }
+
   @Test
   public void pagoBajaValidoDeberiaIrAMercadoPagoYGuardarLaBajaEnSesion() throws Exception {
     dadoQueLaBajaTieneLaTransferencia(true);
     Preference preferenceMock = Mockito.mock(Preference.class);
     when(preferenceMock.getSandboxInitPoint()).thenReturn("https://sandbox.mp/checkout");
     when(servicioMercadoPagoMock.crearUrl(anyString(), any())).thenReturn(preferenceMock);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoBaja(
       new DatosPagoBaja(5L, "Carlos", "Juan", 1500.0)
     );
- 
+
     assertThat(mav.getViewName(), is("redirect:https://sandbox.mp/checkout"));
     verify(sessionMock).setAttribute("bajaUsuarioIdPago", 5L);
   }
- 
+
   @Test
-  public void pagoBajaConTransferenciaQueNoCorrespondeNoDeberiaIrAMercadoPago()
-    throws Exception {
+  public void pagoBajaConTransferenciaQueNoCorrespondeNoDeberiaIrAMercadoPago() throws Exception {
     dadoQueLaBajaTieneLaTransferencia(false);
- 
+
     ModelAndView mav = controladorMercadoPago.pagoBaja(
       new DatosPagoBaja(5L, "Carlos", "Juan", 1500.0)
     );
- 
+
     assertThat(mav.getViewName(), is("redirect:/hogar/baja/simular?usuarioId=5"));
     verify(servicioMercadoPagoMock, never()).crearUrl(anyString(), any());
   }
- 
+
   @Test
   public void pagoBajaAprobadoDeberiaRegistrarElPago() {
     when(sessionMock.getAttribute("bajaUsuarioIdPago")).thenReturn(5L);
@@ -231,12 +231,12 @@ public class ControladorMercadoPagoTest {
     when(sessionMock.getAttribute("emisorPago")).thenReturn("Carlos");
     when(sessionMock.getAttribute("receptorPago")).thenReturn("Juan");
     when(sessionMock.getAttribute("montoPago")).thenReturn(1500.0);
- 
-    controladorMercadoPago.pagoExitoso("123", "approved");
- 
+
+    controladorMercadoPago.pagoExitoso("approved");
+
     verify(servicioBajaIntegranteMock).registrarPago(5L, emisorTest, receptorTest, 1500.0);
   }
- 
+
   private void dadoQueLaBajaTieneLaTransferencia(boolean laTiene) {
     SimulacionBaja simulacionMock = Mockito.mock(SimulacionBaja.class);
     when(simulacionMock.tieneTransferenciaPendiente(emisorTest, receptorTest, 1500.0))

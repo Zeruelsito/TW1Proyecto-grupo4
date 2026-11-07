@@ -37,6 +37,7 @@ public class ControladorMercadoPago {
 
   private static final String BAJA_USUARIO_SESSION_KEY = "bajaUsuarioIdPago";
   private static final String REDIRECT_SIMULAR_BAJA = "redirect:/hogar/baja/simular?usuarioId=";
+  private static final String REDIRECT_LIQUIDACION = "redirect:/liquidacion";
 
   // Constantes de sesión para los pagos (Soluciona el aviso de AvoidDuplicateLiterals)
   private static final String SESSION_EMISOR_PAGO = "emisorPago";
@@ -85,16 +86,14 @@ public class ControladorMercadoPago {
           : "Sin contenido de respuesta";
         logger.error("Error de API de Mercado Pago: {}", errorContent, e);
       }
-      Map<String, Object> modelo = new HashMap<>();
-      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
-      return new ModelAndView("errorControladorMP", modelo);
+      // Redirigimos a liquidación con el mensaje de error
+      return new ModelAndView(REDIRECT_LIQUIDACION + "?error=Error+al+conectar+con+Mercado+Pago");
     } catch (MPException e) {
       if (logger.isErrorEnabled()) {
         logger.error("Error general de Mercado Pago", e);
       }
-      Map<String, Object> modelo = new HashMap<>();
-      modelo.put("error", "Error al conectar con Mercado Pago: " + e.getMessage());
-      return new ModelAndView("errorControladorMP", modelo);
+      // Redirigimos a liquidación con el mensaje de error
+      return new ModelAndView(REDIRECT_LIQUIDACION + "?error=Error+al+conectar+con+Mercado+Pago");
     }
   }
 
@@ -124,10 +123,7 @@ public class ControladorMercadoPago {
   }
 
   @GetMapping("/pago/succesControladorMP")
-  public ModelAndView pagoExitoso(
-    @RequestParam(value = "collection_id", required = false) String collectionId,
-    @RequestParam(value = "status", required = false) String status
-  ) {
+  public ModelAndView pagoExitoso(@RequestParam(value = "status", required = false) String status) {
     Long bajaUsuarioId = (Long) session.getAttribute(BAJA_USUARIO_SESSION_KEY);
 
     if (bajaUsuarioId != null) {
@@ -135,7 +131,7 @@ public class ControladorMercadoPago {
     }
 
     procesarPagoHogarNormal();
-    return new ModelAndView("succesControladorMP");
+    return new ModelAndView(REDIRECT_LIQUIDACION + "?exito=El+pago+se+realizo+con+exito");
   }
 
   private ModelAndView procesarPagoBaja(Long bajaUsuarioId, String status) {
@@ -194,7 +190,9 @@ public class ControladorMercadoPago {
 
   @GetMapping("/pago/errorControladorMP")
   public ModelAndView errorControladorMP() {
-    return new ModelAndView("errorControladorMP");
+    return new ModelAndView(
+      REDIRECT_LIQUIDACION + "?error=El+pago+fue+rechazado+o+no+pudo+completarse"
+    );
   }
 
   @GetMapping("/pago/pending")
@@ -214,7 +212,7 @@ public class ControladorMercadoPago {
       }
     }
 
-    return new ModelAndView("redirect:/liquidacion");
+    return new ModelAndView(REDIRECT_LIQUIDACION);
   }
 
   @PostMapping("/pago/confirmar-manual")

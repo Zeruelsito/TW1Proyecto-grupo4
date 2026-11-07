@@ -202,11 +202,24 @@ public class ServicioCreditoTareaTest {
 
     when(servicioCalculosGastoMock.calcularCuotaMensualPorUsuario(any(), any(), any(), any()))
       .thenReturn(1000.0);
-    when(servicioCalculosGastoMock.calcularValorDeHorasDeTareaPorUsuario(any(), any(), any(), any(), any()))
+    when(
+      servicioCalculosGastoMock.calcularValorDeHorasDeTareaPorUsuario(
+        any(),
+        any(),
+        any(),
+        any(),
+        any()
+      )
+    )
       .thenReturn(1000.0);
 
-    var metricas = servicioCreditoTarea.calcularMetricasBrechaUsuario(usuario, hogar, gastos, 1000.0);
-    
+    var metricas = servicioCreditoTarea.calcularMetricasBrechaUsuario(
+      usuario,
+      hogar,
+      gastos,
+      1000.0
+    );
+
     assertThat(metricas.get("dineroRequeridoBrecha"), equalTo(1000.0));
   }
 
@@ -248,7 +261,7 @@ public class ServicioCreditoTareaTest {
 
     // Invocamos el procesamiento completo de liquidación
     servicioCreditoTarea.procesarLiquidacionCreditos(usuarioId, 1L, new ArrayList<>(), hogar);
-    
+
     // Verificamos que se haya aplicado la liquidación con el crédito generado
     assertThat(usuario.getCreditoLiquidado(), equalTo(1000.0));
   }

@@ -29,7 +29,6 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -41,6 +40,22 @@
 
         <!-- Main Content Area -->
         <div class="col-md-10 px-4">
+
+            <!-- Alerta de Error -->
+            <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show shadow-sm my-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Atencion:</strong> <span th:text="${param.error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Alerta de Éxito -->
+            <div th:if="${param.exito}" class="alert alert-success alert-dismissible fade show shadow-sm my-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong>Transaccion exitosa:</strong> <span th:text="${param.exito}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+
             <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
