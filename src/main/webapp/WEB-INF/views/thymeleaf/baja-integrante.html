@@ -150,7 +150,7 @@
                     <div th:unless="${simulacion.saldoPendiente}">
                     <div class="alert alert-warning small rounded-3">
                         <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        Lo de arriba es solo una simulación. El botón de abajo <strong>da de baja al integrante de verdad</strong>.
+                        Lo de arriba es solo una visualizacion de que pasaria si se da de baja al integrante. El botón de abajo <strong>da de baja al integrante de verdad</strong>.
                     </div>
                     <button type="button" class="btn btn-danger rounded-3 py-2 px-4"
                             data-bs-toggle="modal" data-bs-target="#modalConfirmarBaja">
@@ -170,7 +170,7 @@
                                 </div>
                                 <div class="modal-body">
                                     <p class="mb-2">
-                                        Vas a dar de baja <strong>en serio</strong> a
+                                        Vas a dar de baja <strong>permanentemente</strong> a
                                         <strong th:text="${simulacion.usuarioSaliente.nombre}">Juan</strong>.
                                     </p>
                                     <ul class="small text-muted mb-0">

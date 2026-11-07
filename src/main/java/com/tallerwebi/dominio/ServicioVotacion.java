@@ -2,6 +2,7 @@ package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
+import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,7 +15,6 @@ public class ServicioVotacion {
 
   private static final double PORCENTAJE_MINIMO = 1.0;
   private static final double PORCENTAJE_MAXIMO = 100.0;
-  private static final long VOTOS_MINIMOS = 1;
 
   private final RepositorioVoto repositorioVoto;
   private final RepositorioPropuesta repositorioPropuesta;
@@ -27,9 +27,9 @@ public class ServicioVotacion {
     this.repositorioPropuesta = repositorioPropuesta;
   }
 
-  public List<Propuesta> obtenerTodasLasPropuestas() {
-    List<Propuesta> propuestas = repositorioPropuesta.obtenerTodasLasPropuestas();
-    long totalIntegrantes = repositorioPropuesta.obtenerTotalIntegrantes();
+  public List<Propuesta> obtenerPropuestasDelHogar(Long hogarId) {
+    List<Propuesta> propuestas = repositorioPropuesta.obtenerPropuestasPorHogar(hogarId);
+    long totalIntegrantes = repositorioPropuesta.obtenerTotalIntegrantes(hogarId);
     for (Propuesta p : propuestas) {
       actualizarEstado(p, totalIntegrantes);
     }
@@ -42,23 +42,29 @@ public class ServicioVotacion {
     repositorioPropuesta.guardar(propuesta);
   }
 
-  public void votar(Long idUsuario, Long idPropuesta, boolean esAfirmativo, String comentario) {
+  public void votar(
+    Long idUsuario,
+    Long hogarId,
+    Long idPropuesta,
+    boolean esAfirmativo,
+    String comentario
+  ) {
     Propuesta propuesta = repositorioPropuesta.obtenerPorId(idPropuesta);
-    if (propuesta == null) {
+    if (propuesta == null || !propuesta.perteneceAlHogar(hogarId)) {
       throw new PropuestaNoExiste("La propuesta no existe");
     }
     if (!propuesta.estaPendiente() || propuesta.estaVencida(LocalDate.now())) {
-      throw new PropuestaNoExiste("La propuesta no está pendiente de votación");
+      throw new VotacionCerradaException("La votación de esta propuesta ya está cerrada");
     }
     if (repositorioVoto.existeVoto(idUsuario, idPropuesta)) {
       throw new UsuarioYaVoto("El usuario ya ha votado en esta propuesta");
     }
     repositorioVoto.guardar(new Voto(idUsuario, idPropuesta, esAfirmativo, comentario));
-    actualizarEstado(propuesta, repositorioPropuesta.obtenerTotalIntegrantes());
+    actualizarEstado(propuesta, repositorioPropuesta.obtenerTotalIntegrantes(hogarId));
   }
 
   private void actualizarEstado(Propuesta propuesta, long totalIntegrantes) {
-    if (propuesta.getEstado() != EstadoPropuesta.PENDIENTE) {
+    if (propuesta.getEstado() != EstadoPropuesta.PENDIENTE || totalIntegrantes <= 0) {
       return;
     }
     long aFavor = repositorioVoto.obtenerVotosAfirmativosPorPropuesta(propuesta.getId());
@@ -77,6 +83,9 @@ public class ServicioVotacion {
   }
 
   private void validarPropuesta(Propuesta propuesta) {
+    if (propuesta.getHogarId() == null) {
+      throw new PropuestaNoExiste("La propuesta debe pertenecer a un hogar");
+    }
     validarTexto(propuesta.getTitulo(), "titulo");
     validarTexto(propuesta.getDescripcion(), "descripcion");
     validarQuorum(propuesta.getPorcentajeQuorum());

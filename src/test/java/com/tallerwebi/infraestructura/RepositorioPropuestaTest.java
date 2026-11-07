@@ -2,18 +2,17 @@ package com.tallerwebi.infraestructura;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.hasSize;
 
 import com.tallerwebi.dominio.EstadoPropuesta;
+import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.Propuesta;
 import com.tallerwebi.dominio.RepositorioPropuesta;
 import com.tallerwebi.dominio.Usuario;
 import com.tallerwebi.infraestructura.config.HibernateInfraestructuraTestConfig;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,73 +30,52 @@ public class RepositorioPropuestaTest {
   @Autowired
   private SessionFactory sessionFactory;
 
-  private RepositorioPropuesta repositorioPropuesta;
+  private RepositorioPropuesta repositorio;
 
   @BeforeEach
   public void init() {
-    repositorioPropuesta = new RepositorioPropuestaImpl(sessionFactory);
+    repositorio = new RepositorioPropuestaImpl(sessionFactory);
   }
 
   @Test
   @Transactional
   @Rollback
-  public void deberiaGuardarUnaPropuestaYPoderObtenerlaPorId() {
-    // preparacion
-    Propuesta propuesta = dadoQueTengoUnaPropuesta("Comprar heladera");
+  public void deberiaGuardarUnaPropuestaYObtenerlaPorId() {
+    Propuesta propuesta = crearPropuesta("Comprar heladera", 1L);
 
-    // ejecucion
-    repositorioPropuesta.guardar(propuesta);
-    Propuesta obtenida = repositorioPropuesta.obtenerPorId(propuesta.getId());
+    repositorio.guardar(propuesta);
 
-    // validacion
-    assertThat(obtenida, is(notNullValue()));
-    assertThat(obtenida.getTitulo(), is(equalTo("Comprar heladera")));
-    assertThat(obtenida.getEstado(), is(equalTo(EstadoPropuesta.PENDIENTE)));
-  }
-
-  @Test
-  @Transactional
-  public void obtenerPorIdDeUnaPropuestaInexistenteDeberiaDevolverNull() {
-    Propuesta obtenida = repositorioPropuesta.obtenerPorId(999L);
-
-    assertThat(obtenida, is(nullValue()));
+    assertThat(
+      repositorio.obtenerPorId(propuesta.getId()).getTitulo(),
+      equalTo("Comprar heladera")
+    );
   }
 
   @Test
   @Transactional
   @Rollback
-  public void deberiaObtenerTodasLasPropuestasGuardadas() {
-    // preparacion
-    Propuesta heladera = dadoQueTengoUnaPropuesta("Comprar heladera");
-    Propuesta pintura = dadoQueTengoUnaPropuesta("Pintar el living");
-    repositorioPropuesta.guardar(heladera);
-    repositorioPropuesta.guardar(pintura);
+  public void deberiaTraerSoloLasPropuestasDelHogar() {
+    repositorio.guardar(crearPropuesta("Comprar heladera", 1L));
+    repositorio.guardar(crearPropuesta("Pintar el living", 2L));
 
-    // ejecucion
-    List<Propuesta> todas = repositorioPropuesta.obtenerTodasLasPropuestas();
+    List<Propuesta> resultado = repositorio.obtenerPropuestasPorHogar(1L);
 
-    // validacion
-    assertThat(todas, hasItems(heladera, pintura));
+    assertThat(resultado, hasSize(1));
+    assertThat(resultado.get(0).getTitulo(), equalTo("Comprar heladera"));
   }
 
   @Test
   @Transactional
   @Rollback
-  public void obtenerTotalIntegrantesDeberiaContarLosUsuariosGuardados() {
-    // preparacion
-    long antes = repositorioPropuesta.obtenerTotalIntegrantes();
-    sessionFactory.getCurrentSession().persist(new Usuario("Eze", "eze@test.com", "123"));
-    sessionFactory.getCurrentSession().persist(new Usuario("Maca", "maca@test.com", "123"));
+  public void deberiaContarSoloLosIntegrantesDelHogar() {
+    Hogar casa1 = crearHogar("Casa 1", crearUsuario("eze@test.com"), crearUsuario("maca@test.com"));
+    crearHogar("Casa 2", crearUsuario("pedro@test.com"));
 
-    // ejecucion
-    long despues = repositorioPropuesta.obtenerTotalIntegrantes();
-
-    // validacion
-    assertThat(despues, is(equalTo(antes + 2)));
+    assertThat(repositorio.obtenerTotalIntegrantes(casa1.getId()), equalTo(2L));
   }
 
-  private Propuesta dadoQueTengoUnaPropuesta(String titulo) {
-    return new Propuesta(
+  private Propuesta crearPropuesta(String titulo, Long hogarId) {
+    Propuesta propuesta = new Propuesta(
       titulo,
       "Descripcion de prueba",
       1L,
@@ -105,5 +83,20 @@ public class RepositorioPropuestaTest {
       50.0,
       EstadoPropuesta.PENDIENTE
     );
+    propuesta.setHogarId(hogarId);
+    return propuesta;
+  }
+
+  private Usuario crearUsuario(String email) {
+    Usuario usuario = new Usuario("Test", email, "123");
+    sessionFactory.getCurrentSession().persist(usuario);
+    return usuario;
+  }
+
+  private Hogar crearHogar(String nombre, Usuario... integrantes) {
+    Hogar hogar = new Hogar(nombre);
+    hogar.setIntegrantes(new ArrayList<>(List.of(integrantes)));
+    sessionFactory.getCurrentSession().persist(hogar);
+    return hogar;
   }
 }

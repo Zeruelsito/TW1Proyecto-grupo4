@@ -17,6 +17,7 @@ public class Propuesta {
   private String descripcion;
 
   private Long idUsuarioCreador;
+  private Long hogarId;
   private LocalDate fechaLimite;
   private double porcentajeQuorum;
 
@@ -79,6 +80,18 @@ public class Propuesta {
 
   public void setIdUsuarioCreador(Long idUsuarioCreador) {
     this.idUsuarioCreador = idUsuarioCreador;
+  }
+
+  public Long getHogarId() {
+    return hogarId;
+  }
+
+  public void setHogarId(Long hogarId) {
+    this.hogarId = hogarId;
+  }
+
+  public boolean perteneceAlHogar(Long idHogar) {
+    return hogarId != null && hogarId.equals(idHogar);
   }
 
   public LocalDate getFechaLimite() {

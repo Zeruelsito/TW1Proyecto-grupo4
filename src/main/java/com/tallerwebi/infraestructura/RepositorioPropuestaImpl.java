@@ -37,19 +37,33 @@ public class RepositorioPropuestaImpl implements RepositorioPropuesta {
   }
 
   @Override
+  public List<Propuesta> obtenerPropuestasPorHogar(Long hogarId) {
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery("from Propuesta where hogarId = :hogarId order by id desc", Propuesta.class)
+      .setParameter("hogarId", hogarId)
+      .getResultList();
+  }
+
+  @Override
   public List<Propuesta> obtenerPropuestasPorUsuario(Long idUsuario) {
     return sessionFactory
       .getCurrentSession()
-      .createQuery("from Propuesta where idUsuario = :idUsuario", Propuesta.class)
+      .createQuery("from Propuesta where idUsuarioCreador = :idUsuario", Propuesta.class)
       .setParameter("idUsuario", idUsuario)
       .getResultList();
   }
 
   @Override
-  public long obtenerTotalIntegrantes() {
+  public long obtenerTotalIntegrantes(Long hogarId) {
     return sessionFactory
       .getCurrentSession()
-      .createQuery("select count(*) from Usuario", Long.class)
+      .createQuery(
+        "select count(u) from Hogar h join h.integrantes u " +
+        "where h.id = :hogarId and u.fechaBaja is null",
+        Long.class
+      )
+      .setParameter("hogarId", hogarId)
       .getSingleResult();
   }
 }
