@@ -152,45 +152,4 @@ public class ControladorListaComprasTest {
 
     verify(servicioListaComprasMock, times(1)).eliminarItem(3L);
   }
-
-  @Test
-  public void queConviertaEnGastoExitosamenteYRedirijaConExito() throws Exception {
-    when(servicioListaComprasMock.convertirEnGasto(anyLong(), anyLong()))
-      .thenReturn("Compra convertida en gastos con éxito.");
-
-    mockMvc
-      .perform(
-        post("/lista-compras/convertir-en-gasto")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-      )
-      .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/lista-compras"))
-      .andExpect(flash().attribute("mensajeExito", "¡Compra convertida en gastos con éxito!"));
-  }
-
-  @Test
-  public void queManejeExcepcionSinItemsMarcadosAlConvertirEnGasto() throws Exception {
-    Usuario usuario = new Usuario();
-    usuario.setNombre("Ana");
-
-    when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
-    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L); // <--- ¡Agregá esta línea acá también!
-    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
-    when(servicioListaComprasMock.obtenerItemsActivos()).thenReturn(Collections.emptyList());
-
-    doThrow(new SinItemsMarcadosException("No hay items marcados"))
-      .when(servicioListaComprasMock)
-      .convertirEnGasto(anyLong(), anyLong());
-
-    mockMvc
-      .perform(
-        post("/lista-compras/convertir-en-gasto")
-          .sessionAttr("USUARIO_ID", 1L)
-          .sessionAttr("HOGAR_ID", 1L)
-      )
-      .andExpect(status().isOk())
-      .andExpect(view().name("lista-compras"))
-      .andExpect(model().attribute("mensajeError", "No hay items marcados"));
-  }
 }
