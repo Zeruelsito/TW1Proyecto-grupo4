@@ -3,14 +3,14 @@ package com.tallerwebi.dominio;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-//import com.tallerwebi.dominio.ServicioListaCompras;
-//import com.tallerwebi.dominio.EstadoItemCompra;
 import com.tallerwebi.dominio.excepcion.ItemCompraInvalidoException;
 import com.tallerwebi.dominio.excepcion.ItemCompraNoExiste;
 import com.tallerwebi.dominio.excepcion.SinItemsMarcadosException;
-//import com.tallerwebi.dominio.RepositorioItemCompra;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,11 +19,24 @@ public class ServicioListaComprasTest {
 
   private ServicioListaCompras servicioListaCompras;
   private RepositorioItemCompra repositorioItemCompraMock;
+  private ServicioRegistroGasto servicioRegistroGastoMock;
+  private ServicioHogar servicioHogarMock;
+  private ServicioUsuario servicioUsuarioMock;
 
   @BeforeEach
   public void init() {
     repositorioItemCompraMock = mock(RepositorioItemCompra.class);
-    servicioListaCompras = new ServicioListaCompras(repositorioItemCompraMock);
+    servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
+    servicioHogarMock = mock(ServicioHogar.class);
+    servicioUsuarioMock = mock(ServicioUsuario.class);
+
+    servicioListaCompras =
+      new ServicioListaComprasImpl(
+        repositorioItemCompraMock,
+        servicioRegistroGastoMock,
+        servicioHogarMock,
+        servicioUsuarioMock
+      );
   }
 
   @Test
@@ -97,15 +110,23 @@ public class ServicioListaComprasTest {
   public void convertirEnGastoDeberiaArmarLaDescripcionYArchivarLosItems() {
     // preparacion
     ItemCompra leche = new ItemCompra("Leche", 1L, EstadoItemCompra.EN_CARRITO);
+    leche.setPrecioUnitario(100.0);
+    leche.setCantidad(1);
+    leche.setDestino(DestinoItemCompra.HOGAR);
+
     ItemCompra pan = new ItemCompra("Pan", 1L, EstadoItemCompra.EN_CARRITO);
+    pan.setPrecioUnitario(50.0);
+    pan.setCantidad(2);
+    pan.setDestino(DestinoItemCompra.HOGAR);
+
     when(repositorioItemCompraMock.obtenerPorEstado(EstadoItemCompra.EN_CARRITO))
       .thenReturn(List.of(leche, pan));
 
     // ejecucion
-    String descripcion = servicioListaCompras.convertirEnGasto();
+    String resultado = servicioListaCompras.convertirEnGasto(1L, 1L);
 
     // validacion
-    assertThat(descripcion, equalTo("Compras: Leche, Pan"));
+    assertThat(resultado, equalTo("Compra convertida en gastos con éxito."));
     assertThat(leche.getEstado(), equalTo(EstadoItemCompra.ARCHIVADO));
     assertThat(pan.getEstado(), equalTo(EstadoItemCompra.ARCHIVADO));
   }
@@ -117,6 +138,50 @@ public class ServicioListaComprasTest {
       .thenReturn(List.of());
 
     // ejecucion y validacion
-    assertThrows(SinItemsMarcadosException.class, () -> servicioListaCompras.convertirEnGasto());
+    assertThrows(
+      SinItemsMarcadosException.class,
+      () -> servicioListaCompras.convertirEnGasto(1L, 1L)
+    );
+  }
+
+  @Test
+  public void actualizarDetallesConPrecioInvalidoDeberiaLanzarExcepcion() {
+    ItemCompra item = new ItemCompra("Leche", 1L, EstadoItemCompra.EN_CARRITO);
+    when(repositorioItemCompraMock.obtenerPorId(1L)).thenReturn(item);
+
+    assertThrows(
+      ItemCompraInvalidoException.class,
+      () ->
+        servicioListaCompras.actualizarDetallesItem(
+          1L,
+          -10.0,
+          1,
+          DestinoItemCompra.HOGAR,
+          null,
+          null
+        )
+    );
+  }
+
+  @Test
+  public void convertirEnGastoConMultiplesDestinosDeberiaGenerarVariosGastos() {
+    ItemCompra itemHogar = new ItemCompra("Fideos", 1L, EstadoItemCompra.EN_CARRITO);
+    itemHogar.setPrecioUnitario(100.0);
+    itemHogar.setCantidad(1);
+    itemHogar.setDestino(DestinoItemCompra.HOGAR);
+
+    when(repositorioItemCompraMock.obtenerPorEstado(EstadoItemCompra.EN_CARRITO))
+      .thenReturn(List.of(itemHogar));
+
+    Hogar hogar = new Hogar();
+    hogar.setIntegrantes(List.of(new Usuario()));
+    when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(new Usuario());
+
+    String resultado = servicioListaCompras.convertirEnGasto(1L, 1L);
+
+    assertThat(resultado, equalTo("Compra convertida en gastos con éxito."));
+    verify(servicioRegistroGastoMock, atLeastOnce())
+      .registrarGastoConParticipantes(any(Gasto.class), eq(1L), anyList());
   }
 }
