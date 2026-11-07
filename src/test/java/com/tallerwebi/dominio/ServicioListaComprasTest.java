@@ -184,4 +184,51 @@ public class ServicioListaComprasTest {
     verify(servicioRegistroGastoMock, atLeastOnce())
       .registrarGastoConParticipantes(any(Gasto.class), eq(1L), anyList());
   }
+
+  @Test
+  public void convertirEnGastoConDestinoIndividualDeberiaProcesarloCorrectamente() {
+    ItemCompra itemInd = new ItemCompra("Café", 1L, EstadoItemCompra.EN_CARRITO);
+    itemInd.setPrecioUnitario(200.0);
+    itemInd.setCantidad(1);
+    itemInd.setDestino(DestinoItemCompra.INDIVIDUAL);
+
+    Usuario usuarioDestino = new Usuario("Matias", "mati@kumo.com", "123");
+    usuarioDestino.setId(2L);
+    itemInd.setDestinatarioIndividual(usuarioDestino);
+
+    when(repositorioItemCompraMock.obtenerPorEstado(EstadoItemCompra.EN_CARRITO))
+      .thenReturn(List.of(itemInd));
+    when(servicioUsuarioMock.obtenerUsuarioPorId(2L)).thenReturn(usuarioDestino);
+
+    String resultado = servicioListaCompras.convertirEnGasto(1L, 1L);
+
+    assertThat(resultado, equalTo("Compra convertida en gastos con éxito."));
+    verify(servicioRegistroGastoMock, atLeastOnce())
+      .registrarGastoConParticipantes(any(Gasto.class), eq(1L), anyList());
+  }
+
+  @Test
+  public void convertirEnGastoConDestinoGrupalDeberiaProcesarloCorrectamente() {
+    ItemCompra itemGrup = new ItemCompra("Asado", 1L, EstadoItemCompra.EN_CARRITO);
+    itemGrup.setPrecioUnitario(1000.0);
+    itemGrup.setCantidad(1);
+    itemGrup.setDestino(DestinoItemCompra.GRUPAL);
+
+    Usuario u1 = new Usuario("Juan", "juan@kumo.com", "123");
+    u1.setId(1L);
+    Usuario u2 = new Usuario("Maria", "maria@kumo.com", "123");
+    u2.setId(2L);
+    itemGrup.setDestinatarios(List.of(u1, u2));
+
+    when(repositorioItemCompraMock.obtenerPorEstado(EstadoItemCompra.EN_CARRITO))
+      .thenReturn(List.of(itemGrup));
+    when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(u1);
+    when(servicioUsuarioMock.obtenerUsuarioPorId(2L)).thenReturn(u2);
+
+    String resultado = servicioListaCompras.convertirEnGasto(1L, 1L);
+
+    assertThat(resultado, equalTo("Compra convertida en gastos con éxito."));
+    verify(servicioRegistroGastoMock, atLeastOnce())
+      .registrarGastoConParticipantes(any(Gasto.class), eq(1L), anyList());
+  }
 }
