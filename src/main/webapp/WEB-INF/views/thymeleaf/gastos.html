@@ -452,17 +452,39 @@
                                                 <td th:text="${gastoItem.id}">1</td>
                                                 <td class="fw-medium">
                                                     <div class="d-flex align-items-center justify-content-between">
-                                                        <span th:text="${gastoItem.descripcion}">Supermercado</span>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <!-- Icono diferenciado si es un Ticket de Compra -->
+                                                            <span th:if="${gastoItem.descripcion != null and #strings.contains(gastoItem.descripcion, 'Ticket')}">
+                                                                <i class="bi bi-bag-fill text-purple fs-5" style="color: #e3d7ff;" title="Ticket de Compra"></i>
+                                                            </span>
+                                                            <span th:unless="${gastoItem.descripcion != null and #strings.contains(gastoItem.descripcion, 'Ticket')}">
+                                                                <i class="bi bi-receipt text-secondary fs-5"></i>
+                                                            </span>
+                                                            
+                                                            <!-- Nombre limpio -->
+                                                            <span th:text="${gastoItem.descripcion != null and #strings.contains(gastoItem.descripcion, 'Ticket') ? 'Ticket de compra' : gastoItem.descripcion}">Supermercado</span>
+                                                        </div>
                                                         
-                                                        <!-- Botón sutil desplegable para ver la división -->
-                                                        <button class="btn btn-sm btn-light border rounded-pill px-2 py-0 text-muted small d-flex align-items-center gap-1 shadow-sm" 
-                                                                type="button" data-bs-toggle="collapse" 
-                                                                th:data-bs-target="'#collapseDetalle-' + ${gastoItem.id}" 
-                                                                aria-expanded="false" th:aria-controls="'collapseDetalle-' + ${gastoItem.id}"
-                                                                title="Ver entre quiénes se dividió">
-                                                            <i class="bi bi-people-fill text-primary"></i>
-                                                            <span th:text="${gastoItem.participantes != null ? #lists.size(gastoItem.participantes) : 0}">3</span>
-                                                        </button>
+                                                        <div class="d-flex gap-1">
+                                                            <!-- Botón Ver Detalles de Ítems (Si es Ticket) -->
+                                                            <button th:if="${gastoItem.descripcion != null and #strings.contains(gastoItem.descripcion, 'Ticket')}"
+                                                                    class="btn btn-sm btn-light border rounded-pill px-2 py-0 text-dark small d-flex align-items-center gap-1 shadow-sm" 
+                                                                    type="button" data-bs-toggle="collapse" 
+                                                                    th:data-bs-target="'#collapseTicketDetalles-' + ${gastoItem.id}" 
+                                                                    aria-expanded="false" title="Ver qué ítems se compraron">
+                                                                <i class="bi bi-bag-check-fill text-success"></i> Ver ítems
+                                                            </button>
+
+                                                            <!-- Botón desplegable para ver la división de participantes -->
+                                                            <button class="btn btn-sm btn-light border rounded-pill px-2 py-0 text-muted small d-flex align-items-center gap-1 shadow-sm" 
+                                                                    type="button" data-bs-toggle="collapse" 
+                                                                    th:data-bs-target="'#collapseDetalle-' + ${gastoItem.id}" 
+                                                                    aria-expanded="false" th:aria-controls="'collapseDetalle-' + ${gastoItem.id}"
+                                                                    title="Ver entre quiénes se dividió">
+                                                                <i class="bi bi-people-fill text-primary"></i>
+                                                                <span th:text="${gastoItem.participantes != null ? #lists.size(gastoItem.participantes) : 0}">3</span>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td>
@@ -481,6 +503,23 @@
                                                 <td class="text-end fw-bold"
                                                     th:text="${'$' + #numbers.formatDecimal(gastoItem.monto, 1, 'POINT', 2, 'COMMA')}">
                                                     $0.00
+                                                </td>
+                                            </tr>
+
+                                            <!-- Fila Desplegable Adicional para ver los Ítems Comprados (Si es Ticket) -->
+                                            <tr th:if="${gastoItem.descripcion != null and #strings.contains(gastoItem.descripcion, 'Ticket')}">
+                                                <td colspan="6" class="p-0 border-0">
+                                                    <div class="collapse" th:id="'collapseTicketDetalles-' + ${gastoItem.id}">
+                                                        <div class="card card-body bg-white m-2 border rounded-3 py-2 px-3 shadow-sm">
+                                                            <small class="text-muted fw-bold mb-1">
+                                                                <i class="bi bi-basket2-fill me-1 text-purple" style="color: #4a2b8a"></i> Detalle de la compra:
+                                                            </small>
+                                                            <p class="small text-dark mb-1" th:text="${gastoItem.descripcion}">Descripción completa de los ítems</p>
+                                                            <small class="text-muted" style="font-size: 0.75rem;">
+                                                                <i class="bi bi-calendar3 me-1"></i> Registrado el: <span th:text="${#temporals.format(gastoItem.fechaVencimiento != null ? gastoItem.fechaVencimiento : #temporals.createNow(), 'dd/MM/yyyy HH:mm')}">06/11/2026</span>
+                                                            </small>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                             </tr>
 

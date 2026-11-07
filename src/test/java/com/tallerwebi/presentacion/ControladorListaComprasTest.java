@@ -1,11 +1,14 @@
 package com.tallerwebi.presentacion;
 
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.tallerwebi.dominio.ServicioHogar;
 import com.tallerwebi.dominio.ServicioListaCompras;
 import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Usuario;
@@ -15,6 +18,7 @@ import jakarta.servlet.http.HttpSession;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
@@ -23,6 +27,7 @@ public class ControladorListaComprasTest {
 
   private MockMvc mockMvc;
   private ServicioListaCompras servicioListaComprasMock;
+  private ServicioHogar servicioHogarMock;
   private ServicioUsuario servicioUsuarioMock;
   private HttpSession sessionMock;
   private ControladorListaCompras controladorListaCompras;
@@ -30,10 +35,12 @@ public class ControladorListaComprasTest {
   @BeforeEach
   public void setUp() {
     servicioListaComprasMock = mock(ServicioListaCompras.class);
+    servicioHogarMock = mock(ServicioHogar.class);
     servicioUsuarioMock = mock(ServicioUsuario.class);
     sessionMock = mock(HttpSession.class);
 
-    controladorListaCompras = new ControladorListaCompras(servicioListaComprasMock, sessionMock);
+    controladorListaCompras =
+      new ControladorListaCompras(servicioListaComprasMock, servicioHogarMock, sessionMock);
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
@@ -60,7 +67,7 @@ public class ControladorListaComprasTest {
     usuario.setNombre("María");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
-    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L); // <-- ¡Agregando esta línea se soluciona!
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioListaComprasMock.obtenerItemsActivos()).thenReturn(Collections.emptyList());
 
@@ -73,45 +80,49 @@ public class ControladorListaComprasTest {
   }
 
   @Test
-  public void queAgregueItemExitosamenteYRedirija() throws Exception {
-    doNothing().when(servicioListaComprasMock).agregarItem(eq("Manzanas"), eq(1L));
+  public void queConviertaEnGastoMasivoExitosamenteYRedirija() throws Exception {
+    doNothing()
+      .when(servicioListaComprasMock)
+      .actualizarDetallesYConvertirEnGasto(anyList(), anyLong(), anyLong());
 
     mockMvc
       .perform(
-        post("/lista-compras/agregar")
+        post("/lista-compras/convertir-en-gasto-masivo")
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
-          .param("nombre", "Manzanas")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("[{\"id\":1,\"precioUnitario\":100.0,\"cantidad\":1,\"destino\":\"HOGAR\"}]")
       )
       .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/lista-compras"));
-
-    verify(servicioListaComprasMock, times(1)).agregarItem("Manzanas", 1L);
+      .andExpect(redirectedUrl("/lista-compras"))
+      .andExpect(flash().attribute("mensajeExito", "¡Compra convertida en gastos con éxito!"));
   }
 
   @Test
-  public void queManejeExcepcionItemCompraInvalidoAlAgregar() throws Exception {
+  public void queManejeExcepcionAlConvertirEnGastoMasivo() throws Exception {
     Usuario usuario = new Usuario();
-    usuario.setNombre("Carlos");
+    usuario.setNombre("Ana");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L);
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioListaComprasMock.obtenerItemsActivos()).thenReturn(Collections.emptyList());
 
-    doThrow(new ItemCompraInvalidoException("Item inválido"))
+    doThrow(new SinItemsMarcadosException("No hay items marcados"))
       .when(servicioListaComprasMock)
-      .agregarItem(eq(""), eq(1L));
+      .actualizarDetallesYConvertirEnGasto(anyList(), anyLong(), anyLong());
 
     mockMvc
       .perform(
-        post("/lista-compras/agregar")
+        post("/lista-compras/convertir-en-gasto-masivo")
           .sessionAttr("USUARIO_ID", 1L)
           .sessionAttr("HOGAR_ID", 1L)
-          .param("nombre", "")
+          .contentType(MediaType.APPLICATION_JSON)
+          .content("[]")
       )
       .andExpect(status().isOk())
       .andExpect(view().name("lista-compras"))
-      .andExpect(model().attribute("mensajeError", "Item inválido"));
+      .andExpect(model().attribute("mensajeError", "No hay items marcados"));
   }
 
   @Test
@@ -143,8 +154,9 @@ public class ControladorListaComprasTest {
   }
 
   @Test
-  public void queConviertaEnGastoExitosamenteYRedirijaConDescripcionCodificada() throws Exception {
-    when(servicioListaComprasMock.convertirEnGasto()).thenReturn("Supermercado mes");
+  public void queConviertaEnGastoExitosamenteYRedirijaConExito() throws Exception {
+    when(servicioListaComprasMock.convertirEnGasto(anyLong(), anyLong()))
+      .thenReturn("Compra convertida en gastos con éxito.");
 
     mockMvc
       .perform(
@@ -153,7 +165,8 @@ public class ControladorListaComprasTest {
           .sessionAttr("HOGAR_ID", 1L)
       )
       .andExpect(status().is3xxRedirection())
-      .andExpect(redirectedUrl("/gastos?descripcion=Supermercado+mes"));
+      .andExpect(redirectedUrl("/lista-compras"))
+      .andExpect(flash().attribute("mensajeExito", "¡Compra convertida en gastos con éxito!"));
   }
 
   @Test
@@ -162,12 +175,13 @@ public class ControladorListaComprasTest {
     usuario.setNombre("Ana");
 
     when(sessionMock.getAttribute("USUARIO_ID")).thenReturn(1L);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(1L); // <--- ¡Agregá esta línea acá también!
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioListaComprasMock.obtenerItemsActivos()).thenReturn(Collections.emptyList());
 
     doThrow(new SinItemsMarcadosException("No hay items marcados"))
       .when(servicioListaComprasMock)
-      .convertirEnGasto();
+      .convertirEnGasto(anyLong(), anyLong());
 
     mockMvc
       .perform(
