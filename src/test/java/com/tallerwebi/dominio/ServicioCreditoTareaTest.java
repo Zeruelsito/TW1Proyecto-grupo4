@@ -23,6 +23,10 @@ public class ServicioCreditoTareaTest {
   private ServicioCreditoTarea servicioCreditoTarea;
   private RepositorioTareaRepetitiva repositorioTareaRepetitivaMock;
 
+  ServicioCalculosGasto servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
+  ServicioLiquidacion servicioLiquidacionMock = mock(ServicioLiquidacion.class);
+  ServicioRegistroGasto servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
+
   private List<Tarea> tareasEnMemoria;
 
   @BeforeEach
@@ -34,7 +38,10 @@ public class ServicioCreditoTareaTest {
       new ServicioCreditoTareaImpl(
         repositorioTareaMock,
         repositorioUsuarioMock,
-        repositorioTareaRepetitivaMock
+        repositorioTareaRepetitivaMock,
+        servicioCalculosGastoMock,
+        servicioLiquidacionMock,
+        servicioRegistroGastoMock
       );
 
     tareasEnMemoria = new ArrayList<>();
@@ -178,6 +185,72 @@ public class ServicioCreditoTareaTest {
         servicioCreditoTarea.registrarTareaDesdeCatalogo(999L, null, 1L);
       }
     );
+  }
+
+  @Test
+  public void debeCalcularMetricasDeBrechaUsuarioCorrectamente() {
+    Usuario usuario = new Usuario("Juan", "juan@kumo.com", "1234");
+    usuario.setId(10L);
+    Hogar hogar = givenTengoUnHogar(1L, 1000.0, "Hogar Test");
+    hogar.setIntegrantes(List.of(usuario));
+
+    List<Gasto> gastos = new ArrayList<>();
+    Gasto g = new Gasto();
+    g.setMonto(2000.0);
+    g.setTipoGasto(TipoGasto.OCASIONAL);
+    gastos.add(g);
+
+    when(servicioCalculosGastoMock.calcularCuotaMensualPorUsuario(any(), any(), any(), any()))
+      .thenReturn(1000.0);
+    when(servicioCalculosGastoMock.calcularValorDeHorasDeTareaPorUsuario(any(), any(), any(), any(), any()))
+      .thenReturn(1000.0);
+
+    var metricas = servicioCreditoTarea.calcularMetricasBrechaUsuario(usuario, hogar, gastos, 1000.0);
+    
+    assertThat(metricas.get("dineroRequeridoBrecha"), equalTo(1000.0));
+  }
+
+  @Test
+  public void debeLiquidarCreditosParcialesYObtenerLiquidadoPorUsuario() {
+    Long usuarioId = 15L;
+    Usuario usuario = new Usuario("Ana", "ana@kumo.com", "1234");
+    usuario.setId(usuarioId);
+    usuario.setCreditoLiquidado(500.0);
+
+    when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
+
+    // Probamos liquidación parcial
+    servicioCreditoTarea.liquidarCreditosParciales(usuarioId, 300.0);
+    Double liquidadoMes = servicioCreditoTarea.obtenerCreditoLiquidadoPorUsuario(usuarioId);
+
+    assertThat(liquidadoMes, equalTo(800.0));
+  }
+
+  @Test
+  public void debeProcesarLiquidacionCreditosExitosamente() {
+    Long usuarioId = 20L;
+    Usuario usuario = new Usuario("Carlos", "carlos@kumo.com", "123");
+    usuario.setId(usuarioId);
+    usuario.setCreditoLiquidado(0.0);
+
+    Hogar hogar = givenTengoUnHogar(1L, 1000.0, "Casa");
+    hogar.setIntegrantes(List.of(usuario));
+
+    when(repositorioUsuarioMock.buscarPorId(usuarioId)).thenReturn(usuario);
+    when(servicioLiquidacionMock.obtenerDeudaUsuario(any(), any(), any())).thenReturn(1000.0);
+    when(servicioCalculosGastoMock.calcularCuotaMensualPorUsuario(any(), any(), any(), any()))
+      .thenReturn(0.0);
+
+    // Creamos y completamos una tarea para que el usuario tenga 1000.0 de crédito acumulado
+    Tarea tarea = new Tarea("Limpieza profunda");
+    servicioCreditoTarea.registrarTarea(tarea);
+    servicioCreditoTarea.completarTareaYGenerarCredito(tarea.getId(), usuarioId, 1.0, 1000.0);
+
+    // Invocamos el procesamiento completo de liquidación
+    servicioCreditoTarea.procesarLiquidacionCreditos(usuarioId, 1L, new ArrayList<>(), hogar);
+    
+    // Verificamos que se haya aplicado la liquidación con el crédito generado
+    assertThat(usuario.getCreditoLiquidado(), equalTo(1000.0));
   }
 
   private TareaRepetitiva givenUnaTareaDelCatalogo(

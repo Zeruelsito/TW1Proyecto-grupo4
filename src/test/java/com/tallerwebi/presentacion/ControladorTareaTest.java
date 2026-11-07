@@ -4,6 +4,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,6 +20,8 @@ import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,7 +40,6 @@ public class ControladorTareaTest {
   private ServicioHogar servicioHogarMock;
   private ServicioLiquidacion servicioLiquidacionMock;
   private ServicioRegistroGasto servicioRegistroGastoMock;
-  private ServicioCalculosGasto servicioCalculosGastoMock;
   private ServicioPagoPendiente servicioPagoPendienteMock;
   private ControladorTarea controladorTarea;
 
@@ -51,7 +53,6 @@ public class ControladorTareaTest {
     servicioHogarMock = mock(ServicioHogar.class);
     servicioLiquidacionMock = mock(ServicioLiquidacion.class);
     servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
-    servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
     servicioPagoPendienteMock = mock(ServicioPagoPendiente.class);
 
     controladorTarea =
@@ -62,9 +63,15 @@ public class ControladorTareaTest {
         servicioHogarMock,
         servicioLiquidacionMock,
         servicioRegistroGastoMock,
-        servicioCalculosGastoMock,
         servicioPagoPendienteMock
       );
+
+    // Configuramos un valor por defecto para que no devuelva null y rompa el dashboard en los tests
+    Map<String, Double> metricasVacias = new HashMap<>();
+    metricasVacias.put("dineroRequeridoBrecha", 0.0);
+    metricasVacias.put("horasRequeridasBrecha", 0.0);
+    when(servicioCreditoTareaMock.calcularMetricasBrechaUsuario(any(), any(), any(), any()))
+      .thenReturn(metricasVacias);
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
@@ -291,9 +298,6 @@ public class ControladorTareaTest {
     when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(1L)).thenReturn(Collections.emptyList());
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
-    when(servicioLiquidacionMock.obtenerDeudaUsuario(usuario, hogar, Collections.emptyList()))
-      .thenReturn(5000.0);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(1L)).thenReturn(10000.0);
 
     mockMvc
       .perform(
@@ -302,7 +306,9 @@ public class ControladorTareaTest {
       .andExpect(status().is3xxRedirection())
       .andExpect(redirectedUrl("/tareas"));
 
-    verify(servicioCreditoTareaMock, times(1)).liquidarCreditosParciales(eq(1L), eq(5000.0));
+    // Verificamos que el controlador delegue correctamente la liquidación al servicio
+    verify(servicioCreditoTareaMock, times(1))
+      .procesarLiquidacionCreditos(eq(1L), eq(1L), anyList(), eq(hogar));
   }
 
   @Test
