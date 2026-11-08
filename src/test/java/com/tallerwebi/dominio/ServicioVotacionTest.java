@@ -121,12 +121,12 @@ public class ServicioVotacionTest {
   }
 
   @Test
-  public void enUnHogarDeTresConUnVotoAFavorSeApruebaConQuorumDel50() {
+  public void enUnHogarDeTresConUnSoloVotoAFavorSiguePendiente() {
     dadoQueElHogarTiene(3, 1, 0);
 
     servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
 
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.APROBADA));
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
   }
 
   @Test
