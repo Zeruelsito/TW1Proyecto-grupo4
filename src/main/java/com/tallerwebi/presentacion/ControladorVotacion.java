@@ -2,6 +2,7 @@ package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.servlet.http.HttpSession;
@@ -19,6 +20,8 @@ public class ControladorVotacion {
 
   private static final String SESION_USUARIO_ID = "USUARIO_ID";
   private static final String SESION_HOGAR_ID = "HOGAR_ID";
+  private static final String SESION_ROL = "ROL";
+  private static final String ROL_ADMIN = "ADMIN";
   private static final String REDIRECT_LOGIN = "redirect:/login";
   private static final String REDIRECT_DASHBOARD = "redirect:/dashboard";
   private static final String REDIRECT_PROPUESTAS = "redirect:/propuestas";
@@ -37,7 +40,7 @@ public class ControladorVotacion {
     if (redireccion != null) {
       return redireccion;
     }
-    return armarVista(new DatosPropuesta(), obtenerHogarId(session), null);
+    return armarVista(session, new DatosPropuesta(), null);
   }
 
   @RequestMapping(path = "/propuestas/guardar", method = RequestMethod.POST)
@@ -55,7 +58,7 @@ public class ControladorVotacion {
     try {
       servicioVotacion.guardarPropuesta(armarPropuesta(datos, obtenerIdUsuario(session), hogarId));
     } catch (PropuestaNoExiste e) {
-      return armarVista(datos, hogarId, e.getMessage());
+      return armarVista(session, datos, e.getMessage());
     }
     return new ModelAndView(REDIRECT_PROPUESTAS);
   }
@@ -85,6 +88,34 @@ public class ControladorVotacion {
       redirectAttributes.addFlashAttribute("mensajeError", e.getMessage());
     }
     return new ModelAndView(REDIRECT_PROPUESTAS);
+  }
+
+  @RequestMapping(path = "/propuestas/{id}/cancelar", method = RequestMethod.POST)
+  public ModelAndView cancelarPropuesta(
+    @PathVariable("id") Long idPropuesta,
+    HttpSession session,
+    RedirectAttributes redirectAttributes
+  ) {
+    ModelAndView redireccion = validarSesion(session, redirectAttributes);
+    if (redireccion != null) {
+      return redireccion;
+    }
+
+    try {
+      servicioVotacion.cancelarPropuesta(
+        obtenerIdUsuario(session),
+        obtenerHogarId(session),
+        idPropuesta,
+        esAdmin(session)
+      );
+    } catch (PropuestaNoExiste | SinPermisoParaCancelarException | VotacionCerradaException e) {
+      redirectAttributes.addFlashAttribute("mensajeError", e.getMessage());
+    }
+    return new ModelAndView(REDIRECT_PROPUESTAS);
+  }
+
+  private boolean esAdmin(HttpSession session) {
+    return ROL_ADMIN.equals(session.getAttribute(SESION_ROL));
   }
 
   private ModelAndView validarSesion(HttpSession session, RedirectAttributes redirectAttributes) {
@@ -120,10 +151,15 @@ public class ControladorVotacion {
     return propuesta;
   }
 
-  private ModelAndView armarVista(DatosPropuesta datos, Long hogarId, String mensajeError) {
+  private ModelAndView armarVista(HttpSession session, DatosPropuesta datos, String mensajeError) {
     ModelAndView mav = new ModelAndView("propuestas");
-    mav.addObject("listaPropuestas", servicioVotacion.obtenerPropuestasDelHogar(hogarId));
+    mav.addObject(
+      "listaPropuestas",
+      servicioVotacion.obtenerPropuestasDelHogar(obtenerHogarId(session))
+    );
     mav.addObject("datosPropuesta", datos);
+    mav.addObject("idUsuarioActual", obtenerIdUsuario(session));
+    mav.addObject("esAdmin", esAdmin(session));
     if (mensajeError != null) {
       mav.addObject("mensajeError", mensajeError);
     }

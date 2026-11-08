@@ -8,6 +8,7 @@ import static org.mockito.Mockito.*;
 import com.tallerwebi.dominio.Propuesta;
 import com.tallerwebi.dominio.ServicioVotacion;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,33 @@ public class ControladorVotacionTest {
     controlador.votar(10L, true, "Dale", session, redirectAttributes);
 
     verify(servicioVotacionMock).votar(USUARIO_ID, HOGAR_ID, 10L, true, "Dale");
+  }
+
+  @Test
+  public void deberiaCancelarConElUsuarioYElHogarDeLaSesion() {
+    controlador.cancelarPropuesta(10L, session, redirectAttributes);
+
+    verify(servicioVotacionMock).cancelarPropuesta(USUARIO_ID, HOGAR_ID, 10L, false);
+  }
+
+  @Test
+  public void siElUsuarioEsAdminDeberiaPasarloAlCancelar() {
+    session.setAttribute("ROL", "ADMIN");
+
+    controlador.cancelarPropuesta(10L, session, redirectAttributes);
+
+    verify(servicioVotacionMock).cancelarPropuesta(USUARIO_ID, HOGAR_ID, 10L, true);
+  }
+
+  @Test
+  public void siNoTienePermisoParaCancelarDeberiaPasarElMensajeDeError() {
+    doThrow(new SinPermisoParaCancelarException("Sin permiso"))
+      .when(servicioVotacionMock)
+      .cancelarPropuesta(USUARIO_ID, HOGAR_ID, 10L, false);
+
+    controlador.cancelarPropuesta(10L, session, redirectAttributes);
+
+    assertThat(redirectAttributes.getFlashAttributes().get("mensajeError"), equalTo("Sin permiso"));
   }
 
   @Test
