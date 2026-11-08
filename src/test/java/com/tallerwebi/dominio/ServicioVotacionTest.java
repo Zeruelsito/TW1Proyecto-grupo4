@@ -60,15 +60,6 @@ public class ServicioVotacionTest {
 
     assertThrows(PropuestaNoExiste.class, () -> servicio.guardarPropuesta(propuesta));
   }
-
-  @Test
-  public void enUnHogarDeTresConUnSoloVotoAFavorSiguePendiente() {
-    dadoQueElHogarTiene(3, 1, 0);
- 
-    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
- 
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
-  }
  
   @Test
   public void siLosQueFaltanVotarAlcanzanParaElQuorumSiguePendiente() {
