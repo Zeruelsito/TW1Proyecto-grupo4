@@ -61,24 +61,23 @@ public class ServicioVotacionTest {
     assertThrows(PropuestaNoExiste.class, () -> servicio.guardarPropuesta(propuesta));
   }
 
-  // --- Quórum ---
-
   @Test
-  public void enUnHogarDeTresConDosVotosAFavorSeApruebaConQuorumDel50() {
-    dadoQueElHogarTiene(3, 2, 0);
-
+  public void enUnHogarDeTresConUnSoloVotoAFavorSiguePendiente() {
+    dadoQueElHogarTiene(3, 1, 0);
+ 
     servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
-
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.APROBADA));
+ 
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
   }
-
+ 
   @Test
-  public void siYaNoSePuedeLlegarAlQuorumSeRechaza() {
-    dadoQueElHogarTiene(4, 0, 3);
-
+  public void siLosQueFaltanVotarAlcanzanParaElQuorumSiguePendiente() {
+    dadoQueElHogarTiene(5, 2, 1);
+    propuesta.setPorcentajeQuorum(70.0);
+ 
     servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
-
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.RECHAZADA));
+ 
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
   }
 
   @Test
