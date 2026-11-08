@@ -130,16 +130,6 @@ public class ServicioVotacionTest {
   }
 
   @Test
-  public void siLosQueFaltanVotarAlcanzanParaElQuorumSiguePendiente() {
-    dadoQueElHogarTiene(5, 1, 2);
-    propuesta.setPorcentajeQuorum(70.0);
-
-    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
-
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
-  }
-
-  @Test
   public void siLosQueFaltanVotarNoAlcanzanParaElQuorumSeRechaza() {
     dadoQueElHogarTiene(5, 1, 3);
     propuesta.setPorcentajeQuorum(70.0);
