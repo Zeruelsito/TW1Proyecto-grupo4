@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import java.time.LocalDate;
@@ -21,13 +22,14 @@ public class ServicioVotacionTest {
   private ServicioVotacion servicio;
   private RepositorioVoto repositorioVoto;
   private RepositorioPropuesta repositorioPropuesta;
+  private RepositorioUsuario repositorioUsuario;
   private Propuesta propuesta;
 
   @BeforeEach
   public void init() {
     repositorioVoto = mock(RepositorioVoto.class);
     repositorioPropuesta = mock(RepositorioPropuesta.class);
-    servicio = new ServicioVotacion(repositorioVoto, repositorioPropuesta);
+    servicio = new ServicioVotacion(repositorioVoto, repositorioPropuesta, repositorioUsuario);
 
     propuesta =
       new Propuesta(
@@ -58,25 +60,15 @@ public class ServicioVotacionTest {
 
     assertThrows(PropuestaNoExiste.class, () -> servicio.guardarPropuesta(propuesta));
   }
-
-  // --- Quórum ---
-
+ 
   @Test
-  public void enUnHogarDeTresConDosVotosAFavorSeApruebaConQuorumDel50() {
-    dadoQueElHogarTiene(3, 2, 0);
-
-    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
-
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.APROBADA));
-  }
-
-  @Test
-  public void siYaNoSePuedeLlegarAlQuorumSeRechaza() {
-    dadoQueElHogarTiene(4, 0, 3);
-
+  public void siLosQueFaltanVotarAlcanzanParaElQuorumSiguePendiente() {
+    dadoQueElHogarTiene(5, 2, 1);
+    propuesta.setPorcentajeQuorum(70.0);
+ 
     servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
-
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.RECHAZADA));
+ 
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
   }
 
   @Test
@@ -112,6 +104,71 @@ public class ServicioVotacionTest {
     when(repositorioVoto.existeVoto(1L, PROPUESTA_ID)).thenReturn(true);
 
     assertThrows(UsuarioYaVoto.class, () -> servicio.votar(1L, HOGAR_ID, PROPUESTA_ID, true, null));
+  }
+
+  @Test
+  public void siempreSeRequiereAlMenosUnVoto() {
+    assertThat(servicio.calcularVotosRequeridos(3, 10.0), equalTo(1L));
+  }
+
+  @Test
+  public void enUnHogarDeTresConUnSoloVotoAFavorSiguePendiente() {
+    dadoQueElHogarTiene(3, 1, 0);
+
+    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
+  }
+
+  @Test
+  public void siLosQueFaltanVotarNoAlcanzanParaElQuorumSeRechaza() {
+    dadoQueElHogarTiene(5, 1, 3);
+    propuesta.setPorcentajeQuorum(70.0);
+
+    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.RECHAZADA));
+  }
+
+  @Test
+  public void elCreadorPuedeCancelarSuPropuesta() {
+    servicio.cancelarPropuesta(1L, HOGAR_ID, PROPUESTA_ID, false);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.CANCELADA));
+  }
+
+  @Test
+  public void unAdminPuedeCancelarUnaPropuestaAjena() {
+    servicio.cancelarPropuesta(2L, HOGAR_ID, PROPUESTA_ID, true);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.CANCELADA));
+  }
+
+  @Test
+  public void otroIntegranteNoPuedeCancelarLaPropuesta() {
+    assertThrows(
+      SinPermisoParaCancelarException.class,
+      () -> servicio.cancelarPropuesta(2L, HOGAR_ID, PROPUESTA_ID, false)
+    );
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
+  }
+
+  @Test
+  public void noSePuedeCancelarUnaPropuestaQueYaNoEstaPendiente() {
+    propuesta.setEstado(EstadoPropuesta.APROBADA);
+
+    assertThrows(
+      VotacionCerradaException.class,
+      () -> servicio.cancelarPropuesta(1L, HOGAR_ID, PROPUESTA_ID, false)
+    );
+  }
+
+  @Test
+  public void noSePuedeCancelarUnaPropuestaDeOtroHogar() {
+    assertThrows(
+      PropuestaNoExiste.class,
+      () -> servicio.cancelarPropuesta(1L, 99L, PROPUESTA_ID, true)
+    );
   }
 
   private void dadoQueElHogarTiene(long integrantes, long aFavor, long enContra) {

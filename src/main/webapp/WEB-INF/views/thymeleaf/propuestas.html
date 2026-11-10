@@ -207,6 +207,29 @@
 
                         <p class="mb-3" style="white-space: pre-line;" th:text="${propuesta.descripcion}">Descripción</p>
 
+                        <!-- Cuántos votaron y cuántos faltan -->
+                        <p class="small text-muted mb-2">
+                            <i class="bi bi-people me-1"></i>
+                            Votaron <strong th:text="${propuesta.votos.size()}">0</strong>
+                            <span th:if="${propuesta.estado?.name() == 'PENDIENTE'}">
+                                · Faltan votar <strong th:text="${propuesta.faltanVotar}">0</strong>
+                            </span>
+                        </p>
+
+                        <!-- Comentarios de cada voto -->
+                        <ul class="list-unstyled small mb-3" th:if="${not #lists.isEmpty(propuesta.votos)}">
+                            <li class="d-flex align-items-start gap-2 py-1 border-bottom" th:each="voto : ${propuesta.votos}">
+                                <span class="badge"
+                                      th:classappend="${voto.esAfirmativo} ? 'kumo-badge-green' : 'kumo-badge-pink'"
+                                      th:text="${voto.esAfirmativo} ? 'A favor' : 'En contra'">A favor</span>
+                                <div>
+                                    <span class="fw-semibold" th:text="${voto.nombreUsuario}">Nombre</span>:
+                                    <span th:if="${voto.tieneComentario()}" th:text="${voto.comentario}">Comentario</span>
+                                    <span th:unless="${voto.tieneComentario()}" class="text-muted fst-italic">Sin comentarios</span>
+                                </div>
+                            </li>
+                        </ul>
+
                         <!-- Formulario de voto: solo mientras la propuesta está pendiente -->
                         <form th:if="${propuesta.estado?.name() == 'PENDIENTE'}"
                               th:action="@{/propuestas/{id}/votar(id=${propuesta.id})}"
@@ -218,6 +241,15 @@
                             </button>
                             <button type="submit" name="esAfirmativo" value="false" class="btn btn-outline-danger btn-sm rounded-3">
                                 Rechazar
+                            </button>
+                        </form>
+
+                        <!-- Cancelar: solo el creador de la propuesta o un ADMIN, y solo si sigue pendiente -->
+                        <form th:if="${propuesta.estado?.name() == 'PENDIENTE' and (esAdmin == true or (idUsuarioActual != null and propuesta.idUsuarioCreador == idUsuarioActual))}"
+                              th:action="@{/propuestas/{id}/cancelar(id=${propuesta.id})}"
+                              method="post" class="mt-2 text-end">
+                            <button type="submit" class="btn btn-link btn-sm text-secondary p-0">
+                                <i class="bi bi-x-circle me-1"></i>Cancelar propuesta
                             </button>
                         </form>
                     </div>

@@ -1,11 +1,13 @@
 package com.tallerwebi.dominio;
 
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import jakarta.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -18,13 +20,16 @@ public class ServicioVotacion {
 
   private final RepositorioVoto repositorioVoto;
   private final RepositorioPropuesta repositorioPropuesta;
+  private final RepositorioUsuario repositorioUsuario;
 
   public ServicioVotacion(
     RepositorioVoto repositorioVoto,
-    RepositorioPropuesta repositorioPropuesta
+    RepositorioPropuesta repositorioPropuesta,
+    RepositorioUsuario repositorioUsuario
   ) {
     this.repositorioVoto = repositorioVoto;
     this.repositorioPropuesta = repositorioPropuesta;
+    this.repositorioUsuario = repositorioUsuario;
   }
 
   public List<Propuesta> obtenerPropuestasDelHogar(Long hogarId) {
@@ -32,6 +37,7 @@ public class ServicioVotacion {
     long totalIntegrantes = repositorioPropuesta.obtenerTotalIntegrantes(hogarId);
     for (Propuesta p : propuestas) {
       actualizarEstado(p, totalIntegrantes);
+      cargarDetalleDeVotos(p, totalIntegrantes);
     }
     return propuestas;
   }
@@ -63,19 +69,39 @@ public class ServicioVotacion {
     actualizarEstado(propuesta, repositorioPropuesta.obtenerTotalIntegrantes(hogarId));
   }
 
+  public void cancelarPropuesta(Long idUsuario, Long hogarId, Long idPropuesta, boolean esAdmin) {
+    Propuesta propuesta = repositorioPropuesta.obtenerPorId(idPropuesta);
+    if (propuesta == null || !propuesta.perteneceAlHogar(hogarId)) {
+      throw new PropuestaNoExiste("La propuesta no existe");
+    }
+    if (!esAdmin && !propuesta.fueCreadaPor(idUsuario)) {
+      throw new SinPermisoParaCancelarException(
+        "Solo quien creó la propuesta o un administrador puede cancelarla"
+      );
+    }
+    if (!propuesta.estaPendiente()) {
+      throw new VotacionCerradaException("Solo se pueden cancelar propuestas pendientes");
+    }
+    propuesta.setEstado(EstadoPropuesta.CANCELADA);
+  }
+
+  long calcularVotosRequeridos(long totalIntegrantes, double porcentajeQuorum) {
+    long requeridos = (long) Math.ceil((totalIntegrantes * porcentajeQuorum) / 100.0);
+    return Math.max(1, requeridos);
+  }
+
   private void actualizarEstado(Propuesta propuesta, long totalIntegrantes) {
     if (propuesta.getEstado() != EstadoPropuesta.PENDIENTE || totalIntegrantes <= 0) {
       return;
     }
     long aFavor = repositorioVoto.obtenerVotosAfirmativosPorPropuesta(propuesta.getId());
     long enContra = repositorioVoto.obtenerVotosNegativosPorPropuesta(propuesta.getId());
-    long requeridos = (long) Math.ceil(
-      (totalIntegrantes * propuesta.getPorcentajeQuorum()) / 100.0
-    );
+    long requeridos = calcularVotosRequeridos(totalIntegrantes, propuesta.getPorcentajeQuorum());
+    long sinVotar = totalIntegrantes - aFavor - enContra;
 
     if (aFavor >= requeridos) {
       propuesta.setEstado(EstadoPropuesta.APROBADA);
-    } else if (enContra > totalIntegrantes - requeridos) {
+    } else if (aFavor + sinVotar < requeridos) {
       propuesta.setEstado(EstadoPropuesta.RECHAZADA);
     } else if (propuesta.estaVencida(LocalDate.now())) {
       propuesta.setEstado(EstadoPropuesta.CANCELADA);
@@ -117,5 +143,17 @@ public class ServicioVotacion {
     ) {
       throw new PropuestaNoExiste("La fecha límite debe ser una fecha futura");
     }
+  }
+
+  private void cargarDetalleDeVotos(Propuesta propuesta, long totalIntegrantes) {
+    List<Voto> votos = repositorioVoto.obtenerVotosPorPropuesta(propuesta.getId());
+    List<DetalleVoto> detalles = new ArrayList<>();
+    for (Voto voto : votos) {
+      Usuario usuario = repositorioUsuario.buscarPorId(voto.getIdUsuario());
+      String nombre = usuario != null ? usuario.getNombre() : "Integrante";
+      detalles.add(new DetalleVoto(nombre, voto.isEsAfirmativo(), voto.getComentario()));
+    }
+    propuesta.setVotos(detalles);
+    propuesta.setFaltanVotar(Math.max(0, totalIntegrantes - votos.size()));
   }
 }
