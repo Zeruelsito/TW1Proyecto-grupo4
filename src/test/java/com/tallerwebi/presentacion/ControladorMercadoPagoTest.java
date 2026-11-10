@@ -109,8 +109,10 @@ public class ControladorMercadoPagoTest {
 
     // Then
     assertThat(mav, notNullValue());
-    assertThat(mav.getViewName(), is("errorControladorMP"));
-    assertThat(mav.getModel().containsKey("error"), is(true));
+    assertThat(
+      mav.getViewName(),
+      is("redirect:/liquidacion?error=Error+al+conectar+con+Mercado+Pago")
+    );
   }
 
   @Test
@@ -124,7 +126,10 @@ public class ControladorMercadoPagoTest {
 
     // Then
     assertThat(mav, notNullValue());
-    assertThat(mav.getViewName(), is("errorControladorMP"));
+    assertThat(
+      mav.getViewName(),
+      is("redirect:/liquidacion?error=Error+al+conectar+con+Mercado+Pago")
+    );
   }
 
   @Test
@@ -141,7 +146,7 @@ public class ControladorMercadoPagoTest {
 
     // Then
     assertThat(mav, notNullValue());
-    assertThat(mav.getViewName(), is("succesControladorMP"));
+    assertThat(mav.getViewName(), is("redirect:/liquidacion?exito=El+pago+se+realizo+con+exito"));
     verify(servicioPagoRealizadoMock, times(1)).registrarPagoExitoso(any(PagoRealizado.class));
   }
 

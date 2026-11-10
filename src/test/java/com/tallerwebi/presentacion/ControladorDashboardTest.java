@@ -12,6 +12,7 @@ import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.RepositorioHogar;
 import com.tallerwebi.dominio.ServicioCalculosGasto;
 import com.tallerwebi.dominio.ServicioHogar;
+import com.tallerwebi.dominio.ServicioRegistroGasto;
 import com.tallerwebi.dominio.ServicioUsuario;
 import com.tallerwebi.dominio.Usuario;
 import java.util.Collections;
@@ -27,6 +28,7 @@ public class ControladorDashboardTest {
   private ServicioHogar servicioHogarMock;
   private ServicioUsuario servicioUsuarioMock;
   private ServicioCalculosGasto servicioCalculosGastoMock;
+  private ServicioRegistroGasto servicioRegistroGastoMock;
   private RepositorioHogar repositorioHogarMock;
   private ControladorDashboard controladorDashboard;
 
@@ -35,12 +37,14 @@ public class ControladorDashboardTest {
     servicioHogarMock = mock(ServicioHogar.class);
     servicioUsuarioMock = mock(ServicioUsuario.class);
     servicioCalculosGastoMock = mock(ServicioCalculosGasto.class);
+    servicioRegistroGastoMock = mock(ServicioRegistroGasto.class);
     repositorioHogarMock = mock(RepositorioHogar.class);
 
     controladorDashboard = new ControladorDashboard();
     controladorDashboard.servicioHogar = servicioHogarMock;
     controladorDashboard.servicioUsuario = servicioUsuarioMock;
     controladorDashboard.servicioCalculosGasto = servicioCalculosGastoMock;
+    controladorDashboard.servicioRegistroGasto = servicioRegistroGastoMock;
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");
@@ -55,11 +59,13 @@ public class ControladorDashboardTest {
     Usuario usuario = new Usuario();
     usuario.setId(1L);
     usuario.setNombre("Macarena");
-    Hogar hogar = new Hogar("Depto Palermo");
+    Hogar hogar = new Hogar("Depto Palermo", "kumo2026");
     hogar.setId(1L);
 
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioHogarMock.obtenerHogares(1L)).thenReturn(Collections.singletonList(hogar));
+    when(servicioRegistroGastoMock.obtenerTodosLosGastos(1L)).thenReturn(Collections.emptyList());
+    when(servicioRegistroGastoMock.obtenerSugerenciaProximoPagador(1L)).thenReturn("Macarena");
 
     mockMvc
       .perform(get("/dashboard").sessionAttr("USUARIO_ID", 1L).sessionAttr("HOGAR_ID", 1L))
@@ -92,9 +98,8 @@ public class ControladorDashboardTest {
 
   @Test
   public void quePrevisualiceHogarExitosamenteConPinValido() throws Exception {
-    Hogar hogar = new Hogar("Depto Palermo");
+    Hogar hogar = new Hogar("Depto Palermo", "kumo2026");
     hogar.setId(1L);
-    hogar.setPin("kumo2026");
 
     when(servicioHogarMock.buscarPorPin("kumo2026")).thenReturn(hogar);
     when(servicioHogarMock.obtenerHogares(1L)).thenReturn(Collections.emptyList());
@@ -121,9 +126,8 @@ public class ControladorDashboardTest {
 
   @Test
   public void queMuestreErrorAlPrevisualizarSiYaEsParteDelHogar() throws Exception {
-    Hogar hogar = new Hogar("Depto Palermo");
+    Hogar hogar = new Hogar("Depto Palermo", "kumo2026");
     hogar.setId(1L);
-    hogar.setPin("kumo2026");
 
     when(servicioHogarMock.buscarPorPin("kumo2026")).thenReturn(hogar);
     when(servicioHogarMock.obtenerHogares(1L)).thenReturn(Collections.singletonList(hogar));
@@ -140,15 +144,11 @@ public class ControladorDashboardTest {
     Usuario usuario = new Usuario();
     usuario.setId(1L);
     usuario.setNombre("Macarena");
-    Hogar hogar = new Hogar("Depto Palermo");
+    Hogar hogar = new Hogar("Depto Palermo", "kumo2026");
     hogar.setId(1L);
-    hogar.setPin("kumo2026");
 
     when(servicioUsuarioMock.obtenerUsuarioPorId(1L)).thenReturn(usuario);
     when(servicioHogarMock.buscarPorId(1L)).thenReturn(hogar);
-    when(servicioHogarMock.unirseAHogar(anyString(), anyString(), any(Usuario.class)))
-      .thenReturn(true);
-
     mockMvc
       .perform(post("/confirmar-unirse-hogar").sessionAttr("USUARIO_ID", 1L).param("hogarId", "1"))
       .andExpect(status().is3xxRedirection())
