@@ -41,7 +41,6 @@ public class ControladorDashboardTest {
     controladorDashboard.servicioHogar = servicioHogarMock;
     controladorDashboard.servicioUsuario = servicioUsuarioMock;
     controladorDashboard.servicioCalculosGasto = servicioCalculosGastoMock;
-    controladorDashboard.repositorioHogar = repositorioHogarMock;
 
     InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
     viewResolver.setPrefix("/WEB-INF/views/");

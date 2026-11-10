@@ -1,11 +1,6 @@
 package com.tallerwebi.presentacion;
 
-import com.tallerwebi.dominio.Hogar;
-import com.tallerwebi.dominio.RepositorioHogar;
-import com.tallerwebi.dominio.ServicioCalculosGasto;
-import com.tallerwebi.dominio.ServicioHogar;
-import com.tallerwebi.dominio.ServicioUsuario;
-import com.tallerwebi.dominio.Usuario;
+import com.tallerwebi.dominio.*;
 import jakarta.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.List;
@@ -31,22 +26,16 @@ public class ControladorDashboard {
   ServicioCalculosGasto servicioCalculosGasto;
 
   @Autowired
-  ServicioHogar servicioHogar;
+  ServicioRegistroGasto servicioRegistroGasto;
 
   @Autowired
-  RepositorioHogar repositorioHogar;
+  ServicioHogar servicioHogar;
 
   @GetMapping("/dashboard")
   public ModelAndView irADashboard(HttpSession session) {
     Map<String, Object> model = new HashMap<>();
 
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    Usuario usuarioActual = servicioUsuario.obtenerUsuarioPorId(usuarioId);
-    if (usuarioActual == null) {
-      usuarioActual = new Usuario("Juan", 300000.0);
-      usuarioActual.setId(usuarioId);
-    }
-
     List<Hogar> hogaresUsuario = servicioHogar.obtenerHogares(usuarioId);
     model.put("hogaresUsuario", hogaresUsuario);
 
@@ -57,6 +46,16 @@ public class ControladorDashboard {
         session.setAttribute("hogarActivoEnSession", primerHogar);
       }
       procesarMetricasHogar(primerHogar, model);
+      Long hogarId = primerHogar.getId();
+      List<Gasto> todosLosGastos = servicioRegistroGasto.obtenerTodosLosGastos(hogarId);
+      List<Gasto> gastosPagados = todosLosGastos
+        .stream()
+        .filter(g -> g.getPagado() != null && g.getPagado())
+        .toList();
+
+      double totalGastosPagados = gastosPagados.stream().mapToDouble(Gasto::getMonto).sum();
+      model.put("totalGastosMes", totalGastosPagados);
+      model.put("cantidadGastos", gastosPagados.size());
     }
 
     return new ModelAndView("dashboard", model);
@@ -65,7 +64,6 @@ public class ControladorDashboard {
   private void procesarMetricasHogar(Hogar hogarActual, Map<String, Object> model) {
     List<Usuario> usuariosAgregados = obtenerIntegrantesOTodos(hogarActual);
     verificarYAsignarIngresos(usuariosAgregados);
-
     Double valorPisoMinimo = verificarPisoMinimo(hogarActual);
 
     if (usuariosAgregados != null && !usuariosAgregados.isEmpty()) {
@@ -84,6 +82,30 @@ public class ControladorDashboard {
     }
 
     model.put("usuarios", usuariosAgregados);
+    model.put("sugerenciaProximoPagador", resolverSugerenciaPagador(hogarActual));
+  }
+
+  private String resolverSugerenciaPagador(Hogar hogarActual) {
+    String sugerencia = obtenerSugerenciaSegura(hogarActual.getId());
+    if (esSugerenciaValida(sugerencia)) {
+      return sugerencia;
+    }
+    return sugerencia;
+  }
+
+  private String obtenerSugerenciaSegura(Long hogarId) {
+    try {
+      return servicioRegistroGasto.obtenerSugerenciaProximoPagador(hogarId);
+    } catch (Exception e) {
+      return "Sin datos";
+    }
+  }
+
+  private boolean esSugerenciaValida(String sugerencia) {
+    if (sugerencia == null || sugerencia.isEmpty()) {
+      return false;
+    }
+    return !"Sin datos".equalsIgnoreCase(sugerencia);
   }
 
   private List<Usuario> obtenerIntegrantesOTodos(Hogar hogarActual) {

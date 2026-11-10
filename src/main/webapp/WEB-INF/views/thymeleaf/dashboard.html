@@ -211,7 +211,7 @@
                                 <i class="bi bi-magic fs-5 text-danger"></i>
                             </div>
                             <h6 class="text-muted fw-semibold mt-3 mb-1">Próximo a pagar:</h6>
-                            <h3 class="fw-bold text-danger mb-0" th:text="${sugerenciaProximoPagador != null ? sugerenciaProximoPagador : 'Sin datos'}">Sofía</h3>
+                            <h3 class="fw-bold text-danger mb-0" th:text="${sugerenciaProximoPagador != null ? sugerenciaProximoPagador : 'Sin datos'}"></h3>
                             <p class="small text-muted mb-0 mt-2">Es quien registra menor monto aportado este mes.</p>
                         </div>
                         <div class="pt-4">
@@ -220,7 +220,7 @@
                     </div>
                 </div>
 
-                <!-- Bento Card 2 -->
+                <!-- Bento Card 2: Balance Mensual (Gastos Pagados) -->
                 <div class="col-md-6 col-lg-4">
                     <div class="kumo-card kumo-badge-purple d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -228,9 +228,19 @@
                                 <span class="badge bg-white text-primary rounded-pill px-3 py-2 fw-semibold">Balance Mensual</span>
                                 <i class="bi bi-wallet2 fs-5 text-primary"></i>
                             </div>
-                            <h6 class="text-muted fw-semibold mt-3 mb-1">Total Gastado</h6>
-                            <h3 class="fw-bold text-primary mb-0" th:text="${totalGastosMes != null ? '$' + #numbers.formatDecimal(totalGastosMes, 1, 'POINT', 2, 'COMMA') : '$0,00'}">$45.200,00</h3>
-                            <p class="small text-muted mb-0 mt-2" th:text="${cantidadGastos != null ? cantidadGastos + ' gastos registrados este mes' : '0 gastos registrados'}">12 gastos</p>
+                            <h6 class="text-muted fw-semibold mt-3 mb-1">Total Gastado en el hogar</h6>
+
+                            <!-- Muestra la suma total de los gastos pagados -->
+                            <h3 class="fw-bold text-primary mb-0"
+                                th:text="${totalGastosMes != null ? '$' + #numbers.formatDecimal(totalGastosMes, 1, 'POINT', 2, 'COMMA') : '$0,00'}">
+                                $0,00
+                            </h3>
+
+                            <!-- Muestra la cantidad exacta de gastos pagados -->
+                            <p class="small text-muted mb-0 mt-2"
+                               th:text="${cantidadGastos != null ? cantidadGastos + ' gastos pagados registrados' : '0 gastos pagados'}">
+                                0 gastos registrados
+                            </p>
                         </div>
                         <div class="pt-4">
                             <a th:href="@{/gastos}" class="btn btn-sm btn-outline-primary w-100 rounded-3 fw-semibold">Ver detalle completo</a>

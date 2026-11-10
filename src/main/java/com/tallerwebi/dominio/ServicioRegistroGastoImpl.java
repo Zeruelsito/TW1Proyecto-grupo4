@@ -105,7 +105,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     }
 
     if (gastos.isEmpty()) {
-      return obtenerNombreFormateado(integrantes.get(0).getEmail());
+      return obtenerNombreFormateado(integrantes.get(0).getNombre());
     }
 
     Map<Long, Double> totalPorUsuario = calcularTotalesPorUsuario(integrantes, gastos);
@@ -223,10 +223,10 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   private String buscarNombrePorId(List<Usuario> integrantes, Long idBuscado) {
     for (Usuario u : integrantes) {
       if (u.getId().equals(idBuscado)) {
-        return obtenerNombreFormateado(u.getEmail());
+        return obtenerNombreFormateado(u.getNombre());
       }
     }
-    return obtenerNombreFormateado(integrantes.get(0).getEmail());
+    return obtenerNombreFormateado(integrantes.get(0).getNombre());
   }
 
   private String obtenerNombreFormateado(String email) {
