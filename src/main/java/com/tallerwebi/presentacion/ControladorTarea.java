@@ -112,6 +112,9 @@ public class ControladorTarea {
       if (tareaRepetitivaId != null) {
         servicioCreditoTarea.registrarTareaDesdeCatalogo(tareaRepetitivaId, null, hogarId);
       } else {
+        Hogar hogar = servicioHogar.buscarPorId(hogarId);
+        tarea.setHogar(hogar);
+
         servicioCreditoTarea.registrarTarea(tarea);
         if (request.getParameter("guardarComoPlantilla") != null) {
           guardarPlantilla(
@@ -234,7 +237,8 @@ public class ControladorTarea {
 
   private void cargarDatosDashboardTareas(Map<String, Object> model, Long usuarioId, Long hogarId) {
     Double creditoTotalBruto = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuarioId);
-    model.put("tareas", servicioCreditoTarea.obtenerTodasLasTareas());
+    model.put("tareas", servicioCreditoTarea.obtenerTareasPorHogar(hogarId));
+    // model.put("tareas", servicioCreditoTarea.obtenerTodasLasTareas());
     //model.put("catalogo", servicioTareaRepetitiva.obtenerTodas(hogarId));
     model.put("catalogo", servicioTareaRepetitiva.obtenerCatalogo(hogarId, usuarioId));
 

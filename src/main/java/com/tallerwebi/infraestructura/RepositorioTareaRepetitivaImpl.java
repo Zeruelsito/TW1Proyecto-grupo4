@@ -1,5 +1,7 @@
 package com.tallerwebi.infraestructura;
 
+import com.tallerwebi.dominio.AlcanceTarea;
+//import com.tallerwebi.dominio.Hogar;
 import com.tallerwebi.dominio.RepositorioTareaRepetitiva;
 import com.tallerwebi.dominio.TareaRepetitiva;
 import com.tallerwebi.dominio.Usuario;
@@ -57,4 +59,43 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
       .setParameter("hogarId", hogarId)
       .getResultList();
   }
+
+  @Override
+  public List<TareaRepetitiva> obtenerPorHogarYUsuario(Long hogarId, Long usuarioId) {
+    String query =
+      "from TareaRepetitiva t where t.hogar.id = :hogarId " +
+      "and t.activa = true " +
+      "and (t.alcance = :hogar or t.propietario.id = :usuarioId)";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, TareaRepetitiva.class)
+      .setParameter("hogarId", hogarId)
+      .setParameter("hogar", AlcanceTarea.HOGAR)
+      .setParameter("usuarioId", usuarioId)
+      .getResultList();
+  }
+
+
+  @Override
+  public TareaRepetitiva obtenerPorHogarUsuarioYTitulo(
+    Long hogarId,
+    Long usuarioId,
+    String titulo
+  ) {
+    String query =
+      "from TareaRepetitiva t where t.hogar.id = :hogarId and t.titulo = :titulo " +
+      "and t.activa = true " +
+      "and (t.alcance = :hogar or t.propietario.id = :usuarioId)";
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, TareaRepetitiva.class)
+      .setParameter("hogarId", hogarId)
+      .setParameter("titulo", titulo)
+      .setParameter("hogar", AlcanceTarea.HOGAR)
+      .setParameter("usuarioId", usuarioId)
+      .setMaxResults(1)
+      .uniqueResult();
+  }
+
+
 }

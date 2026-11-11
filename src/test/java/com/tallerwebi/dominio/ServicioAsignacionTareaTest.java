@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+//import com.tallerwebi.dominio.RepositorioTareaRepetitiva;
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
 import com.tallerwebi.dominio.excepcion.TareaNoEncontradaException;
 import java.util.ArrayList;
@@ -139,16 +140,6 @@ public class ServicioAsignacionTareaTest {
   }
 
   @Test
-  public void noDebeGuardarComoPlantillaUnTituloQueYaExiste() {
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID))
-      .thenReturn(List.of(new TareaRepetitiva(1L, "Regar las plantas")));
-
-    servicio.guardarComoPlantilla("regar las plantas", HOGAR_ID);
-
-    verify(repositorioTareaRepetitiva, never()).guardar(any(TareaRepetitiva.class));
-  }
-
-  @Test
   public void debeGuardarComoPlantillaPersonalConSuPropietario() {
     Usuario propietario = new Usuario();
     propietario.setId(11L);
@@ -156,8 +147,10 @@ public class ServicioAsignacionTareaTest {
 
     servicio.guardarComoPlantillaPersonal("lavar mi ropa", HOGAR_ID, propietario);
 
-    verify(repositorioTareaRepetitiva).guardar(
-        argThat(plantilla ->plantilla.getAlcance() == AlcanceTarea.PERSONAL &&
+    verify(repositorioTareaRepetitiva)
+      .guardar(
+        argThat(plantilla ->
+          plantilla.getAlcance() == AlcanceTarea.PERSONAL &&
           propietario.equals(plantilla.getPropietario())
         )
       );
@@ -169,7 +162,8 @@ public class ServicioAsignacionTareaTest {
     TareaRepetitiva personal = new TareaRepetitiva(2L, "Lavar mi ropa");
     personal.setAlcance(AlcanceTarea.PERSONAL);
 
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(delHogar, personal));
+    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID))
+      .thenReturn(List.of(delHogar, personal));
 
     List<TareaRepetitiva> tareas = servicio.obtenerTodas(HOGAR_ID);
 
@@ -193,7 +187,8 @@ public class ServicioAsignacionTareaTest {
     tareaB.setAlcance(AlcanceTarea.PERSONAL);
     tareaB.setPropietario(pepe);
 
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(delHogar, tareaA, tareaB));
+    when(repositorioTareaRepetitiva.obtenerPorHogarYUsuario(HOGAR_ID, 11L))
+      .thenReturn(List.of(delHogar, tareaA));
 
     List<TareaRepetitiva> catalogo = servicio.obtenerCatalogo(HOGAR_ID, 11L);
 
@@ -212,7 +207,6 @@ public class ServicioAsignacionTareaTest {
     assertThat(tareas, equalTo(List.of(activa)));
   }
 
-  
   @Test
   public void debeRotarAunqueElUsuarioAsignadoSeaOtraInstanciaConElMismoId() {
     Usuario oriDeLaLista = new Usuario();
@@ -226,30 +220,15 @@ public class ServicioAsignacionTareaTest {
     tarea.setUsuarioAsignado(oriDeLaBase);
     when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(tarea));
 
-    
     servicio.asignarEquitativamente(1L, List.of(oriDeLaLista, pepe), HOGAR_ID);
 
-   
     assertThat(tarea.getUsuarioAsignado(), equalTo(pepe));
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   @Test
   public void debeQuitarUnaPlantillaMarcandolaComoInactiva() {
-    TareaRepetitiva plantilla = new TareaRepetitiva(1L, "Regar las plantas");
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(plantilla));
+    TareaRepetitiva plantilla = plantillaDelHogar(1L, "Regar las plantas");
+    when(repositorioTareaRepetitiva.obtenerPorId(1L)).thenReturn(plantilla);
 
     servicio.quitarPlantilla(1L, HOGAR_ID, 11L);
 
@@ -258,7 +237,8 @@ public class ServicioAsignacionTareaTest {
 
   @Test
   public void noDebeQuitarUnaPlantillaQueNoExiste() {
-    assertThrows(TareaNoEncontradaException.class,
+    assertThrows(
+      TareaNoEncontradaException.class,
       () -> servicio.quitarPlantilla(99L, HOGAR_ID, 11L)
     );
   }
@@ -267,10 +247,10 @@ public class ServicioAsignacionTareaTest {
   public void noDebeQuitarUnaPlantillaPersonalDeOtroUsuario() {
     Usuario propietario = new Usuario();
     propietario.setId(11L);
-    TareaRepetitiva personal = new TareaRepetitiva(1L, "Lavar mi ropa");
+    TareaRepetitiva personal = plantillaDelHogar(1L, "Lavar mi ropa");
     personal.setAlcance(AlcanceTarea.PERSONAL);
     personal.setPropietario(propietario);
-    when(repositorioTareaRepetitiva.obtenerPorHogar(HOGAR_ID)).thenReturn(List.of(personal));
+    when(repositorioTareaRepetitiva.obtenerPorId(1L)).thenReturn(personal);
 
     assertThrows(
       TareaNoEncontradaException.class,
@@ -279,4 +259,32 @@ public class ServicioAsignacionTareaTest {
     assertThat(personal.isActiva(), equalTo(true));
   }
 
+  @Test
+  public void noDebeGuardarComoPlantillaUnTituloQueYaExiste() {
+    when(
+      repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(HOGAR_ID, null, "regar las plantas")
+    )
+      .thenReturn(new TareaRepetitiva(1L, "Regar las plantas"));
+
+    servicio.guardarComoPlantilla("regar las plantas", HOGAR_ID);
+
+    verify(repositorioTareaRepetitiva, never()).guardar(any(TareaRepetitiva.class));
+  }
+
+  @Test
+  public void noDebeQuitarUnaPlantillaDeOtroHogar() {
+    TareaRepetitiva deOtroHogar = plantillaDelHogar(1L, "Regar las plantas");
+    when(repositorioTareaRepetitiva.obtenerPorId(1L)).thenReturn(deOtroHogar);
+
+    assertThrows(TareaNoEncontradaException.class, () -> servicio.quitarPlantilla(1L, 2L, 11L));
+    assertThat(deOtroHogar.isActiva(), equalTo(true));
+  }
+
+  private TareaRepetitiva plantillaDelHogar(Long id, String titulo) {
+    Hogar hogar = new Hogar();
+    hogar.setId(HOGAR_ID);
+    TareaRepetitiva plantilla = new TareaRepetitiva(id, titulo);
+    plantilla.setHogar(hogar);
+    return plantilla;
+  }
 }

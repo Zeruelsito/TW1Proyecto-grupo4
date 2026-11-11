@@ -9,6 +9,7 @@ import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
 
 @Entity
+@SuppressWarnings("PMD.TooManyFields")
 public class Tarea {
 
   @Id
@@ -21,6 +22,10 @@ public class Tarea {
   private Double valorCredito;
   private EstadoTarea estado;
   private Boolean descontableDeLiquidacion;
+
+  @ManyToOne
+  @JoinColumn(name = "hogar_id")
+  private Hogar hogar;
 
   @ManyToOne
   @JoinColumn(name = "usuario_realizador_id")
@@ -150,5 +155,13 @@ public class Tarea {
 
   public void setDescontableDeLiquidacion(Boolean descontableDeLiquidacion) {
     this.descontableDeLiquidacion = descontableDeLiquidacion;
+  }
+
+  public Hogar getHogar() {
+    return hogar;
+  }
+
+  public void setHogar(Hogar hogar) {
+    this.hogar = hogar;
   }
 }

@@ -65,7 +65,7 @@ public class ServicioReporteTest {
     when(servicioRegistroGastoMock.obtenerIntegrantes(anyLong())).thenReturn(List.of());
     when(servicioRegistroGastoMock.obtenerTodosLosGastos(anyLong()))
       .thenReturn(List.of(gastoSeptiembre, gastoAgosto));
-    when(servicioCreditoTareaMock.obtenerTodasLasTareas()).thenReturn(List.of());
+    when(servicioCreditoTareaMock.obtenerTareasPorHogar(HOGAR_ID)).thenReturn(List.of());
     when(servicioLiquidacionMock.obtenerLiquidacionDelMes(any(Hogar.class), anyList()))
       .thenReturn(List.of());
 

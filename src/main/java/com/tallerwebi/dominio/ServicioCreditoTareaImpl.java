@@ -48,6 +48,7 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
 
     Tarea tarea = new Tarea(plantilla.getTitulo());
     tarea.setTareaRepetitiva(plantilla);
+    tarea.setHogar(plantilla.getHogar());
     registrarTarea(tarea);
   }
 
@@ -148,6 +149,11 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
   @Override
   public List<Tarea> obtenerTodasLasTareas() {
     return repositorioTarea.obtenerTodas();
+  }
+
+  @Override
+  public List<Tarea> obtenerTareasPorHogar(Long hogarId) {
+    return repositorioTarea.obtenerPorHogar(hogarId);
   }
 
   /* --- Métodos Auxiliares Privados --- */

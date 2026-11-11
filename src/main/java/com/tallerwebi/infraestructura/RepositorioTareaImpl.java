@@ -43,4 +43,15 @@ public class RepositorioTareaImpl implements RepositorioTarea {
       .setParameter("usuario", usuarioRealizador)
       .getResultList();
   }
+
+  @Override
+  public List<Tarea> obtenerPorHogar(Long hogarId) {
+    String query = "from Tarea t where t.hogar.id = :hogarId";
+
+    return sessionFactory
+      .getCurrentSession()
+      .createQuery(query, Tarea.class)
+      .setParameter("hogarId", hogarId)
+      .getResultList();
+  }
 }

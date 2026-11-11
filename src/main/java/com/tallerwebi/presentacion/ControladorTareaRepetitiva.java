@@ -65,7 +65,6 @@ public class ControladorTareaRepetitiva {
     }
   }
 
-  /*
   @PostMapping("/tareas-repetitivas/quitar")
   public ModelAndView quitarTarea(@RequestParam("tareaId") Long tareaId, HttpSession session) {
     Long hogarId = obtenerHogarIdDeSesion(session);
@@ -80,7 +79,7 @@ public class ControladorTareaRepetitiva {
       mav.addObject(ATRIBUTO_INTEGRANTES, servicioRegistroGasto.obtenerIntegrantes(hogarId));
       return mav;
     }
-  }  */
+  }
 
   private Long obtenerHogarIdDeSesion(HttpSession session) {
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");

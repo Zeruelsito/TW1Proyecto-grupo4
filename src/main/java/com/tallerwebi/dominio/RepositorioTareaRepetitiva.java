@@ -9,4 +9,7 @@ public interface RepositorioTareaRepetitiva {
   int contarAsignadasAUsuario(Usuario usuario); // borrar
 
   List<TareaRepetitiva> obtenerPorHogar(Long hogarId);
+
+  List<TareaRepetitiva> obtenerPorHogarYUsuario(Long hogarId, Long usuarioId);
+  TareaRepetitiva obtenerPorHogarUsuarioYTitulo(Long hogarId, Long usuarioId, String titulo);
 }

@@ -1,6 +1,7 @@
 package com.tallerwebi.infraestructura.config;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -199,6 +200,110 @@ public class RepositorioTareaRepetitivaTest {
     assertThat(visibleParaOtro, equalTo(false));
   }
 
+  // agrego
+
+  @Test
+  @Transactional
+  @Rollback
+  public void deberiaObtenerLasDelHogarYLasPersonalesDelUsuarioSinTraerOtrasNiInactivas() {
+    Hogar hogarA = givenTengoUnHogar("depto 1", 1000.00);
+    Hogar hogarB = givenTengoUnHogar("depto 2", 1000.00);
+    Usuario ori = givenTengoUnUsuario("ori");
+    Usuario dylan = givenTengoUnUsuario("dylan");
+    
+    TareaRepetitiva delHogar = givenTengoUnaTareaEnHogar("comprar manteles", hogarA);
+    TareaRepetitiva deOri = givenTengoUnaTareaPersonal("lavar mi ropa", hogarA, ori);
+    givenTengoUnaTareaPersonal("estudiar", hogarA, dylan);
+    givenTengoUnaTareaEnHogar("pagar alquiler", hogarB);
+    TareaRepetitiva inactiva = givenTengoUnaTareaEnHogar("regar plantas", hogarA);
+    inactiva.setActiva(false);
+
+    List<TareaRepetitiva> obtenidas = repositorioTareaRepetitiva.obtenerPorHogarYUsuario(
+      hogarA.getId(),
+      ori.getId());
+
+    assertThat(obtenidas.size(), equalTo(2));
+    assertThat(obtenidas.get(0), equalTo(delHogar));
+    assertThat(obtenidas.get(1), equalTo(deOri));
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void noDeberiaVerUnaTareaDeHogarDeOtroHogar() {
+    Hogar hogarA = givenTengoUnHogar("depto 1", 1000.00);
+    Hogar hogarB = givenTengoUnHogar("depto 2", 1000.00);
+
+    Usuario ori = givenTengoUnUsuario("ori");
+    givenTengoUnaTareaEnHogar("comprar manteles", hogarA);
+
+    List<TareaRepetitiva> obtenidas = repositorioTareaRepetitiva.obtenerPorHogarYUsuario(hogarB.getId(), ori.getId()
+    );
+
+    assertThat(obtenidas, empty());
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void deberiaObtenerPorHogarUsuarioYTituloUnaTareaDelHogar() {
+    Hogar hogar = givenTengoUnHogar("depto 1", 1000.00);
+    Usuario ori = givenTengoUnUsuario("ori");
+    TareaRepetitiva manteles = givenTengoUnaTareaEnHogar("comprar manteles", hogar);
+
+    TareaRepetitiva obtenida = repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(
+      hogar.getId(),
+      ori.getId(),
+      "comprar manteles"
+    );
+
+    assertThat(obtenida, equalTo(manteles));
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void noDeberiaObtenerPorTituloUnaTareaDeOtroHogarNiPersonalDeOtroUsuario() {
+    Hogar hogarA = givenTengoUnHogar("depto 1", 1000.00);
+    Hogar hogarB = givenTengoUnHogar("depto 2", 1000.00);
+    Usuario ori = givenTengoUnUsuario("ori");
+    Usuario dylan = givenTengoUnUsuario("dylan");
+    givenTengoUnaTareaEnHogar("comprar manteles", hogarB);
+    givenTengoUnaTareaPersonal("comprar pinceles", hogarA, dylan);
+
+    TareaRepetitiva deOtroHogar = repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(
+      hogarA.getId(),
+      ori.getId(),
+      "comprar manteles"
+    );
+    TareaRepetitiva deOtroUsuario = repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(
+      hogarA.getId(),
+      ori.getId(),
+      "comprar pinceles"
+    );
+
+    assertThat(deOtroHogar, nullValue());
+    assertThat(deOtroUsuario, nullValue());
+  }
+
+  @Test
+  @Transactional
+  @Rollback
+  public void noDeberiaObtenerPorTituloUnaTareaInactiva() {
+    Hogar hogar = givenTengoUnHogar("depto", 1000.00);
+    Usuario ori = givenTengoUnUsuario("ori");
+    TareaRepetitiva quitada = givenTengoUnaTareaEnHogar("comprar manteles", hogar);
+    quitada.setActiva(false);
+
+    TareaRepetitiva obtenida = repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(
+      hogar.getId(),
+      ori.getId(),
+      "comprar manteles"
+    );
+
+    assertThat(obtenida, nullValue());
+  }
+
   private Hogar givenTengoUnHogar(String nombre, Double precioHora) {
     Hogar hogar = new Hogar(nombre);
     hogar.setPrecioHoraTarea(precioHora);
@@ -221,8 +326,27 @@ public class RepositorioTareaRepetitivaTest {
 
   private TareaRepetitiva givenTengoUnaTareaRepetitiva(String titulo) {
     TareaRepetitiva tareaRepetitiva = crearTareaRepetitiva(titulo);
+    tareaRepetitiva.setActiva(true);
     sessionFactory.getCurrentSession().persist(tareaRepetitiva);
     return tareaRepetitiva;
+  }
+
+  private TareaRepetitiva givenTengoUnaTareaEnHogar(String titulo, Hogar hogar) {
+    TareaRepetitiva tarea = givenTengoUnaTareaRepetitiva(titulo);
+    tarea.setHogar(hogar);
+    tarea.setAlcance(AlcanceTarea.HOGAR);
+    return tarea;
+  }
+
+  private TareaRepetitiva givenTengoUnaTareaPersonal(
+    String titulo,
+    Hogar hogar,
+    Usuario propietario
+  ) {
+    TareaRepetitiva tarea = givenTengoUnaTareaEnHogar(titulo, hogar);
+    tarea.setAlcance(AlcanceTarea.PERSONAL);
+    tarea.setPropietario(propietario);
+    return tarea;
   }
 
   private TareaRepetitiva givenTengoUnaTareaRepetitivaAsignada(String titulo, Usuario usuario) {

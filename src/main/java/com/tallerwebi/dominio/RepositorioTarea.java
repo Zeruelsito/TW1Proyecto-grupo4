@@ -7,4 +7,6 @@ public interface RepositorioTarea {
   Tarea buscarPorId(Long id);
   List<Tarea> obtenerTodas();
   List<Tarea> obtenerPorUsuario(Usuario usuarioRealizador);
+
+  List<Tarea> obtenerPorHogar(Long hogarId);
 }

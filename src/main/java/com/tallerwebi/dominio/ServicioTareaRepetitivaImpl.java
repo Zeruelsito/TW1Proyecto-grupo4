@@ -63,27 +63,22 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
 
   @Override
   public List<TareaRepetitiva> obtenerCatalogo(Long hogarId, Long usuarioId) {
-    List<TareaRepetitiva> catalogo = new ArrayList<>();
-    for (TareaRepetitiva tarea : repositorioTareaRepetitiva.obtenerPorHogar(hogarId)) {
-      if (tarea.esVisiblePara(usuarioId)) {
-        catalogo.add(tarea);
-      }
-    }
-    return catalogo;
+    return repositorioTareaRepetitiva.obtenerPorHogarYUsuario(hogarId, usuarioId);
   }
 
-  
   @Override
   public void quitarPlantilla(Long plantillaId, Long hogarId, Long usuarioId) {
-    TareaRepetitiva plantilla = buscarPorId(
-      plantillaId,
-      repositorioTareaRepetitiva.obtenerPorHogar(hogarId)
-    );
-    if (!plantilla.esVisiblePara(usuarioId)) {
+    TareaRepetitiva plantilla = repositorioTareaRepetitiva.obtenerPorId(plantillaId);
+    if (
+      plantilla == null ||
+      plantilla.getHogar() == null ||
+      !plantilla.getHogar().getId().equals(hogarId) ||
+      !plantilla.esVisiblePara(usuarioId)
+    ) {
       throw new TareaNoEncontradaException();
     }
     plantilla.setActiva(false);
-  } 
+  }
 
   private TareaRepetitiva buscarPorId(Long tareaId, List<TareaRepetitiva> tareas) {
     for (TareaRepetitiva tarea : tareas) {
@@ -127,7 +122,7 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
     return cantidad;
   }
 
-  private void crearPlantilla( // crearPlantillaSiNoExiste 
+  private void crearPlantilla( // crearPlantillaSiNoExiste
     String titulo,
     Long hogarId,
     AlcanceTarea alcance,
@@ -140,12 +135,12 @@ public class ServicioTareaRepetitivaImpl implements ServicioTareaRepetitiva {
     if (propietario != null) {
       propietarioId = propietario.getId();
     }
-    for (TareaRepetitiva existente : repositorioTareaRepetitiva.obtenerPorHogar(hogarId)) {
-      if (
-        existente.esVisiblePara(propietarioId) && titulo.equalsIgnoreCase(existente.getTitulo())
-      ) {
-        return;
-      }
+
+    if (
+      repositorioTareaRepetitiva.obtenerPorHogarUsuarioYTitulo(hogarId, propietarioId, titulo) !=
+      null
+    ) {
+      return;
     }
     TareaRepetitiva plantilla = new TareaRepetitiva();
     plantilla.setTitulo(titulo);

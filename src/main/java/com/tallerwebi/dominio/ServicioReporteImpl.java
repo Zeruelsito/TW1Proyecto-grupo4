@@ -61,7 +61,7 @@ public class ServicioReporteImpl implements ServicioReporte {
 
     List<Usuario> integrantes = servicioRegistroGasto.obtenerIntegrantes(hogarId);
     List<Gasto> gastos = filtrarGastosDelMes(mes, hogarId);
-    List<Tarea> tareas = filtrarTareasDelMes(mes);
+    List<Tarea> tareas = filtrarTareasDelMes(mes, hogarId);
 
     Hogar hogar = servicioHogar.obtenerHogar();
     if (hogar == null) {
@@ -89,9 +89,9 @@ public class ServicioReporteImpl implements ServicioReporte {
     return delMes;
   }
 
-  private List<Tarea> filtrarTareasDelMes(YearMonth mes) {
+  private List<Tarea> filtrarTareasDelMes(YearMonth mes, Long hogarId) {
     List<Tarea> delMes = new ArrayList<>();
-    for (Tarea tarea : servicioCreditoTarea.obtenerTodasLasTareas()) {
+    for (Tarea tarea : servicioCreditoTarea.obtenerTareasPorHogar(hogarId)) {
       if (esDelMes(tarea.getFechaRegistro(), mes)) {
         delMes.add(tarea);
       }

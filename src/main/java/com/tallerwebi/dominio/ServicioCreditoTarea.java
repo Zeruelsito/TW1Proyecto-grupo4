@@ -18,4 +18,6 @@ public interface ServicioCreditoTarea {
   void liquidarCreditosDeUsuario(Long usuarioId);
   Double obtenerCreditoLiquidadoPorUsuario(Long usuarioId);
   void liquidarCreditosParciales(Long usuarioId, double montoMaximo);
+
+  List<Tarea> obtenerTareasPorHogar(Long hogarId);
 }
