@@ -12,9 +12,14 @@ import org.springframework.stereotype.Service;
 public class ServicioUsuarioImpl implements ServicioUsuario {
 
   private List<Usuario> usuariosMock = new ArrayList<Usuario>();
+  private RepositorioUsuario repositorioUsuario;
 
   @Autowired
-  private RepositorioUsuario repositorioUsuario;
+  public ServicioUsuarioImpl(RepositorioUsuario repositorioUsuario) {
+    this.repositorioUsuario = repositorioUsuario;
+  }
+
+  public ServicioUsuarioImpl() {}
 
   @Override
   public void registrarUsuario(Usuario usuario) {

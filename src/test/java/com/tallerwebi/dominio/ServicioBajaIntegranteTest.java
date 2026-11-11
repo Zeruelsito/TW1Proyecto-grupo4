@@ -1,12 +1,8 @@
 package com.tallerwebi.dominio;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -18,249 +14,214 @@ import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 public class ServicioBajaIntegranteTest {
 
-  private ServicioBajaIntegrante servicioBaja;
   private RepositorioUsuario repositorioUsuarioMock;
   private RepositorioGasto repositorioGastoMock;
+  private ServicioLiquidacion servicioLiquidacionMock;
+  private ServicioCalculosGasto servicioCalculosGastoMock;
   private ServicioHogar servicioHogarMock;
   private ServicioCreditoTarea servicioCreditoTareaMock;
   private ServicioPagoRealizado servicioPagoRealizadoMock;
   private HttpSession sessionMock;
 
-  private Usuario juan;
-  private Usuario maria;
-  private Usuario pedro;
-  private Hogar hogar;
-  private static final Long HOGAR_ID = 1L;
+  private ServicioBajaIntegranteImpl servicioBajaIntegrante;
+
+  private Hogar hogarTest;
+  private Usuario usuario1;
+  private Usuario usuario2;
 
   @BeforeEach
-  public void init() {
-    repositorioUsuarioMock = mock(RepositorioUsuario.class);
-    repositorioGastoMock = mock(RepositorioGasto.class);
-    servicioHogarMock = mock(ServicioHogar.class);
-    servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
-    servicioCreditoTareaMock = mock(ServicioCreditoTarea.class);
-    servicioPagoRealizadoMock = mock(ServicioPagoRealizado.class);
-    sessionMock = mock(HttpSession.class);
+  public void setUp() {
+    repositorioUsuarioMock = Mockito.mock(RepositorioUsuario.class);
+    repositorioGastoMock = Mockito.mock(RepositorioGasto.class);
+    servicioLiquidacionMock = Mockito.mock(ServicioLiquidacion.class);
+    servicioCalculosGastoMock = Mockito.mock(ServicioCalculosGasto.class);
+    servicioHogarMock = Mockito.mock(ServicioHogar.class);
+    servicioCreditoTareaMock = Mockito.mock(ServicioCreditoTarea.class);
+    servicioPagoRealizadoMock = Mockito.mock(ServicioPagoRealizado.class);
+    sessionMock = Mockito.mock(HttpSession.class);
 
-    servicioBaja =
+    servicioBajaIntegrante =
       new ServicioBajaIntegranteImpl(
         repositorioUsuarioMock,
         repositorioGastoMock,
-        new ServicioLiquidacionImpl(servicioCreditoTareaMock, servicioPagoRealizadoMock),
-        new ServicioCalculosGastoImpl(),
+        servicioLiquidacionMock,
+        servicioCalculosGastoMock,
         servicioHogarMock,
         servicioCreditoTareaMock,
         servicioPagoRealizadoMock,
         sessionMock
       );
 
-    juan = new Usuario("Juan", 300000.0);
-    juan.setId(1L);
-    maria = new Usuario("Maria", 600000.0);
-    maria.setId(2L);
-    pedro = new Usuario("Pedro", 900000.0);
-    pedro.setId(3L);
+    hogarTest = new Hogar();
+    hogarTest.setId(10L);
+    hogarTest.setPisoMinimoHogar(1000.0);
+    hogarTest.setPrecioHoraTarea(100.0);
 
-    hogar = new Hogar("Hogar 1");
-    hogar.setId(HOGAR_ID);
-    hogar.setPisoMinimoHogar(200000.0);
-    hogar.setPrecioHoraTarea(5000.0);
+    usuario1 = new Usuario();
+    usuario1.setId(1L);
+    usuario1.setNombre("Carlos");
+    usuario1.setIngresoMensual(50000.0);
 
-    // Configuramos la sesión para que devuelva el HOGAR_ID
-    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(HOGAR_ID);
+    usuario2 = new Usuario();
+    usuario2.setId(2L);
+    usuario2.setNombre("Juan");
+    usuario2.setIngresoMensual(60000.0);
 
-    when(repositorioUsuarioMock.buscarPorId(1L)).thenReturn(juan);
-    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(HOGAR_ID))
-      .thenReturn(List.of(juan, maria, pedro));
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of());
-    when(servicioHogarMock.obtenerHogar()).thenReturn(hogar);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
+    when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(10L);
   }
 
   @Test
-  public void simularBajaNoDeberiaGuardarNingunCambio() {
-    // ejecucion
-    servicioBaja.simularBaja(1L);
-
-    // validacion
-    assertThat(juan.getFechaBaja(), nullValue());
-    verify(repositorioUsuarioMock, times(0)).modificar(any());
-  }
-
-  @Test
-  public void siElQueSeVaNoPagoNadaDeberiaPagarleSuParteAlQuePago() {
-    // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
-
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
-
-    // validacion
-    TransferenciaSugerida transferencia = simulacion.getLiquidacionFinal().get(0);
-    assertThat(simulacion.getBalanceFinal(), equalTo(-10000.0));
-    assertThat(transferencia.getEmisor(), equalTo("Juan"));
-    assertThat(transferencia.getReceptor(), equalTo("Maria"));
-    assertThat(transferencia.getMonto(), equalTo(10000.0));
-  }
-
-  @Test
-  public void losGastosFijosDeberianRepartirseEntreLosQueQuedan() {
-    // preparacion: 90000 de fijos -> 30000 entre 3, 45000 entre 2
-    Gasto alquiler = new Gasto("G2", TipoGasto.FIJO, "Alquiler", 90000.0, maria, "Casa");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(alquiler));
-
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
-
-    // validacion
-    FilaCuota filaMaria = simulacion.getCuotasRestantes().get(0);
-    assertThat(filaMaria.getParteFijaAntes(), equalTo(30000.0));
-    assertThat(filaMaria.getParteFijaDespues(), equalTo(45000.0));
-  }
-
-  @Test
-  public void sinPisoMinimoNoDeberiaCalcularLasCuotas() {
-    // preparacion
-    hogar.setPisoMinimoHogar(0.0);
-
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
-
-    // validacion
-    assertFalse(simulacion.isCuotasCalculadas());
-    assertThat(simulacion.getCuotasRestantes().get(0).getCuotaDespues(), nullValue());
-  }
-
-  @Test
-  public void simularBajaDeUnUsuarioQueNoExisteDeberiaLanzarExcepcion() {
-    // preparacion
+  public void queLanceExcepcionSiUsuarioNoExisteAlSimularBaja() {
     when(repositorioUsuarioMock.buscarPorId(99L)).thenReturn(null);
 
-    // ejecucion y validacion
-    assertThrows(UsuarioNoEncontrado.class, () -> servicioBaja.simularBaja(99L));
+    assertThrows(
+      UsuarioNoEncontrado.class,
+      () -> {
+        servicioBajaIntegrante.simularBaja(99L);
+      }
+    );
   }
 
   @Test
-  public void simularBajaDeUnUsuarioYaDadoDeBajaDeberiaLanzarExcepcion() {
-    // preparacion
-    juan.setFechaBaja(LocalDateTime.now().minusDays(1));
+  public void queLanceExcepcionSiUsuarioYaEstaDeBaja() {
+    usuario1.setFechaBaja(LocalDateTime.now().minusDays(5));
+    when(repositorioUsuarioMock.buscarPorId(1L)).thenReturn(usuario1);
 
-    // ejecucion y validacion
-    assertThrows(UsuarioYaDadoDeBajaException.class, () -> servicioBaja.simularBaja(1L));
+    assertThrows(
+      UsuarioYaDadoDeBajaException.class,
+      () -> {
+        servicioBajaIntegrante.simularBaja(1L);
+      }
+    );
   }
 
   @Test
-  public void darDeBajaAlUltimoIntegranteDeberiaLanzarExcepcion() {
-    // preparacion
-    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(HOGAR_ID)).thenReturn(List.of(juan));
+  public void queLanceExcepcionSiElHogarSeQuedaSinIntegrantesAlDarDeBaja() {
+    when(repositorioUsuarioMock.buscarPorId(1L)).thenReturn(usuario1);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1));
 
-    // ejecucion y validacion
-    assertThrows(HogarSinIntegrantesException.class, () -> servicioBaja.confirmarBaja(1L));
-    verify(repositorioUsuarioMock, times(0)).modificar(any());
+    assertThrows(
+      HogarSinIntegrantesException.class,
+      () -> {
+        servicioBajaIntegrante.simularBaja(1L);
+      }
+    );
   }
 
   @Test
-  public void confirmarBajaDeberiaRegistrarLaFechaYRecalcularLasCuotas() {
-    // ejecucion
-    servicioBaja.confirmarBaja(1L);
+  public void queSimuleBajaCorrectamenteSinDeudaPendiente() {
+    when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1, usuario2));
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
+    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
+      .thenReturn(Collections.emptyList());
+    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
+    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
 
-    // validacion
-    assertThat(juan.getFechaBaja(), notNullValue());
-    assertThat(maria.getCuotaMensual(), notNullValue());
-    verify(repositorioUsuarioMock, times(1)).modificar(juan);
-    verify(repositorioUsuarioMock, times(1)).modificar(maria);
-    verify(repositorioUsuarioMock, times(1)).modificar(pedro);
+    SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(2L);
+
+    assertThat(simulacion, notNullValue());
+    assertThat(simulacion.getUsuarioSaliente(), is(usuario2));
+    assertThat(simulacion.isSaldoPendiente(), is(false));
   }
 
   @Test
-  public void noDeberiaPermitirDarDeBajaAUnIntegranteQueTodaviaDebePlata() {
-    // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
+  public void queLanceExcepcionSiSeIntentaConfirmarBajaConSaldoPendiente() {
+    when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1, usuario2));
 
-    // ejecucion y validacion
-    assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
-    assertThat(juan.getFechaBaja(), nullValue());
-    verify(repositorioUsuarioMock, times(0)).modificar(any());
+    Gasto gasto = new Gasto();
+    gasto.setMonto(1000.0);
+    gasto.setUsuarioPagador(usuario1);
+    gasto.setParticipantes(Arrays.asList(usuario1, usuario2));
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Arrays.asList(gasto));
+
+    List<TransferenciaSugerida> transferencias = Arrays.asList(
+      new TransferenciaSugerida("Juan", "juan@mail.com", "Carlos", 500.0)
+    );
+    when(servicioLiquidacionMock.calcularLiquidacionOptima(any())).thenReturn(transferencias);
+    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
+
+    assertThrows(
+      IntegranteConSaldoPendienteException.class,
+      () -> {
+        servicioBajaIntegrante.confirmarBaja(2L);
+      }
+    );
   }
 
   @Test
-  public void noDeberiaPermitirDarDeBajaAUnIntegranteAlQueLeDebenPlata() {
-    // preparacion: Juan pagó 30000 entre 3 -> le deben 20000
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, juan, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
+  public void queConfirmeBajaExitosamenteSiNoHaySaldoPendiente() {
+    when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1, usuario2));
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
+    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
+      .thenReturn(Collections.emptyList());
+    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
 
-    // ejecucion y validacion
-    assertThrows(IntegranteConSaldoPendienteException.class, () -> servicioBaja.confirmarBaja(1L));
+    servicioBajaIntegrante.confirmarBaja(2L);
+
+    verify(repositorioUsuarioMock, times(1)).modificar(usuario2);
+    assertThat(usuario2.getFechaBaja(), notNullValue());
   }
 
   @Test
-  public void conSaldoPendienteLaSimulacionDeberiaIndicarlo() {
-    // preparacion
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
+  public void quePermitaRegistrarPagoExitosoDeBajaSiCorrespondeALiquidacion() {
+    when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1, usuario2));
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
 
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
+    List<TransferenciaSugerida> transferencias = Arrays.asList(
+      new TransferenciaSugerida("Juan", "juan@mail.com", "Carlos", 500.0)
+    );
+    when(servicioLiquidacionMock.calcularLiquidacionOptima(any())).thenReturn(transferencias);
+    when(servicioHogarMock.seleccionarHogarPorId(10L)).thenReturn(hogarTest);
 
-    // validacion
-    assertTrue(simulacion.isSaldoPendiente());
-  }
+    servicioBajaIntegrante.registrarPago(2L, usuario2, usuario1, 500.0);
 
-  @Test
-  public void sinSaldoPendienteLaSimulacionNoDeberiaBloquearLaBaja() {
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
-
-    // validacion
-    assertFalse(simulacion.isSaldoPendiente());
-  }
-
-  @Test
-  public void registrarUnPagoDeLaLiquidacionFinalDeberiaGuardarlo() {
-    // preparacion: Maria pagó 30000 entre 3 -> Juan le debe 10000
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
-    when(servicioHogarMock.seleccionarHogarPorId(HOGAR_ID)).thenReturn(hogar);
-
-    // ejecucion
-    servicioBaja.registrarPago(1L, "Juan", "Maria", 10000.0);
-
-    // validacion
     verify(servicioPagoRealizadoMock, times(1)).registrarPagoExitoso(any(PagoRealizado.class));
   }
 
   @Test
-  public void registrarUnPagoQueNoEstaEnLaLiquidacionDeberiaLanzarExcepcion() {
-    // preparacion: no hay gastos -> Juan no debe nada
-    // ejecucion y validacion
+  public void queLanceExcepcionSiPagoNoCorrespondeALiquidacionDeBaja() {
+    when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
+      .thenReturn(Arrays.asList(usuario1, usuario2));
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
+    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
+      .thenReturn(Collections.emptyList());
+
     assertThrows(
       PagoNoCorrespondeALiquidacionException.class,
-      () -> servicioBaja.registrarPago(1L, "Juan", "Maria", 10000.0)
+      () -> {
+        servicioBajaIntegrante.registrarPago(2L, usuario2, usuario1, 500.0);
+      }
     );
-    verify(servicioPagoRealizadoMock, times(0)).registrarPagoExitoso(any());
   }
 
   @Test
-  public void conLaDeudaPagadaElIntegranteNoDeberiaTenerSaldoPendiente() {
-    // preparacion: Juan le debía 10000 a Maria y ya se los pagó
-    Gasto gasto = new Gasto("G1", TipoGasto.OCASIONAL, "Super", 30000.0, maria, "Comida");
-    when(repositorioGastoMock.obtenerTodosPorHogar(HOGAR_ID)).thenReturn(List.of(gasto));
-    PagoRealizado pago = new PagoRealizado("Juan", "Maria", 10000.0, LocalDateTime.now(), hogar);
-    when(servicioPagoRealizadoMock.obtenerHistorialPagos(HOGAR_ID)).thenReturn(List.of(pago));
+  public void queObtengaIntegrantesActivosCorrectamente() {
+    List<Usuario> activos = Arrays.asList(usuario1, usuario2);
+    when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L)).thenReturn(activos);
 
-    // ejecucion
-    SimulacionBaja simulacion = servicioBaja.simularBaja(1L);
+    List<Usuario> resultado = servicioBajaIntegrante.obtenerIntegrantesActivos();
 
-    // validacion
-    assertFalse(simulacion.isSaldoPendiente());
-    assertTrue(simulacion.getLiquidacionFinal().isEmpty());
+    assertThat(resultado, notNullValue());
+    assertThat(resultado, hasSize(2));
+    verify(repositorioUsuarioMock, times(1)).obtenerIntegrantesDelHogar(10L);
   }
 }

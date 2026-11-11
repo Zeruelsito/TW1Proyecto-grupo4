@@ -1,14 +1,10 @@
 package com.tallerwebi.dominio;
 
-//import com.tallerwebi.dominio.EstadoItemCompra;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import java.util.List;
 
 @Entity
+@Table(name = "items_compra")
 public class ItemCompra {
 
   @Id
@@ -16,26 +12,42 @@ public class ItemCompra {
   private Long id;
 
   private String nombre;
-  private Long idUsuarioCreador;
+
+  private Long usuarioId; // Quién lo agregó a la lista
 
   @Enumerated(EnumType.STRING)
-  private EstadoItemCompra estado;
+  private EstadoItemCompra estado = EstadoItemCompra.PENDIENTE;
+
+  // --- NUEVOS CAMPOS PARA LA COMPRA Y GASTO ---
+  private Double precioUnitario;
+
+  private Integer cantidad;
+
+  @Enumerated(EnumType.STRING)
+  private DestinoItemCompra destino; // HOGAR, PERSONAL, GRUPAL
+
+  @ManyToMany
+  @JoinTable(
+    name = "item_compra_destinatarios",
+    joinColumns = @JoinColumn(name = "item_compra_id"),
+    inverseJoinColumns = @JoinColumn(name = "usuario_id")
+  )
+  private List<Usuario> destinatarios; // Integrantes específicos si es un gasto grupal
+
+  @ManyToOne
+  @JoinColumn(name = "destinatario_individual_id")
+  private Usuario destinatarioIndividual; // Por si es para un único integrante específico
 
   public ItemCompra() {}
 
-  public ItemCompra(String nombre, Long idUsuarioCreador, EstadoItemCompra estado) {
+  public ItemCompra(String nombre, Long usuarioId, EstadoItemCompra estado) {
     this.nombre = nombre;
-    this.idUsuarioCreador = idUsuarioCreador;
+    this.usuarioId = usuarioId;
     this.estado = estado;
+    this.cantidad = 1; // Por defecto arranca en 1
   }
 
-  public boolean estaEnCarrito() {
-    return EstadoItemCompra.EN_CARRITO.equals(estado);
-  }
-
-  public boolean estaArchivado() {
-    return EstadoItemCompra.ARCHIVADO.equals(estado);
-  }
+  // --- GETTERS Y SETTERS ---
 
   public Long getId() {
     return id;
@@ -53,12 +65,12 @@ public class ItemCompra {
     this.nombre = nombre;
   }
 
-  public Long getIdUsuarioCreador() {
-    return idUsuarioCreador;
+  public Long getUsuarioId() {
+    return usuarioId;
   }
 
-  public void setIdUsuarioCreador(Long idUsuarioCreador) {
-    this.idUsuarioCreador = idUsuarioCreador;
+  public void setUsuarioId(Long usuarioId) {
+    this.usuarioId = usuarioId;
   }
 
   public EstadoItemCompra getEstado() {
@@ -67,5 +79,54 @@ public class ItemCompra {
 
   public void setEstado(EstadoItemCompra estado) {
     this.estado = estado;
+  }
+
+  public Double getPrecioUnitario() {
+    return precioUnitario;
+  }
+
+  public void setPrecioUnitario(Double precioUnitario) {
+    this.precioUnitario = precioUnitario;
+  }
+
+  public Integer getCantidad() {
+    return cantidad;
+  }
+
+  public void setCantidad(Integer cantidad) {
+    this.cantidad = cantidad;
+  }
+
+  public DestinoItemCompra getDestino() {
+    return destino;
+  }
+
+  public void setDestino(DestinoItemCompra destino) {
+    this.destino = destino;
+  }
+
+  public List<Usuario> getDestinatarios() {
+    return destinatarios;
+  }
+
+  public void setDestinatarios(List<Usuario> destinatarios) {
+    this.destinatarios = destinatarios;
+  }
+
+  // Métodos útiles de ayuda
+  public boolean estaEnCarrito() {
+    return EstadoItemCompra.EN_CARRITO.equals(this.estado);
+  }
+
+  public boolean estaArchivado() {
+    return EstadoItemCompra.ARCHIVADO.equals(this.estado);
+  }
+
+  public Usuario getDestinatarioIndividual() {
+    return destinatarioIndividual;
+  }
+
+  public void setDestinatarioIndividual(Usuario destinatarioIndividual) {
+    this.destinatarioIndividual = destinatarioIndividual;
   }
 }

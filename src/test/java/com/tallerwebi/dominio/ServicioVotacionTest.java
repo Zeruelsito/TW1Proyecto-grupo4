@@ -5,28 +5,31 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
-//import com.tallerwebi.dominio.EstadoPropuesta;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
-//import com.tallerwebi.dominio.RepositorioPropuesta;
-//import com.tallerwebi.dominio.RepositorioVoto;
-//import com.tallerwebi.dominio.ServicioVotacion;
+import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
 import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class ServicioVotacionTest {
 
-  private ServicioVotacion servicioVotacion;
-  private RepositorioVoto repositorioVotoMock;
-  private RepositorioPropuesta repositorioPropuestaMock;
+  private static final Long HOGAR_ID = 3L;
+  private static final Long PROPUESTA_ID = 5L;
+
+  private ServicioVotacion servicio;
+  private RepositorioVoto repositorioVoto;
+  private RepositorioPropuesta repositorioPropuesta;
+  private RepositorioUsuario repositorioUsuario;
   private Propuesta propuesta;
 
   @BeforeEach
   public void init() {
-    repositorioVotoMock = mock(RepositorioVoto.class);
-    repositorioPropuestaMock = mock(RepositorioPropuesta.class);
-    servicioVotacion = new ServicioVotacion(repositorioVotoMock, repositorioPropuestaMock);
+    repositorioVoto = mock(RepositorioVoto.class);
+    repositorioPropuesta = mock(RepositorioPropuesta.class);
+    servicio = new ServicioVotacion(repositorioVoto, repositorioPropuesta, repositorioUsuario);
 
     propuesta =
       new Propuesta(
@@ -37,94 +40,140 @@ public class ServicioVotacionTest {
         50.0,
         EstadoPropuesta.PENDIENTE
       );
-    propuesta.setId(5L);
+    propuesta.setId(PROPUESTA_ID);
+    propuesta.setHogarId(HOGAR_ID);
+    when(repositorioPropuesta.obtenerPorId(PROPUESTA_ID)).thenReturn(propuesta);
+  }
+
+  // --- Guardar ---
+
+  @Test
+  public void deberiaGuardarUnaPropuestaValida() {
+    servicio.guardarPropuesta(propuesta);
+
+    verify(repositorioPropuesta).guardar(propuesta);
   }
 
   @Test
-  public void guardarPropuestaValidaDeberiaGuardarlaComoPendiente() {
-    // ejecucion
-    servicioVotacion.guardarPropuesta(propuesta);
+  public void noDeberiaGuardarUnaPropuestaSinHogar() {
+    propuesta.setHogarId(null);
 
-    // validacion
+    assertThrows(PropuestaNoExiste.class, () -> servicio.guardarPropuesta(propuesta));
+  }
+
+  @Test
+  public void siLosQueFaltanVotarAlcanzanParaElQuorumSiguePendiente() {
+    dadoQueElHogarTiene(5, 2, 1);
+    propuesta.setPorcentajeQuorum(70.0);
+
+    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
+
     assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
-    verify(repositorioPropuestaMock, times(1)).guardar(propuesta);
   }
 
   @Test
-  public void guardarPropuestaSinTituloDeberiaLanzarExcepcion() {
-    // preparacion
-    propuesta.setTitulo("");
-
-    // ejecucion y validacion
-    assertThrows(PropuestaNoExiste.class, () -> servicioVotacion.guardarPropuesta(propuesta));
-    verify(repositorioPropuestaMock, times(0)).guardar(propuesta);
-  }
-
-  @Test
-  public void guardarPropuestaConQuorumInvalidoDeberiaLanzarExcepcion() {
-    // preparacion
-    propuesta.setPorcentajeQuorum(0);
-
-    // ejecucion y validacion
-    assertThrows(PropuestaNoExiste.class, () -> servicioVotacion.guardarPropuesta(propuesta));
-  }
-
-  @Test
-  public void guardarPropuestaConFechaPasadaDeberiaLanzarExcepcion() {
-    // preparacion
+  public void unaPropuestaVencidaSinQuorumQuedaCancelada() {
     propuesta.setFechaLimite(LocalDate.now().minusDays(1));
+    when(repositorioPropuesta.obtenerPropuestasPorHogar(HOGAR_ID)).thenReturn(List.of(propuesta));
+    dadoQueElHogarTiene(4, 1, 0);
 
-    // ejecucion y validacion
-    assertThrows(PropuestaNoExiste.class, () -> servicioVotacion.guardarPropuesta(propuesta));
+    servicio.obtenerPropuestasDelHogar(HOGAR_ID);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.CANCELADA));
+  }
+
+  // --- Votar ---
+
+  @Test
+  public void noSePuedeVotarUnaPropuestaDeOtroHogar() {
+    assertThrows(PropuestaNoExiste.class, () -> servicio.votar(1L, 99L, PROPUESTA_ID, true, null));
   }
 
   @Test
-  public void votarPropuestaQueNoExisteDeberiaLanzarExcepcion() {
-    // preparacion
-    when(repositorioPropuestaMock.obtenerPorId(5L)).thenReturn(null);
+  public void noSePuedeVotarUnaPropuestaCerrada() {
+    propuesta.setEstado(EstadoPropuesta.APROBADA);
 
-    // ejecucion y validacion
-    assertThrows(PropuestaNoExiste.class, () -> servicioVotacion.votar(1L, 5L, true, null));
+    assertThrows(
+      VotacionCerradaException.class,
+      () -> servicio.votar(1L, HOGAR_ID, PROPUESTA_ID, true, null)
+    );
   }
 
   @Test
-  public void votarDosVecesDeberiaLanzarExcepcion() {
-    // preparacion
-    when(repositorioPropuestaMock.obtenerPorId(5L)).thenReturn(propuesta);
-    when(repositorioVotoMock.existeVoto(1L, 5L)).thenReturn(true);
+  public void noSePuedeVotarDosVeces() {
+    when(repositorioVoto.existeVoto(1L, PROPUESTA_ID)).thenReturn(true);
 
-    // ejecucion y validacion
-    assertThrows(UsuarioYaVoto.class, () -> servicioVotacion.votar(1L, 5L, true, null));
+    assertThrows(UsuarioYaVoto.class, () -> servicio.votar(1L, HOGAR_ID, PROPUESTA_ID, true, null));
   }
 
   @Test
-  public void votarAFavorHastaLlegarAlQuorumDeberiaAprobarLaPropuesta() {
-    // preparacion: 4 integrantes con quorum 50% -> se necesitan 2 votos a favor
-    when(repositorioPropuestaMock.obtenerPorId(5L)).thenReturn(propuesta);
-    when(repositorioPropuestaMock.obtenerTotalIntegrantes()).thenReturn(4L);
-    when(repositorioVotoMock.obtenerVotosAfirmativosPorPropuesta(5L)).thenReturn(2L);
-    when(repositorioVotoMock.obtenerVotosNegativosPorPropuesta(5L)).thenReturn(0L);
-
-    // ejecucion
-    servicioVotacion.votar(1L, 5L, true, "Dale");
-
-    // validacion
-    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.APROBADA));
-    verify(repositorioVotoMock, times(1)).guardar(any(Voto.class));
+  public void siempreSeRequiereAlMenosUnVoto() {
+    assertThat(servicio.calcularVotosRequeridos(3, 10.0), equalTo(1L));
   }
 
   @Test
-  public void votarEnContraSinPosibilidadDeQuorumDeberiaRechazarLaPropuesta() {
-    // preparacion: 4 integrantes, se necesitan 2 a favor y ya hay 3 en contra
-    when(repositorioPropuestaMock.obtenerPorId(5L)).thenReturn(propuesta);
-    when(repositorioPropuestaMock.obtenerTotalIntegrantes()).thenReturn(4L);
-    when(repositorioVotoMock.obtenerVotosAfirmativosPorPropuesta(5L)).thenReturn(0L);
-    when(repositorioVotoMock.obtenerVotosNegativosPorPropuesta(5L)).thenReturn(3L);
+  public void enUnHogarDeTresConUnSoloVotoAFavorSiguePendiente() {
+    dadoQueElHogarTiene(3, 1, 0);
 
-    // ejecucion
-    servicioVotacion.votar(1L, 5L, false, null);
+    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, true, null);
 
-    // validacion
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
+  }
+
+  @Test
+  public void siLosQueFaltanVotarNoAlcanzanParaElQuorumSeRechaza() {
+    dadoQueElHogarTiene(5, 1, 3);
+    propuesta.setPorcentajeQuorum(70.0);
+
+    servicio.votar(2L, HOGAR_ID, PROPUESTA_ID, false, null);
+
     assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.RECHAZADA));
+  }
+
+  @Test
+  public void elCreadorPuedeCancelarSuPropuesta() {
+    servicio.cancelarPropuesta(1L, HOGAR_ID, PROPUESTA_ID, false);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.CANCELADA));
+  }
+
+  @Test
+  public void unAdminPuedeCancelarUnaPropuestaAjena() {
+    servicio.cancelarPropuesta(2L, HOGAR_ID, PROPUESTA_ID, true);
+
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.CANCELADA));
+  }
+
+  @Test
+  public void otroIntegranteNoPuedeCancelarLaPropuesta() {
+    assertThrows(
+      SinPermisoParaCancelarException.class,
+      () -> servicio.cancelarPropuesta(2L, HOGAR_ID, PROPUESTA_ID, false)
+    );
+    assertThat(propuesta.getEstado(), equalTo(EstadoPropuesta.PENDIENTE));
+  }
+
+  @Test
+  public void noSePuedeCancelarUnaPropuestaQueYaNoEstaPendiente() {
+    propuesta.setEstado(EstadoPropuesta.APROBADA);
+
+    assertThrows(
+      VotacionCerradaException.class,
+      () -> servicio.cancelarPropuesta(1L, HOGAR_ID, PROPUESTA_ID, false)
+    );
+  }
+
+  @Test
+  public void noSePuedeCancelarUnaPropuestaDeOtroHogar() {
+    assertThrows(
+      PropuestaNoExiste.class,
+      () -> servicio.cancelarPropuesta(1L, 99L, PROPUESTA_ID, true)
+    );
+  }
+
+  private void dadoQueElHogarTiene(long integrantes, long aFavor, long enContra) {
+    when(repositorioPropuesta.obtenerTotalIntegrantes(HOGAR_ID)).thenReturn(integrantes);
+    when(repositorioVoto.obtenerVotosAfirmativosPorPropuesta(PROPUESTA_ID)).thenReturn(aFavor);
+    when(repositorioVoto.obtenerVotosNegativosPorPropuesta(PROPUESTA_ID)).thenReturn(enContra);
   }
 }

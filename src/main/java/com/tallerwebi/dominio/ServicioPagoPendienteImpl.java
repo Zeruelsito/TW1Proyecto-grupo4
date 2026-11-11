@@ -17,7 +17,7 @@ public class ServicioPagoPendienteImpl implements ServicioPagoPendiente {
   }
 
   @Override
-  public boolean existePendiente(String emisor, String receptor, Double monto, Hogar hogar) {
+  public boolean existePendiente(Usuario emisor, Usuario receptor, Double monto, Hogar hogar) {
     return repositorioPagoPendiente.buscarPorDatos(emisor, receptor, monto, hogar) != null;
   }
 
@@ -42,7 +42,7 @@ public class ServicioPagoPendienteImpl implements ServicioPagoPendiente {
   }
 
   @Override
-  public void eliminarPendiente(String emisor, String receptor, Double monto, Hogar hogar) {
+  public void eliminarPendiente(Usuario emisor, Usuario receptor, Double monto, Hogar hogar) {
     PagoPendiente pendiente = repositorioPagoPendiente.buscarPorDatos(
       emisor,
       receptor,

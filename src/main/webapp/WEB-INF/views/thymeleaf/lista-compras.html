@@ -2,18 +2,85 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>Kumo - Lista de compras</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Kumo - Lista de Compras</title>
+    <!-- Bootstrap 5 CSS & Iconos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Iconos Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
+
+    <style>
+        /* Estilo Ticket Físico (mantiene su tipografía monoespaciada para simular el recibo) */
+        .receipt-paper {
+            background: #ffffff;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            border-radius: 12px 12px 0 0;
+            padding: 30px 25px;
+            margin-bottom: 30px;
+        }
+
+        /* Dientes del ticket en el borde inferior */
+        .receipt-paper::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -15px;
+            width: 100%;
+            height: 15px;
+            background: linear-gradient(-135deg, #ffffff 8px, transparent 0), linear-gradient(135deg, #ffffff 8px, transparent 0);
+            background-position: left bottom;
+            background-repeat: repeat-x;
+            background-size: 16px 16px;
+        }
+
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #e0e0e0;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .receipt-font {
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .ticket-item {
+            border-bottom: 1px dashed #eee;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+        }
+
+        .ticket-item:hover {
+            background-color: #faf9f5;
+        }
+
+        /* Tarjeta resumen de integrantes */
+        .hogar-badge-zero {
+            background-color: #e9ecef;
+            color: #495057;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .btn-pastel-primary {
+            background-color: #7b61ff;
+            color: white;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .btn-pastel-primary:hover {
+            background-color: #664be3;
+            color: white;
+        }
+    </style>
 </head>
 <body class="p-3">
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar Navigation Unificado (Idéntico a Gastos) -->
         <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
             <div>
                 <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
@@ -28,7 +95,6 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
                     <li class="nav-item"><a class="nav-link active" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -40,15 +106,19 @@
 
         <!-- Main Content Area -->
         <div class="col-md-10 px-4">
-            <!-- Header Bar -->
+            <!-- Header Bar Unificado (Campanita + Usuario idéntico a Gastos) -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
-                    <h2 class="fw-bold mb-0">Lista de compras</h2>
-                    <p class="text-muted small">Todos agregan lo que falta; quien va al súper lo marca y lo convierte en gasto.</p>
+                    <h2 class="fw-bold mb-0">Ticket de Compras</h2>
+                    <p class="text-muted small">Cargá lo que falte, indicá los precios y destinos directos, y convertí tu ticket en gastos de un solo clic.</p>
                 </div>
 
-                <!-- CONTENEDOR AGRUPADO A LA DERECHA (Campanita + Usuario) -->
+                <!-- CONTENEDOR AGRUPADO A LA DERECHA -->
                 <div class="d-flex align-items-center gap-3">
+                    <a th:href="@{/gastos}" class="btn btn-dark rounded-3 px-3 py-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-circle"></i> Nuevo Gasto
+                    </a>
+
                     <!-- CAMPANITA DE NOTIFICACIONES -->
                     <div class="dropdown notification-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center justify-content-center bg-white" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; width: 44px; height: 44px;">
@@ -69,7 +139,7 @@
                         <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3 mt-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                 <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-danger me-1"></i> Notificaciones</h6>
-                                <a th:href="@{/vencimientos}" class="small text-decoration-none fw-semibold">Ver todos</a>
+                                <a th:href="@{/gastos}" class="small text-decoration-none fw-semibold">Ver todos</a>
                             </div>
 
                             <!-- Si NO hay ninguna notificación -->
@@ -81,7 +151,9 @@
                             <!-- Sección: Gastos Vencidos -->
                             <div th:if="${vencidosNotif != null and not #lists.isEmpty(vencidosNotif)}" class="mb-3">
                                 <span class="badge bg-danger text-white rounded-pill px-2 py-1 mb-2 small fw-bold">Vencidos</span>
-                                <div th:each="vencido : ${vencidosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-danger">
+                                <a th:each="vencido : ${vencidosNotif}"
+                                   th:href="@{/gastos(gastoId=${vencido.id})}"
+                                   class="d-block text-decoration-none p-2 mb-2 bg-light rounded-3 border-start border-4 border-danger notification-item">
                                     <div class="d-flex justify-content-between">
                                         <span class="fw-semibold small text-dark" th:text="${vencido.descripcion}">Descripción</span>
                                         <span class="fw-bold small text-danger" th:text="'$' + ${#numbers.formatDecimal(vencido.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
@@ -89,13 +161,15 @@
                                     <div class="small text-muted" style="font-size: 0.75rem;">
                                         Venció el: <span th:text="${#temporals.format(vencido.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
                                     </div>
-                                </div>
+                                </a>
                             </div>
 
-                            <!-- Sección: Próximos a Vencer (Hoy a 1 semana) -->
+                            <!-- Sección: Próximos a Vencer -->
                             <div th:if="${proximosNotif != null and not #lists.isEmpty(proximosNotif)}">
                                 <span class="badge bg-warning text-dark rounded-pill px-2 py-1 mb-2 small fw-bold">Próximos a vencer</span>
-                                <div th:each="prox : ${proximosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-warning">
+                                <a th:each="prox : ${proximosNotif}"
+                                   th:href="@{/gastos(gastoId=${prox.id})}"
+                                   class="d-block text-decoration-none p-2 mb-2 bg-light rounded-3 border-start border-4 border-warning notification-item">
                                     <div class="d-flex justify-content-between">
                                         <span class="fw-semibold small text-dark" th:text="${prox.descripcion}">Descripción</span>
                                         <span class="fw-bold small text-dark" th:text="'$' + ${#numbers.formatDecimal(prox.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
@@ -103,12 +177,11 @@
                                     <div class="small text-muted" style="font-size: 0.75rem;">
                                         Vence el: <span th:text="${#temporals.format(prox.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Menú Desplegable de Usuario Integrado -->
+                    <!-- DROPDOWN DE USUARIO -->
                     <div class="dropdown user-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
                             <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
@@ -118,8 +191,8 @@
                             <i class="bi bi-chevron-down small text-muted ms-1"></i>
                         </div>
 
-                        <!-- Menú Desplegable con Acciones -->
-                        <div class="dropdown-menu shadow-sm border-0 rounded-4 p-2 mt-2">
+                        <!-- Menú Desplegable con acciones -->
+                        <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 p-2 mt-2">
                             <div class="px-3 py-2 border-bottom mb-2">
                                 <p class="mb-0 fw-bold text-dark small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</p>
                             </div>
@@ -136,72 +209,157 @@
                 </div>
             </div>
 
-            <!-- Error Banner -->
+            <!-- Alertas -->
             <div th:if="${mensajeError}" class="alert alert-danger rounded-4 mb-4" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 <span th:text="${mensajeError}">Error</span>
             </div>
+            <div th:if="${mensajeExito}" class="alert alert-success rounded-4 mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <span th:text="${mensajeExito}">Éxito</span>
+            </div>
 
             <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="kumo-card">
-                        <!-- Agregar un faltante -->
-                        <form th:action="@{/lista-compras/agregar}" method="post" class="d-flex gap-2 mb-4">
-                            <input type="text" name="nombre" class="form-control rounded-3" maxlength="100"
-                                   placeholder="¿Qué falta? Ej: Leche" autocomplete="off">
-                            <button type="submit" class="btn btn-dark rounded-3 px-4">
-                                <i class="bi bi-plus-lg me-1"></i>Agregar
-                            </button>
-                        </form>
+                <div class="col-lg-7">
+                    <!-- Formulario de nuevo ítem -->
+                    <form th:action="@{/lista-compras/agregar}" method="post" class="d-flex gap-2 mb-4">
+                        <input type="text" name="nombre" class="form-control rounded-3 shadow-sm" maxlength="100"
+                               placeholder="¿Qué falta comprar? Ej: Leche, Cerveza..." autocomplete="off" required>
+                        <button type="submit" class="btn btn-dark rounded-3 px-4 fw-semibold">
+                            <i class="bi bi-plus-lg me-1"></i>Agregar
+                        </button>
+                    </form>
 
-                        <!-- Esta zona se refresca sola cada pocos segundos -->
-                        <div id="zona-lista" th:attr="data-url=@{/lista-compras}">
-                            <ul class="list-unstyled mb-3">
-                                <li class="d-flex align-items-center gap-3 rounded-3 px-3 py-2 mb-2"
-                                    style="background: rgba(0,0,0,0.03);"
-                                    th:each="item : ${items}">
-                                    <form th:action="@{/lista-compras/{id}/alternar(id=${item.id})}" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-link p-0 fs-4 text-decoration-none"
-                                                th:title="${item.estaEnCarrito() ? 'Sacar del carrito' : 'Marcar como comprado'}">
-                                            <i th:class="${item.estaEnCarrito()} ? 'bi bi-check-circle-fill text-success' : 'bi bi-circle text-secondary'"></i>
+                    <!-- Ticket de Papel -->
+                    <div class="receipt-paper">
+                        <div class="receipt-header">
+                            <h4 class="receipt-font fw-bold text-uppercase mb-1">*** KUMO STORE ***</h4>
+                            <p class="receipt-font text-muted small mb-0">TICKET DE COMPRA DEL HOGAR</p>
+                            <span class="receipt-font text-muted small" th:text="${#dates.format(#dates.createNow(), 'dd/MM/yyyy HH:mm')}">06/11/2026</span>
+                        </div>
+
+                        <ul class="list-unstyled mb-0" id="lista-items">
+                            <th:block th:each="item : ${items}">
+                                <li class="ticket-item p-3 mb-2" th:id="'item-container-' + ${item.id}">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <!-- Checkbox Marcar Ítem -->
+                                        <form th:action="@{/lista-compras/{id}/alternar(id=${item.id})}" method="post" class="m-0">
+                                            <button type="submit" class="btn btn-link p-0 fs-4 text-decoration-none border-0 bg-transparent"
+                                                    th:title="${item.estaEnCarrito() ? 'Desmarcar ítem' : 'Marcar como comprado'}">
+                                                <i th:class="${item.estaEnCarrito()} ? 'bi bi-check-square-fill text-success' : 'bi bi-square text-secondary'"></i>
+                                            </button>
+                                        </form>
+
+                                        <span class="flex-grow-1 fw-bold"
+                                              th:classappend="${item.estaEnCarrito()} ? 'text-primary' : 'text-dark'"
+                                              th:text="${item.nombre}">Ítem</span>
+
+                                        <!-- Flecha Desplegable Independiente (Solo si está en carrito) -->
+                                        <button th:if="${item.estaEnCarrito()}" type="button" 
+                                                class="btn btn-sm btn-light rounded-circle toggle-btn" 
+                                                th:id="'btn-toggle-' + ${item.id}"
+                                                th:onclick="'toggleAcordeon(' + ${item.id} + ')'">
+                                            <i class="bi bi-chevron-down"></i>
                                         </button>
-                                    </form>
 
-                                    <span class="flex-grow-1"
-                                          th:classappend="${item.estaEnCarrito()} ? 'text-decoration-line-through text-muted'"
-                                          th:text="${item.nombre}">Leche</span>
+                                        <!-- Eliminar -->
+                                        <form th:action="@{/lista-compras/{id}/eliminar(id=${item.id})}" method="post" class="m-0">
+                                            <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-1 border-0 bg-transparent" title="Quitar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
 
-                                    <form th:action="@{/lista-compras/{id}/eliminar(id=${item.id})}" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-3" title="Quitar de la lista">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
+                                    <!-- Panel Desplegable Acordeón Independiente -->
+                                    <div th:if="${item.estaEnCarrito()}" class="acordeon-panel mt-3 pt-3 border-top bg-light p-3 rounded-3" 
+                                         th:id="'panel-' + ${item.id}" style="display: none;">
+                                        <div class="row g-3 item-inputs-form" th:data-item-id="${item.id}">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Precio Unitario ($)</label>
+                                                <input type="number" step="0.01" min="0.01" class="form-control form-control-sm rounded-3 input-precio"
+                                                       th:value="${item.precioUnitario}" placeholder="0.00" 
+                                                       oninput="guardarEstadoYValidar()">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Cantidad</label>
+                                                <input type="number" min="1" class="form-control form-control-sm rounded-3 input-cantidad"
+                                                       th:value="${item.cantidad != null ? item.cantidad : 1}" 
+                                                       oninput="guardarEstadoYValidar()">
+                                            </div>
+
+                                            <div class="col-md-12">
+                                                <label class="form-label small fw-semibold">Destino del Ítem</label>
+                                                <select class="form-select form-select-sm rounded-3 select-destino"
+                                                    th:attr="onchange=|cambiarDestino(this, '${item.id}'); guardarEstadoYValidar();|">
+                                                    <option value="" hidden>Seleccioná para quién es</option>
+                                                    <option value="HOGAR" th:selected="${item.destino?.name() == 'HOGAR'}">Para el Hogar (Todos)</option>
+                                                    <option value="INDIVIDUAL" th:selected="${item.destino?.name() == 'INDIVIDUAL'}">Individual (Específico)</option>
+                                                    <option value="GRUPAL" th:selected="${item.destino?.name() == 'GRUPAL'}">Para un Subgrupo</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Coherencia Gastos Hogar: Mostrar Etiqueta 0 -->
+                                            <div class="col-md-12 div-hogar-info" th:id="'div-hogar-' + ${item.id}"
+                                                 th:style="${item.destino?.name() == 'HOGAR'} ? 'display:block;' : 'display:none;'">
+                                                <div class="p-2 bg-white rounded-3 border d-flex align-items-center gap-2">
+                                                    <span class="hogar-badge-zero">0</span>
+                                                    <span class="small text-muted">Dividido entre todos por defecto</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Sub-opción Individual -->
+                                            <div class="col-md-12 div-individual" th:id="'div-ind-' + ${item.id}"
+                                                 th:style="${item.destino?.name() == 'INDIVIDUAL'} ? 'display:block;' : 'display:none;'">
+                                                <label class="form-label small fw-semibold text-muted">Asignado a:</label>
+                                                <select class="form-select form-select-sm rounded-3 select-ind-user" onchange="guardarEstadoYValidar()">
+                                                    <option th:each="user : ${integrantes}" th:value="${user.id}" 
+                                                            th:text="${user.nombre != null ? user.nombre : user.email}"
+                                                            th:selected="${item.destinatarioIndividual?.id == user.id}">Integrante</option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Sub-opción Grupal -->
+                                            <div class="col-md-12 div-grupal" th:id="'div-grup-' + ${item.id}"
+                                                 th:style="${item.destino?.name() == 'GRUPAL'} ? 'display:block;' : 'display:none;'">
+                                                <label class="form-label small fw-semibold text-muted">Seleccioná integrantes del subgrupo:</label>
+                                                <div class="d-flex flex-column gap-1">
+                                                    <div th:each="user : ${integrantes}" class="form-check">
+                                                        <input class="form-check-input check-grup-user" type="checkbox" 
+                                                               th:value="${user.id}" th:id="'item-user-' + ${item.id} + '-' + ${user.id}"
+                                                               onchange="guardarEstadoYValidar()">
+                                                        <label class="form-check-label small" th:for="'item-user-' + ${item.id} + '-' + ${user.id}"
+                                                               th:text="${user.nombre != null ? user.nombre : user.email}">Nombre</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </li>
-                            </ul>
+                            </th:block>
+                        </ul>
 
-                            <div class="text-center text-muted py-4" th:if="${#lists.isEmpty(items)}">
-                                <i class="bi bi-cart display-6 d-block mb-2"></i>
-                                La lista está vacía. ¡Agregá lo que falte en casa!
+                        <div class="text-center text-muted py-4" th:if="${#lists.isEmpty(items)}">
+                            <i class="bi bi-receipt display-5 d-block mb-2 text-secondary"></i>
+                            El ticket está vacío. ¡Agregá ítems faltantes arriba!
+                        </div>
+
+                        <!-- Pie del Ticket con Totales y Botón Único -->
+                        <div class="border-top border-2 border-dark pt-3 mt-4" th:unless="${#lists.isEmpty(items)}">
+                            <div class="d-flex justify-content-between text-muted small mb-2 receipt-font">
+                                <span>ÍTEMS MARCADOS:</span>
+                                <strong th:text="${cantidadEnCarrito}">0</strong>
                             </div>
 
-                            <!-- Convertir lo marcado en un gasto -->
-                            <form th:action="@{/lista-compras/convertir-en-gasto}" method="post"
-                                  class="d-flex justify-content-between align-items-center border-top pt-3"
-                                  th:unless="${#lists.isEmpty(items)}">
-                                <span class="small text-muted">
-                                    En el carrito: <strong th:text="${cantidadEnCarrito}">0</strong>
-                                    de <strong th:text="${#lists.size(items)}">0</strong>
-                                </span>
-                                <button type="submit" class="btn btn-success rounded-3 px-4"
-                                        th:disabled="${cantidadEnCarrito == 0}">
-                                    <i class="bi bi-receipt-cutoff me-1"></i>Convertir en gasto
-                                </button>
-                            </form>
+                            <div id="mensaje-validacion-ticket" class="alert alert-warning py-2 small mb-3 rounded-3" style="display: none;">
+                                <i class="bi bi-exclamation-circle me-1"></i> Completá precio, cantidad y destino de todos los ítems marcados.
+                            </div>
+
+                            <button type="button" id="btn-generar-gastos" onclick="enviarGastosMasivos()" 
+                                    class="btn btn-pastel-primary w-100 py-2 fs-6 shadow-sm" disabled>
+                                <i class="bi bi-receipt-cutoff me-2"></i>Generar Gastos de Compra
+                            </button>
                         </div>
                     </div>
-                    <p class="text-muted small text-center mt-3">
-                        <i class="bi bi-arrow-repeat me-1"></i>La lista se actualiza sola para todos los integrantes.
-                    </p>
                 </div>
             </div>
         </div>
@@ -210,29 +368,208 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Tiempo real por polling: cada 4 segundos se pide la página y se reemplaza
-    // solo la zona de la lista, así lo que otro integrante marque o agregue aparece sin recargar.
-    (function () {
-        var zona = document.getElementById('zona-lista');
-        if (!zona) { return; }
-        var url = zona.getAttribute('data-url');
+    // Guardar posición del scroll y estado de los inputs antes de recargar
+    document.addEventListener("submit", function(e) {
+        if (e.target.tagName === 'FORM') {
+            localStorage.setItem('kumo_scroll_pos', window.scrollY);
+            guardarEstadoEnLocalStorage();
+        }
+    });
 
-        function refrescar() {
-            if (document.hidden) { return; }
-            fetch(url, { credentials: 'same-origin', cache: 'no-store' })
-                .then(function (respuesta) { return respuesta.text(); })
-                .then(function (html) {
-                    var documento = new DOMParser().parseFromString(html, 'text/html');
-                    var nueva = documento.getElementById('zona-lista');
-                    if (nueva && nueva.innerHTML !== zona.innerHTML) {
-                        zona.innerHTML = nueva.innerHTML;
+    // Restaurar scroll y datos al cargar la página
+    window.addEventListener("DOMContentLoaded", function() {
+        restaurarEstadoDesdeLocalStorage();
+
+        const scrollPos = localStorage.getItem('kumo_scroll_pos');
+        if (scrollPos) {
+            window.scrollTo(0, parseInt(scrollPos));
+            localStorage.removeItem('kumo_scroll_pos');
+        }
+        validarFormularioCompleto();
+    });
+
+    // Guardar todos los inputs actuales en memoria local
+    function guardarEstadoEnLocalStorage() {
+        const forms = document.querySelectorAll('.item-inputs-form');
+        const estado = {};
+
+        forms.forEach(f => {
+            const itemId = f.getAttribute('data-item-id');
+            const precio = f.querySelector('.input-precio').value;
+            const cantidad = f.querySelector('.input-cantidad').value;
+            const destino = f.querySelector('.select-destino').value;
+            const selectInd = f.querySelector('.select-ind-user');
+            const destIndId = selectInd ? selectInd.value : '';
+
+            const destsIds = [];
+            f.querySelectorAll('.check-grup-user:checked').forEach(chk => {
+                destsIds.push(chk.value);
+            });
+
+            estado[itemId] = { precio, cantidad, destino, destIndId, destsIds };
+        });
+
+        localStorage.setItem('kumo_ticket_estado', JSON.stringify(estado));
+    }
+
+    // Restaurar los inputs desde la memoria local tras la recarga
+    function restaurarEstadoDesdeLocalStorage() {
+        const guardado = localStorage.getItem('kumo_ticket_estado');
+        if (!guardado) return;
+
+        try {
+            const estado = JSON.parse(guardado);
+            const forms = document.querySelectorAll('.item-inputs-form');
+
+            forms.forEach(f => {
+                const itemId = f.getAttribute('data-item-id');
+                if (estado[itemId]) {
+                    const datos = estado[itemId];
+                    if (datos.precio) f.querySelector('.input-precio').value = datos.precio;
+                    if (datos.cantidad) f.querySelector('.input-cantidad').value = datos.cantidad;
+                    
+                    const selectDestino = f.querySelector('.select-destino');
+                    if (datos.destino) {
+                        selectDestino.value = datos.destino;
+                        cambiarDestino(selectDestino, itemId);
                     }
-                })
-                .catch(function () { /* sin conexión: se reintenta en el próximo ciclo */ });
+
+                    if (datos.destIndId) {
+                        const selectInd = f.querySelector('.select-ind-user');
+                        if (selectInd) selectInd.value = datos.destIndId;
+                    }
+
+                    if (datos.destsIds && datos.destsIds.length > 0) {
+                        f.querySelectorAll('.check-grup-user').forEach(chk => {
+                            if (datos.destsIds.includes(chk.value)) {
+                                chk.checked = true;
+                            }
+                        });
+                    }
+                }
+            });
+        } catch (e) {
+            console.error("Error al restaurar estado", e);
+        }
+    }
+
+    // Guardar en vivo cada vez que el usuario escribe o cambia algo
+    function guardarEstadoYValidar() {
+        guardarEstadoEnLocalStorage();
+        validarFormularioCompleto();
+    }
+
+    // Acordeón totalmente independiente y manual
+    function toggleAcordeon(itemId) {
+        const panelActual = document.getElementById('panel-' + itemId);
+        const btnActual = document.getElementById('btn-toggle-' + itemId);
+        if (!panelActual || !btnActual) return;
+        const icon = btnActual.querySelector('i');
+        
+        const estaAbierto = panelActual.style.display === 'block';
+        panelActual.style.display = estaAbierto ? 'none' : 'block';
+        icon.className = estaAbierto ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+    }
+
+    // Cambiar la sub-opción de destino visualmente
+    function cambiarDestino(select, itemId) {
+        const valor = select.value;
+        const divHogar = document.getElementById('div-hogar-' + itemId);
+        const divInd = document.getElementById('div-ind-' + itemId);
+        const divGrup = document.getElementById('div-grup-' + itemId);
+
+        if (divHogar) divHogar.style.display = (valor === 'HOGAR') ? 'block' : 'none';
+        if (divInd) divInd.style.display = (valor === 'INDIVIDUAL') ? 'block' : 'none';
+        if (divGrup) divGrup.style.display = (valor === 'GRUPAL') ? 'block' : 'none';
+    }
+
+    // Validación Global y habilitación del botón principal
+    function validarFormularioCompleto() {
+        const forms = document.querySelectorAll('.item-inputs-form');
+        const btnGenerar = document.getElementById('btn-generar-gastos');
+        const msgValidacion = document.getElementById('mensaje-validacion-ticket');
+
+        if (!btnGenerar) return;
+
+        if (forms.length === 0) {
+            btnGenerar.disabled = true;
+            if (msgValidacion) msgValidacion.style.display = 'none';
+            return;
         }
 
-        setInterval(refrescar, 4000);
-    })();
+        let todoValido = true;
+
+        forms.forEach(f => {
+            const precioInput = f.querySelector('.input-precio');
+            const cantidadInput = f.querySelector('.input-cantidad');
+            const destinoSelect = f.querySelector('.select-destino');
+
+            const precio = precioInput ? parseFloat(precioInput.value) : NaN;
+            const cantidad = cantidadInput ? parseInt(cantidadInput.value) : NaN;
+            const destino = destinoSelect ? destinoSelect.value : '';
+
+            if (isNaN(precio) || precio <= 0 || isNaN(cantidad) || cantidad <= 0 || !destino) {
+                todoValido = false;
+            }
+        });
+
+        if (todoValido) {
+            btnGenerar.disabled = false;
+            if (msgValidacion) msgValidacion.style.display = 'none';
+        } else {
+            btnGenerar.disabled = true;
+            if (msgValidacion) msgValidacion.style.display = 'block';
+        }
+    }
+
+    // Enviar todos los datos recolectados al backend mediante AJAX utilizando la URL segura de Thymeleaf
+    function enviarGastosMasivos() {
+        localStorage.removeItem('kumo_ticket_estado');
+
+        const forms = document.querySelectorAll('.item-inputs-form');
+        const payload = [];
+
+        forms.forEach(f => {
+            const itemId = f.getAttribute('data-item-id');
+            const precio = parseFloat(f.querySelector('.input-precio').value);
+            const cantidad = parseInt(f.querySelector('.input-cantidad').value);
+            const destino = f.querySelector('.select-destino').value;
+            
+            let destIndId = null;
+            if (destino === 'INDIVIDUAL') {
+                const selectInd = f.querySelector('.select-ind-user');
+                destIndId = selectInd ? selectInd.value : null;
+            }
+
+            const destsIds = [];
+            if (destino === 'GRUPAL') {
+                f.querySelectorAll('.check-grup-user:checked').forEach(chk => {
+                    destsIds.push(parseInt(chk.value));
+                });
+            }
+
+            payload.push({
+                id: parseInt(itemId),
+                precioUnitario: precio,
+                cantidad: cantidad,
+                destino: destino,
+                destinatarioIndividualId: destIndId ? parseInt(destIndId) : null,
+                destinatariosIds: destsIds
+            });
+        });
+
+        fetch('[[@{/lista-compras/convertir-en-gasto-masivo}]]', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert("Hubo un error al generar los gastos de la compra.");
+            }
+        });
+    }
 </script>
 </body>
 </html>

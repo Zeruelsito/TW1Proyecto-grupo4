@@ -8,153 +8,159 @@
     <!-- Bootstrap 5 CSS e Iconos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- FontAwesome CSS para el icono de la nube -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
     <style>
         body {
             background-color: #F7F4EE !important;
             font-family: system-ui, -apple-system, sans-serif;
         }
-        /* Estilos personalizados para emparejar con el menú oscuro de la app */
-        #sidebar {
-            background-color: #121619;
-            min-height: 100vh;
-        }
-        #sidebar .nav-link {
-            color: #adb5bd;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease-in-out;
-        }
-        #sidebar .nav-link:hover {
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.07);
-        }
-        #sidebar .nav-link.active {
-            color: #ffffff;
-            background-color: #4f46e5; /* Color activo característico */
-        }
         .income-box {
             background-color: rgba(16, 185, 129, 0.08);
             border: 1px solid rgba(16, 185, 129, 0.25);
         }
     </style>
+    <style>
+        body {
+            background-color: #F7F4EE !important;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .income-box {
+            background-color: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        /* Estilo limpio para el botón del Dashboard al hacer hover */
+        .btn-dashboard-custom {
+            background-color: #ffffff;
+            color: #212529;
+            border: 1px solid #212529;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-dashboard-custom:hover {
+            background-color: #212529 !important;
+            color: #ffffff !important;
+            border-color: #212529 !important;
+        }
+    </style>
 </head>
 
+<body class="p-4 pt-4">
 
-<body class="p-3">
-<div class="container-fluid p-0">
-    <div class="row g-0">
-        <!-- Menú Lateral exacto de la aplicación -->
-        <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
-            <div>
-                <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
-                <ul class="nav flex-column mt-4">
-                    <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
-                    <li class="nav-item"><a class="nav-link active" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
-                </ul>
-            </div>
-            <div class="px-3">
-                <a th:href="@{/logout}" class="nav-link text-danger">
-                    <i class="bi bi-box-arrow-left me-2"></i> Salir
-                </a>
-            </div>
+<!-- BANNER NEGRO SUPERIOR (Ancho completo de pantalla, manteniendo el padding superior) -->
+<div class="container-fluid px-0 mb-4">
+    <div class="bg-dark text-white rounded-4 py-3 px-4 shadow-sm d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+            <h2 class="fw-bold tracking-wider mb-0 text-white">KUMO</h2>
+            <span class="badge kumo-badge-purple rounded-pill px-3 py-1 small fw-semibold d-inline-flex align-items-center gap-1">
+                <i class="fa-solid fa-cloud me-1 text-primary"></i> Nube
+            </span>
         </div>
+    </div>
+</div>
 
-        <!-- Contenido Principal optimizado en espacio -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-5 py-5 d-flex justify-content-center align-items-center min-vh-100">
-            <div class="w-100" style="max-width: 620px;">
+<!-- CONTENEDOR CENTRAL DEL FORMULARIO Y ENCABEZADOS -->
+<div class="container-fluid px-0" style="max-width: 900px;">
 
-                <!-- Tarjeta de Perfil -->
-                <div class="kumo-card p-4 p-md-5 shadow-sm rounded-4 border-0 bg-white">
-                    <div class="d-flex align-items-center mb-4">
-                        <i class="bi bi-person-gear fs-2 text-primary me-2"></i>
-                        <div>
-                            <h4 class="fw-bold mb-0">Mi Perfil</h4>
-                            <p class="text-muted small mb-0">Modifica tus datos personales e ingresos mensuales</p>
-                        </div>
+    <!-- ENCABEZADO: Títulos a la izquierda y Botón Dashboard a la derecha en el mismo nivel -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Mi Perfil</h3>
+            <p class="text-muted small mb-0">Modifica tus datos personales e ingresos mensuales.</p>
+        </div>
+        <a th:href="@{/dashboard}" class="btn rounded-3 px-3 py-2 d-flex align-items-center gap-2 shadow-sm fw-semibold btn-dashboard-custom">
+            <i class="bi bi-grid-1x2-fill"></i> Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Banner de Éxito -->
+    <div th:if="${exito != null}" class="alert alert-success rounded-3 small py-2 mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        <span th:text="${exito}">Perfil actualizado correctamente</span>
+    </div>
+
+    <!-- Banner de Error -->
+    <div th:if="${error != null}" class="alert alert-danger rounded-3 small py-2 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <span th:text="${error}">Error al guardar los cambios</span>
+    </div>
+
+    <!-- UN SOLO FORMULARIO EN UN CONTENEDOR GENERAL -->
+    <form th:action="@{/perfil/guardar}" method="POST" th:object="${usuario}">
+        <input type="hidden" th:field="*{id}" />
+
+        <div class="kumo-card p-4 p-md-5 shadow-sm border-0 rounded-4 bg-white">
+
+            <!-- Sección 1: Información Personal -->
+            <h5 class="fw-bold mb-3 text-dark">
+                <i class="bi bi-person-gear text-primary me-2"></i>Información Personal
+            </h5>
+            <hr class="text-muted opacity-25 mb-4">
+
+            <div class="row g-4 mb-4">
+                <!-- Nombre -->
+                <div class="col-md-6">
+                    <label for="nombre" class="form-label small fw-semibold">Nombre</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-person text-muted"></i></span>
+                        <input th:field="*{nombre}" id="nombre" type="text" class="form-control rounded-end-3 border-start-0" placeholder="Tu nombre" required />
                     </div>
-
-                    <!-- Banner de Éxito -->
-                    <div th:if="${exito != null}" class="alert alert-success rounded-3 small py-2 mb-3" role="alert">
-                        <i class="bi bi-check-circle-fill me-1"></i>
-                        <span th:text="${exito}">Perfil actualizado correctamente</span>
-                    </div>
-
-                    <!-- Banner de Error -->
-                    <div th:if="${error != null}" class="alert alert-danger rounded-3 small py-2 mb-3" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        <span th:text="${error}">Error al guardar los cambios</span>
-                    </div>
-
-                    <form th:action="@{/perfil/guardar}" method="POST" th:object="${usuario}">
-                        <input type="hidden" th:field="*{id}" />
-
-                        <!-- Nombre Completo -->
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label small fw-semibold">Nombre</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-person text-muted"></i></span>
-                                <input th:field="*{nombre}" id="nombre" type="text" class="form-control rounded-end-3 border-start-0" placeholder="Tu nombre" required />
-                            </div>
-                        </div>
-
-                        <!-- Correo Electrónico -->
-                        <div class="mb-3">
-                            <label for="email" class="form-label small fw-semibold">Correo electrónico</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-                                <input th:field="*{email}" id="email" type="email" class="form-control rounded-end-3 border-start-0" placeholder="tu@email.com" required autocomplete="email" />
-                            </div>
-                        </div>
-
-                        <!-- Nueva Contraseña -->
-                        <div class="mb-3">
-                            <label for="password" class="form-label small fw-semibold">Nueva Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-lock text-muted"></i></span>
-                                <input name="nuevaPassword" id="password" type="password" class="form-control border-start-0 border-end-0" placeholder="Dejar en blanco para mantener la actual" />
-                                <button class="btn btn-outline-secondary bg-light border-start-0 rounded-end-3 text-muted" type="button" onclick="togglePassword()">
-                                    <i class="bi bi-eye" id="toggleIcon"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Ingreso Mensual Estimado -->
-                        <div class="p-3 mb-4 rounded-3 income-box">
-                            <label for="ingresoMensual" class="form-label small fw-semibold text-success mb-1">
-                                <i class="bi bi-wallet2 me-1"></i> Ingreso Mensual Estimado
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text border-0 bg-transparent text-success fw-bold fs-5">$</span>
-                                <input th:field="*{ingresoMensual}" id="ingresoMensual" type="number" step="0.01" min="0" class="form-control border-0 bg-transparent text-success fw-bold fs-5" placeholder="0.00" />
-                                <span class="input-group-text border-0 bg-transparent text-muted small fw-semibold">ARS</span>
-                            </div>
-                            <span class="form-text text-muted small d-block mt-1">Este monto servirá para calcular el balance y la distribución de gastos comunes.</span>
-                        </div>
-
-                        <!-- Botones de Acción -->
-                        <div class="d-flex gap-3 justify-content-end">
-                            <a th:href="${urlAnterior != null ? urlAnterior : '/home'}" class="btn btn-light border w-50 rounded-3 py-2 fw-semibold text-center">
-                                Cancelar
-                            </a>
-                            <button class="btn btn-dark w-50 rounded-3 py-2 fw-semibold shadow-sm" type="submit">
-                                <i class="bi bi-floppy me-1"></i> Guardar
-                            </button>
-                        </div>
-                    </form>
                 </div>
 
+                <!-- Correo electrónico -->
+                <div class="col-md-6">
+                    <label for="email" class="form-label small fw-semibold">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                        <input th:field="*{email}" id="email" type="email" class="form-control rounded-end-3 border-start-0" placeholder="tu@email.com" required autocomplete="email" />
+                    </div>
+                </div>
+
+                <!-- Nueva Contraseña -->
+                <div class="col-12">
+                    <label for="password" class="form-label small fw-semibold">Nueva Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light rounded-start-3 border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                        <input name="nuevaPassword" id="password" type="password" class="form-control border-start-0 border-end-0" placeholder="Dejar en blanco para mantener la actual" />
+                        <button class="btn btn-outline-secondary bg-light border-start-0 rounded-end-3 text-muted" type="button" onclick="togglePassword()">
+                            <i class="bi bi-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-        </main>
-    </div>
+
+            <!-- Sección 2: Configuración Financiera -->
+            <h5 class="fw-bold mb-3 text-dark pt-2">
+                <i class="bi bi-wallet2 text-success me-2"></i>Configuración Financiera
+            </h5>
+            <hr class="text-muted opacity-25 mb-4">
+
+            <div class="p-3 mb-4 rounded-3 income-box">
+                <label for="ingresoMensual" class="form-label small fw-semibold text-success mb-1">
+                    <i class="bi bi-cash-stack me-1"></i> Ingreso Mensual Estimado
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text border-0 bg-transparent text-success fw-bold fs-5">$</span>
+                    <input th:field="*{ingresoMensual}" id="ingresoMensual" type="number" step="0.01" min="0" class="form-control border-0 bg-transparent text-success fw-bold fs-5 ps-1" placeholder="0.00" />
+                    <span class="input-group-text border-0 bg-transparent text-muted small fw-semibold">ARS</span>
+                </div>
+                <span class="form-text text-muted small d-block mt-2">
+                    Este monto servirá para calcular el balance y la distribución de gastos comunes en el hogar.
+                </span>
+            </div>
+
+            <!-- Botones de Acción al final del mismo contenedor -->
+            <div class="d-flex gap-3 pt-3 border-top justify-content-end">
+                <a th:href="@{/dashboard}" class="btn btn-light border px-4 rounded-3 py-2 fw-semibold text-center">
+                    Cancelar
+                </a>
+                <button class="btn btn-dark px-5 rounded-3 py-2 fw-semibold shadow-sm" type="submit">
+                    <i class="bi bi-floppy me-1"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </form>
 </div>
 
 <!-- Bootstrap 5 JS Bundle -->

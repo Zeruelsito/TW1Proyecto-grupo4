@@ -1,6 +1,7 @@
 package com.tallerwebi.dominio;
 
 import java.util.List;
+import java.util.Objects;
 
 public class SimulacionBaja {
 
@@ -62,11 +63,14 @@ public class SimulacionBaja {
     return balanceFinal != null && balanceFinal > 0;
   }
 
-  public boolean tieneTransferenciaPendiente(String emisor, String receptor, Double monto) {
+  public boolean tieneTransferenciaPendiente(Usuario emisor, Usuario receptor, Double monto) {
+    String nombreEmisor = emisor != null ? emisor.getNombre() : null;
+    String nombreReceptor = receptor != null ? receptor.getNombre() : null;
+
     for (TransferenciaSugerida transferencia : liquidacionFinal) {
       if (
-        transferencia.getEmisor().equals(emisor) &&
-        transferencia.getReceptor().equals(receptor) &&
+        Objects.equals(transferencia.getEmisor(), nombreEmisor) &&
+        Objects.equals(transferencia.getReceptor(), nombreReceptor) &&
         Math.abs(transferencia.getMonto() - monto) < MARGEN_MONTO
       ) {
         return true;

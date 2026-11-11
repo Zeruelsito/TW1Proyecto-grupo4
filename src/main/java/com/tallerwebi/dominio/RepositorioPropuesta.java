@@ -1,12 +1,12 @@
 package com.tallerwebi.dominio;
 
-//import com.tallerwebi.dominio.Propuesta;
 import java.util.List;
 
 public interface RepositorioPropuesta {
   Propuesta guardar(Propuesta propuesta);
   Propuesta obtenerPorId(Long id);
   List<Propuesta> obtenerTodasLasPropuestas();
+  List<Propuesta> obtenerPropuestasPorHogar(Long hogarId);
   List<Propuesta> obtenerPropuestasPorUsuario(Long idUsuario);
-  long obtenerTotalIntegrantes();
+  long obtenerTotalIntegrantes(Long hogarId);
 }

@@ -75,7 +75,6 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
       .getResultList();
   }
 
-
   @Override
   public TareaRepetitiva obtenerPorHogarUsuarioYTitulo(
     Long hogarId,
@@ -96,6 +95,4 @@ public class RepositorioTareaRepetitivaImpl implements RepositorioTareaRepetitiv
       .setMaxResults(1)
       .uniqueResult();
   }
-
-
 }

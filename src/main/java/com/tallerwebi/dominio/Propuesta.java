@@ -3,6 +3,8 @@ package com.tallerwebi.dominio;
 //import com.tallerwebi.dominio.EstadoPropuesta;
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 public class Propuesta {
@@ -17,11 +19,18 @@ public class Propuesta {
   private String descripcion;
 
   private Long idUsuarioCreador;
+  private Long hogarId;
   private LocalDate fechaLimite;
   private double porcentajeQuorum;
 
   @Enumerated(EnumType.STRING)
   private EstadoPropuesta estado;
+
+  @Transient
+  private List<DetalleVoto> votos = new ArrayList<>();
+
+  @Transient
+  private long faltanVotar;
 
   public Propuesta() {}
 
@@ -43,6 +52,10 @@ public class Propuesta {
 
   public boolean estaPendiente() {
     return EstadoPropuesta.PENDIENTE.equals(estado);
+  }
+
+  public Boolean fueCreadaPor(Long idUsuario) {
+    return idUsuarioCreador != null && idUsuarioCreador.equals(idUsuario);
   }
 
   public boolean estaVencida(LocalDate hoy) {
@@ -81,6 +94,18 @@ public class Propuesta {
     this.idUsuarioCreador = idUsuarioCreador;
   }
 
+  public Long getHogarId() {
+    return hogarId;
+  }
+
+  public void setHogarId(Long hogarId) {
+    this.hogarId = hogarId;
+  }
+
+  public boolean perteneceAlHogar(Long idHogar) {
+    return hogarId != null && hogarId.equals(idHogar);
+  }
+
   public LocalDate getFechaLimite() {
     return fechaLimite;
   }
@@ -103,5 +128,21 @@ public class Propuesta {
 
   public void setEstado(EstadoPropuesta estado) {
     this.estado = estado;
+  }
+
+  public List<DetalleVoto> getVotos() {
+    return votos;
+  }
+
+  public void setVotos(List<DetalleVoto> votos) {
+    this.votos = votos;
+  }
+
+  public long getFaltanVotar() {
+    return faltanVotar;
+  }
+
+  public void setFaltanVotar(long faltanVotar) {
+    this.faltanVotar = faltanVotar;
   }
 }

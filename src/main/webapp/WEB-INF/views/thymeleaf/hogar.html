@@ -24,7 +24,6 @@
                     <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
                     <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/perfil}"><i class="bi bi-person-gear me-2"></i> Mi Perfil</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -44,6 +43,10 @@
 
                 <!-- CONTENEDOR DERECHO: Agrupa la campanita y el usuario en línea horizontal -->
                 <div class="d-flex align-items-center gap-3">
+                    <a th:href="@{/gastos}" class="btn btn-dark rounded-3 px-3 py-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-plus-circle"></i> Nuevo Gasto
+                    </a>
+
                     <!-- CAMPANITA DE NOTIFICACIONES -->
                     <div class="dropdown notification-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center justify-content-center bg-white" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; width: 44px; height: 44px;">
@@ -64,7 +67,7 @@
                         <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3 mt-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                 <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-danger me-1"></i> Notificaciones</h6>
-                                <a th:href="@{/vencimientos}" class="small text-decoration-none fw-semibold">Ver todos</a>
+                                <a th:href="@{/gastos}" class="small text-decoration-none fw-semibold">Ver todos</a>
                             </div>
 
                             <!-- Si NO hay ninguna notificación -->
@@ -76,7 +79,9 @@
                             <!-- Sección: Gastos Vencidos -->
                             <div th:if="${vencidosNotif != null and not #lists.isEmpty(vencidosNotif)}" class="mb-3">
                                 <span class="badge bg-danger text-white rounded-pill px-2 py-1 mb-2 small fw-bold">Vencidos</span>
-                                <div th:each="vencido : ${vencidosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-danger">
+                                <a th:each="vencido : ${vencidosNotif}"
+                                   th:href="@{/gastos(gastoId=${vencido.id})}"
+                                   class="d-block text-decoration-none p-2 mb-2 bg-light rounded-3 border-start border-4 border-danger notification-item">
                                     <div class="d-flex justify-content-between">
                                         <span class="fw-semibold small text-dark" th:text="${vencido.descripcion}">Descripción</span>
                                         <span class="fw-bold small text-danger" th:text="'$' + ${#numbers.formatDecimal(vencido.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
@@ -84,13 +89,15 @@
                                     <div class="small text-muted" style="font-size: 0.75rem;">
                                         Venció el: <span th:text="${#temporals.format(vencido.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
                                     </div>
-                                </div>
+                                </a>
                             </div>
 
                             <!-- Sección: Próximos a Vencer -->
                             <div th:if="${proximosNotif != null and not #lists.isEmpty(proximosNotif)}">
                                 <span class="badge bg-warning text-dark rounded-pill px-2 py-1 mb-2 small fw-bold">Próximos a vencer</span>
-                                <div th:each="prox : ${proximosNotif}" class="p-2 mb-2 bg-light rounded-3 border-start border-4 border-warning">
+                                <a th:each="prox : ${proximosNotif}"
+                                   th:href="@{/gastos(gastoId=${prox.id})}"
+                                   class="d-block text-decoration-none p-2 mb-2 bg-light rounded-3 border-start border-4 border-warning notification-item">
                                     <div class="d-flex justify-content-between">
                                         <span class="fw-semibold small text-dark" th:text="${prox.descripcion}">Descripción</span>
                                         <span class="fw-bold small text-dark" th:text="'$' + ${#numbers.formatDecimal(prox.monto, 1, 'POINT', 2, 'COMMA')}">$0</span>
@@ -98,12 +105,11 @@
                                     <div class="small text-muted" style="font-size: 0.75rem;">
                                         Vence el: <span th:text="${#temporals.format(prox.fechaVencimiento, 'dd/MM/yyyy')}">01/01/2026</span>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Menú Desplegable de Usuario Integrado -->
+                    <!-- DROPDOWN DE USUARIO -->
                     <div class="dropdown user-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
                             <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
@@ -113,8 +119,8 @@
                             <i class="bi bi-chevron-down small text-muted ms-1"></i>
                         </div>
 
-                        <!-- Menú Desplegable con Acciones -->
-                        <div class="dropdown-menu shadow-sm border-0 rounded-4 p-2 mt-2">
+                        <!-- Menú Desplegable con acciones -->
+                        <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 p-2 mt-2">
                             <div class="px-3 py-2 border-bottom mb-2">
                                 <p class="mb-0 fw-bold text-dark small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</p>
                             </div>

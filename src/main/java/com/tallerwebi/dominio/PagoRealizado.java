@@ -11,8 +11,14 @@ public class PagoRealizado {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  private String emisor;
-  private String receptor;
+  @ManyToOne
+  @JoinColumn(name = "emisor_id")
+  private Usuario emisor;
+
+  @ManyToOne
+  @JoinColumn(name = "receptor_id")
+  private Usuario receptor;
+
   private Double monto;
   private LocalDateTime fecha;
 
@@ -23,8 +29,8 @@ public class PagoRealizado {
   public PagoRealizado() {}
 
   public PagoRealizado(
-    String emisor,
-    String receptor,
+    Usuario emisor,
+    Usuario receptor,
     Double monto,
     LocalDateTime fecha,
     Hogar hogar
@@ -36,7 +42,7 @@ public class PagoRealizado {
     this.hogar = hogar;
   }
 
-  // Getters y Setters
+  // Getters y Setters actualizados a Usuario
   public Long getId() {
     return id;
   }
@@ -45,19 +51,19 @@ public class PagoRealizado {
     this.id = id;
   }
 
-  public String getEmisor() {
+  public Usuario getEmisor() {
     return emisor;
   }
 
-  public void setEmisor(String emisor) {
+  public void setEmisor(Usuario emisor) {
     this.emisor = emisor;
   }
 
-  public String getReceptor() {
+  public Usuario getReceptor() {
     return receptor;
   }
 
-  public void setReceptor(String receptor) {
+  public void setReceptor(Usuario receptor) {
     this.receptor = receptor;
   }
 

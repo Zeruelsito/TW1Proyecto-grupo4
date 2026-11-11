@@ -105,7 +105,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
     }
 
     if (gastos.isEmpty()) {
-      return obtenerNombreFormateado(integrantes.get(0).getEmail());
+      return obtenerNombreFormateado(integrantes.getFirst().getNombre());
     }
 
     Map<Long, Double> totalPorUsuario = calcularTotalesPorUsuario(integrantes, gastos);
@@ -208,7 +208,7 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   }
 
   private Long obtenerIdConMenorMonto(List<Usuario> integrantes, Map<Long, Double> totales) {
-    Long idMenor = integrantes.get(0).getId();
+    Long idMenor = integrantes.getFirst().getId();
     double menorMonto = Double.MAX_VALUE;
 
     for (Map.Entry<Long, Double> entry : totales.entrySet()) {
@@ -223,10 +223,10 @@ public class ServicioRegistroGastoImpl implements ServicioRegistroGasto {
   private String buscarNombrePorId(List<Usuario> integrantes, Long idBuscado) {
     for (Usuario u : integrantes) {
       if (u.getId().equals(idBuscado)) {
-        return obtenerNombreFormateado(u.getEmail());
+        return obtenerNombreFormateado(u.getNombre());
       }
     }
-    return obtenerNombreFormateado(integrantes.get(0).getEmail());
+    return obtenerNombreFormateado(integrantes.getFirst().getNombre());
   }
 
   private String obtenerNombreFormateado(String email) {

@@ -210,7 +210,7 @@ public class RepositorioTareaRepetitivaTest {
     Hogar hogarB = givenTengoUnHogar("depto 2", 1000.00);
     Usuario ori = givenTengoUnUsuario("ori");
     Usuario dylan = givenTengoUnUsuario("dylan");
-    
+
     TareaRepetitiva delHogar = givenTengoUnaTareaEnHogar("comprar manteles", hogarA);
     TareaRepetitiva deOri = givenTengoUnaTareaPersonal("lavar mi ropa", hogarA, ori);
     givenTengoUnaTareaPersonal("estudiar", hogarA, dylan);
@@ -220,7 +220,8 @@ public class RepositorioTareaRepetitivaTest {
 
     List<TareaRepetitiva> obtenidas = repositorioTareaRepetitiva.obtenerPorHogarYUsuario(
       hogarA.getId(),
-      ori.getId());
+      ori.getId()
+    );
 
     assertThat(obtenidas.size(), equalTo(2));
     assertThat(obtenidas.get(0), equalTo(delHogar));
@@ -237,7 +238,9 @@ public class RepositorioTareaRepetitivaTest {
     Usuario ori = givenTengoUnUsuario("ori");
     givenTengoUnaTareaEnHogar("comprar manteles", hogarA);
 
-    List<TareaRepetitiva> obtenidas = repositorioTareaRepetitiva.obtenerPorHogarYUsuario(hogarB.getId(), ori.getId()
+    List<TareaRepetitiva> obtenidas = repositorioTareaRepetitiva.obtenerPorHogarYUsuario(
+      hogarB.getId(),
+      ori.getId()
     );
 
     assertThat(obtenidas, empty());

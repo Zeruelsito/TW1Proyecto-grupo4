@@ -38,6 +38,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     List<Usuario> integrantes = hogar.getIntegrantes();
     Map<String, Double> balances = new HashMap<>();
     Map<String, String> emailToNombre = new HashMap<>();
+    Map<String, Long> emailToId = new HashMap<>(); // <-- Mapa para asociar email con ID del usuario
 
     for (Usuario usuario : integrantes) {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
@@ -48,14 +49,17 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
       String email = usuario.getEmail();
       String nombre = usuario.getNombre() != null ? usuario.getNombre() : "Usuario";
+      Long id = usuario.getId(); // <-- Obtenemos el ID
 
       emailToNombre.put(email, nombre);
+      emailToId.put(email, id); // <-- Almacenamos el ID
       balances.put(email, balanceNeto);
     }
 
     List<TransferenciaSugerida> transferencias = calcularLiquidacionOptimaConNombres(
       balances,
-      emailToNombre
+      emailToNombre,
+      emailToId // <-- Se lo pasamos al generador
     );
 
     List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null
@@ -68,8 +72,10 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
         pagosRealizados
           .stream()
           .noneMatch(p ->
-            p.getEmisor().equals(t.getEmisor()) &&
-            p.getReceptor().equals(t.getReceptor()) &&
+            p.getEmisor() != null &&
+            p.getEmisor().getNombre().equals(t.getEmisor()) &&
+            p.getReceptor() != null &&
+            p.getReceptor().getNombre().equals(t.getReceptor()) &&
             Math.abs(p.getMonto() - t.getMonto()) < MARGEN_TOLERANCIA
           )
       )
@@ -106,7 +112,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
   }
 
   @Transactional
-  public void registrarPagoExitoso(Hogar hogar, String emisor, String receptor, Double monto) {
+  public void registrarPagoExitoso(Hogar hogar, Usuario emisor, Usuario receptor, Double monto) {
     if (servicioPagoRealizado != null && hogar != null) {
       PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), hogar);
       servicioPagoRealizado.registrarPagoExitoso(pago);
@@ -143,7 +149,8 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
   public List<TransferenciaSugerida> calcularLiquidacionOptimaConNombres(
     Map<String, Double> balances,
-    Map<String, String> emailToNombre
+    Map<String, String> emailToNombre,
+    Map<String, Long> emailToId
   ) {
     List<TransferenciaSugerida> transferencias = new ArrayList<>();
     List<PersonaBalance> deudores = new ArrayList<>();
@@ -164,12 +171,22 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       if (monto > 0) {
         String emailEmisor = deudor.nombre;
         String nombreEmisor = emailToNombre.getOrDefault(emailEmisor, emailEmisor);
+        Long emisorId = emailToId != null ? emailToId.get(emailEmisor) : null; // <-- Obtenemos ID emisor
 
         String emailReceptor = acreedor.nombre;
         String nombreReceptor = emailToNombre.getOrDefault(emailReceptor, emailReceptor);
+        Long receptorId = emailToId != null ? emailToId.get(emailReceptor) : null; // <-- Obtenemos ID receptor
 
+        // Usamos el constructor que incluye los IDs
         transferencias.add(
-          new TransferenciaSugerida(nombreEmisor, emailEmisor, nombreReceptor, monto)
+          new TransferenciaSugerida(
+            emisorId,
+            nombreEmisor,
+            emailEmisor,
+            receptorId,
+            nombreReceptor,
+            monto
+          )
         );
       }
 
@@ -189,7 +206,11 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
   @Override
   public List<TransferenciaSugerida> calcularLiquidacionOptima(Map<String, Double> balances) {
-    return calcularLiquidacionOptimaConNombres(balances, Collections.emptyMap());
+    return calcularLiquidacionOptimaConNombres(
+      balances,
+      Collections.emptyMap(),
+      Collections.emptyMap()
+    );
   }
 
   private void clasificarBalances(
@@ -224,8 +245,8 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       return 0.0;
     }
     double totalPagado = calcularTotalPagadoPorUsuario(usuario, gastos);
-    double creditoLiquidado = obtenerCreditoTareas(usuario);
     double consumo = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
+    double creditoLiquidado = obtenerCreditoTareas(usuario);
 
     double balanceNeto = (totalPagado + creditoLiquidado) - consumo;
 

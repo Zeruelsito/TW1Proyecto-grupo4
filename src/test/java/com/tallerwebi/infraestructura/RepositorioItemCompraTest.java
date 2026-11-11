@@ -50,7 +50,7 @@ public class RepositorioItemCompraTest {
     // validacion
     assertThat(obtenido, is(notNullValue()));
     assertThat(obtenido.getNombre(), is(equalTo("Leche")));
-    assertThat(obtenido.getIdUsuarioCreador(), is(equalTo(1L)));
+    assertThat(obtenido.getUsuarioId(), is(equalTo(1L))); // <-- Corregido a getUsuarioId()
     assertThat(obtenido.getEstado(), is(equalTo(EstadoItemCompra.PENDIENTE)));
   }
 
@@ -58,7 +58,6 @@ public class RepositorioItemCompraTest {
   @Transactional
   public void obtenerPorIdDeUnItemInexistenteDeberiaDevolverNull() {
     ItemCompra obtenido = repositorioItemCompra.obtenerPorId(999L);
-
     assertThat(obtenido, is(nullValue()));
   }
 

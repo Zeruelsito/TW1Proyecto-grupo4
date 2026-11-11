@@ -6,8 +6,12 @@ import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.ValorCreditoInvalidoException;
 import jakarta.transaction.Transactional;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,16 +21,25 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
   private final RepositorioTarea repositorioTarea;
   private final RepositorioUsuario repositorioUsuario;
   private final RepositorioTareaRepetitiva repositorioTareaRepetitiva;
+  private final ServicioCalculosGasto servicioCalculosGasto;
+  private final ServicioLiquidacion servicioLiquidacion;
+  private final ServicioRegistroGasto servicioRegistroGasto;
 
   @Autowired
   public ServicioCreditoTareaImpl(
     RepositorioTarea repositorioTarea,
     RepositorioUsuario repositorioUsuario,
-    RepositorioTareaRepetitiva repositorioTareaRepetitiva
+    RepositorioTareaRepetitiva repositorioTareaRepetitiva,
+    ServicioCalculosGasto servicioCalculosGasto,
+    @Lazy ServicioLiquidacion servicioLiquidacion,
+    ServicioRegistroGasto servicioRegistroGasto
   ) {
     this.repositorioTarea = repositorioTarea;
     this.repositorioUsuario = repositorioUsuario;
     this.repositorioTareaRepetitiva = repositorioTareaRepetitiva;
+    this.servicioCalculosGasto = servicioCalculosGasto;
+    this.servicioLiquidacion = servicioLiquidacion;
+    this.servicioRegistroGasto = servicioRegistroGasto;
   }
 
   @Override
@@ -154,6 +167,114 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
   @Override
   public List<Tarea> obtenerTareasPorHogar(Long hogarId) {
     return repositorioTarea.obtenerPorHogar(hogarId);
+  }
+
+  @Override
+  public Map<String, Double> calcularMetricasBrechaUsuario(
+    Usuario usuario,
+    Hogar hogar,
+    List<Gasto> gastos,
+    Double precioHora
+  ) {
+    Map<String, Double> resultado = new HashMap<>();
+    Double dineroRequeridoBrecha = 0.0;
+    double horasRequeridasBrecha = 0.0;
+
+    List<Usuario> integrantes = obtenerIntegrantesHogares(hogar);
+    double totalGastosOcasionales = calcularTotalGastos(gastos);
+    double pisoMinimo = calcularPisoMinimoHogar(hogar);
+
+    if (usuario != null && !integrantes.isEmpty() && servicioCalculosGasto != null) {
+      dineroRequeridoBrecha =
+        servicioCalculosGasto.calcularCuotaMensualPorUsuario(
+          usuario,
+          totalGastosOcasionales,
+          pisoMinimo,
+          integrantes
+        );
+
+      Double valorADeberTareas = servicioCalculosGasto.calcularValorDeHorasDeTareaPorUsuario(
+        usuario,
+        precioHora,
+        totalGastosOcasionales,
+        pisoMinimo,
+        integrantes
+      );
+
+      horasRequeridasBrecha =
+        (precioHora > 0) ? Math.ceil((valorADeberTareas / precioHora) * 2.0) / 2.0 : 0.0;
+    }
+
+    resultado.put("dineroRequeridoBrecha", dineroRequeridoBrecha);
+    resultado.put("horasRequeridasBrecha", horasRequeridasBrecha);
+    return resultado;
+  }
+
+  private List<Usuario> obtenerIntegrantesHogares(Hogar hogar) {
+    return (hogar != null && hogar.getIntegrantes() != null)
+      ? hogar.getIntegrantes()
+      : Collections.emptyList();
+  }
+
+  private double calcularTotalGastos(List<Gasto> gastos) {
+    return gastos
+      .stream()
+      .filter(g -> g != null && g.getMonto() != null)
+      .mapToDouble(Gasto::getMonto)
+      .sum();
+  }
+
+  private double calcularPisoMinimoHogar(Hogar hogar) {
+    double pisoMinimo = 0.0;
+    if (hogar != null && hogar.getId() != null) {
+      List<Gasto> gastosFijos = servicioRegistroGasto.obtenerGastosFijosRecurrentes(hogar.getId());
+      if (gastosFijos != null) {
+        for (Gasto gasto : gastosFijos) {
+          if (
+            gasto != null && gasto.getTipoGasto() != TipoGasto.OCASIONAL && gasto.getMonto() != null
+          ) {
+            pisoMinimo += gasto.getMonto();
+          }
+        }
+      }
+    }
+    return pisoMinimo;
+  }
+
+  @Override
+  public void procesarLiquidacionCreditos(
+    Long usuarioId,
+    Long hogarId,
+    List<Gasto> gastos,
+    Hogar hogar
+  ) {
+    Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
+    if (usuario == null || hogar == null) return;
+
+    double deuda = servicioLiquidacion.obtenerDeudaUsuario(usuario, hogar, gastos);
+    double precioHora = (hogar.getPrecioHoraTarea() != null) ? hogar.getPrecioHoraTarea() : 1000.0;
+
+    Map<String, Double> metricasBrecha = calcularMetricasBrechaUsuario(
+      usuario,
+      hogar,
+      gastos,
+      precioHora
+    );
+    double dineroRequeridoBrecha = metricasBrecha.get("dineroRequeridoBrecha");
+
+    double creditoTotalBruto = obtenerCreditoAcumuladoPorUsuario(usuarioId);
+    double creditoLiquidadoMes = obtenerCreditoLiquidadoPorUsuario(usuarioId);
+
+    double creditoLibreExcedente = Math.max(0.0, creditoTotalBruto - dineroRequeridoBrecha);
+    double creditoDisponibleParaLiquidar = Math.max(
+      0.0,
+      creditoLibreExcedente - creditoLiquidadoMes
+    );
+    double montoALiquidar = Math.min(creditoDisponibleParaLiquidar, deuda);
+
+    if (montoALiquidar > 0) {
+      liquidarCreditosParciales(usuarioId, montoALiquidar);
+    }
   }
 
   /* --- Métodos Auxiliares Privados --- */

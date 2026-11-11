@@ -2,9 +2,9 @@ package com.tallerwebi.presentacion;
 
 import com.tallerwebi.dominio.*;
 import com.tallerwebi.dominio.excepcion.PropuestaNoExiste;
+import com.tallerwebi.dominio.excepcion.SinPermisoParaCancelarException;
 import com.tallerwebi.dominio.excepcion.UsuarioYaVoto;
 import com.tallerwebi.dominio.excepcion.VotacionCerradaException;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -18,49 +18,49 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class ControladorVotacion {
 
-  private final ServicioVotacion servicioVotacion;
-  private final HttpSession session;
+  private static final String SESION_USUARIO_ID = "USUARIO_ID";
+  private static final String SESION_HOGAR_ID = "HOGAR_ID";
+  private static final String SESION_ROL = "ROL";
+  private static final String ROL_ADMIN = "ADMIN";
+  private static final String REDIRECT_LOGIN = "redirect:/login";
+  private static final String REDIRECT_DASHBOARD = "redirect:/dashboard";
+  private static final String REDIRECT_PROPUESTAS = "redirect:/propuestas";
+  private static final String MENSAJE_SIN_HOGAR =
+    "Para ver las propuestas y otras secciones debes pertenecer a un hogar.";
 
-  public ControladorVotacion(
-    ServicioVotacion servicioVotacion,
-    ServicioUsuario servicioUsuario,
-    HttpSession session
-  ) {
+  private final ServicioVotacion servicioVotacion;
+
+  public ControladorVotacion(ServicioVotacion servicioVotacion) {
     this.servicioVotacion = servicioVotacion;
-    this.session = session;
   }
 
   @RequestMapping(path = "/propuestas", method = RequestMethod.GET)
-  public ModelAndView irAPropuestas(
-    HttpServletRequest request,
-    RedirectAttributes redirectAttributes
-  ) {
-    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
-    if (hogarId == null) {
-      redirectAttributes.addFlashAttribute(
-        "alertaHogar",
-        "Para ver la liquidación y otras secciones debes pertenecer a un hogar."
-      );
-      return new ModelAndView("redirect:/dashboard");
+  public ModelAndView irAPropuestas(HttpSession session, RedirectAttributes redirectAttributes) {
+    ModelAndView redireccion = validarSesion(session, redirectAttributes);
+    if (redireccion != null) {
+      return redireccion;
     }
-    if (obtenerIdUsuario(request) == null) {
-      return new ModelAndView("redirect:/login");
-    }
-    return armarVista(new DatosPropuesta(), null);
+    return armarVista(session, new DatosPropuesta(), null);
   }
 
   @RequestMapping(path = "/propuestas/guardar", method = RequestMethod.POST)
   public ModelAndView guardarPropuesta(
     @ModelAttribute("datosPropuesta") DatosPropuesta datos,
-    HttpSession session
+    HttpSession session,
+    RedirectAttributes redirectAttributes
   ) {
-    Long idUsuario = SessionUtils.obtenerUsuarioIdDeSesion(session);
-    try {
-      servicioVotacion.guardarPropuesta(armarPropuesta(datos, idUsuario));
-    } catch (PropuestaNoExiste e) {
-      return armarVista(datos, e.getMessage());
+    ModelAndView redireccion = validarSesion(session, redirectAttributes);
+    if (redireccion != null) {
+      return redireccion;
     }
-    return new ModelAndView("redirect:/propuestas");
+
+    Long hogarId = obtenerHogarId(session);
+    try {
+      servicioVotacion.guardarPropuesta(armarPropuesta(datos, obtenerIdUsuario(session), hogarId));
+    } catch (PropuestaNoExiste e) {
+      return armarVista(session, datos, e.getMessage());
+    }
+    return new ModelAndView(REDIRECT_PROPUESTAS);
   }
 
   @RequestMapping(path = "/propuestas/{id}/votar", method = RequestMethod.POST)
@@ -68,28 +68,78 @@ public class ControladorVotacion {
     @PathVariable("id") Long idPropuesta,
     @RequestParam("esAfirmativo") boolean esAfirmativo,
     @RequestParam(value = "comentario", required = false) String comentario,
-    HttpServletRequest request
+    HttpSession session,
+    RedirectAttributes redirectAttributes
   ) {
-    Long idUsuario = obtenerIdUsuario(request);
-    if (idUsuario == null) {
-      return new ModelAndView("redirect:/login");
+    ModelAndView redireccion = validarSesion(session, redirectAttributes);
+    if (redireccion != null) {
+      return redireccion;
     }
 
     try {
-      servicioVotacion.votar(idUsuario, idPropuesta, esAfirmativo, comentario);
+      servicioVotacion.votar(
+        obtenerIdUsuario(session),
+        obtenerHogarId(session),
+        idPropuesta,
+        esAfirmativo,
+        comentario
+      );
     } catch (PropuestaNoExiste | VotacionCerradaException | UsuarioYaVoto e) {
-      return armarVista(new DatosPropuesta(), e.getMessage());
+      redirectAttributes.addFlashAttribute("mensajeError", e.getMessage());
     }
-    return new ModelAndView("redirect:/propuestas");
+    return new ModelAndView(REDIRECT_PROPUESTAS);
   }
 
-  private Long obtenerIdUsuario(HttpServletRequest request) {
-    return (Long) request.getSession().getAttribute("USUARIO_ID");
+  @RequestMapping(path = "/propuestas/{id}/cancelar", method = RequestMethod.POST)
+  public ModelAndView cancelarPropuesta(
+    @PathVariable("id") Long idPropuesta,
+    HttpSession session,
+    RedirectAttributes redirectAttributes
+  ) {
+    ModelAndView redireccion = validarSesion(session, redirectAttributes);
+    if (redireccion != null) {
+      return redireccion;
+    }
+
+    try {
+      servicioVotacion.cancelarPropuesta(
+        obtenerIdUsuario(session),
+        obtenerHogarId(session),
+        idPropuesta,
+        esAdmin(session)
+      );
+    } catch (PropuestaNoExiste | SinPermisoParaCancelarException | VotacionCerradaException e) {
+      redirectAttributes.addFlashAttribute("mensajeError", e.getMessage());
+    }
+    return new ModelAndView(REDIRECT_PROPUESTAS);
   }
 
-  private Propuesta armarPropuesta(DatosPropuesta datos, Long idUsuario) {
+  private boolean esAdmin(HttpSession session) {
+    return ROL_ADMIN.equals(session.getAttribute(SESION_ROL));
+  }
+
+  private ModelAndView validarSesion(HttpSession session, RedirectAttributes redirectAttributes) {
+    if (obtenerIdUsuario(session) == null) {
+      return new ModelAndView(REDIRECT_LOGIN);
+    }
+    if (obtenerHogarId(session) == null) {
+      redirectAttributes.addFlashAttribute("alertaHogar", MENSAJE_SIN_HOGAR);
+      return new ModelAndView(REDIRECT_DASHBOARD);
+    }
+    return null;
+  }
+
+  private Long obtenerIdUsuario(HttpSession session) {
+    return (Long) session.getAttribute(SESION_USUARIO_ID);
+  }
+
+  private Long obtenerHogarId(HttpSession session) {
+    return (Long) session.getAttribute(SESION_HOGAR_ID);
+  }
+
+  private Propuesta armarPropuesta(DatosPropuesta datos, Long idUsuario, Long hogarId) {
     double quorum = datos.getPorcentajeQuorum() == null ? 0 : datos.getPorcentajeQuorum();
-    return new Propuesta(
+    Propuesta propuesta = new Propuesta(
       datos.getTitulo(),
       datos.getDescripcion(),
       idUsuario,
@@ -97,12 +147,19 @@ public class ControladorVotacion {
       quorum,
       EstadoPropuesta.PENDIENTE
     );
+    propuesta.setHogarId(hogarId);
+    return propuesta;
   }
 
-  private ModelAndView armarVista(DatosPropuesta datos, String mensajeError) {
+  private ModelAndView armarVista(HttpSession session, DatosPropuesta datos, String mensajeError) {
     ModelAndView mav = new ModelAndView("propuestas");
-    mav.addObject("listaPropuestas", servicioVotacion.obtenerTodasLasPropuestas());
+    mav.addObject(
+      "listaPropuestas",
+      servicioVotacion.obtenerPropuestasDelHogar(obtenerHogarId(session))
+    );
     mav.addObject("datosPropuesta", datos);
+    mav.addObject("idUsuarioActual", obtenerIdUsuario(session));
+    mav.addObject("esAdmin", esAdmin(session));
     if (mensajeError != null) {
       mav.addObject("mensajeError", mensajeError);
     }
