@@ -210,7 +210,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     Map<Long, Double> consumo,
     Map<Long, Double> pagado
   ) {
-    if (gasto.getMonto() == null) {
+    if (gasto.getMonto() == null || !Boolean.TRUE.equals(gasto.getPagado())) {
       return;
     }
     List<Usuario> participantes = participantesDe(gasto, integrantes);

@@ -143,6 +143,7 @@ public class ServicioBajaIntegranteTest {
       .thenReturn(Arrays.asList(usuario1, usuario2));
 
     Gasto gasto = new Gasto();
+    gasto.setPagado(true);
     gasto.setMonto(1000.0);
     gasto.setUsuarioPagador(usuario1);
     gasto.setParticipantes(Arrays.asList(usuario1, usuario2));
