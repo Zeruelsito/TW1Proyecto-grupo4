@@ -127,7 +127,7 @@ public class ServicioBajaIntegranteTest {
     when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
       .thenReturn(Collections.emptyList());
     when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
+    when(servicioCreditoTareaMock.obtenerCreditoLiquidadoPorUsuario(anyLong())).thenReturn(0.0);
 
     SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(2L);
 

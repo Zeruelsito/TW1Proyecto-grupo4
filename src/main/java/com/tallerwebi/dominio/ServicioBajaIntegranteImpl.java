@@ -225,6 +225,10 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   private List<Usuario> participantesDe(Gasto gasto, List<Usuario> integrantes) {
+    List<Usuario> elegidos = gasto.getParticipantes();
+    if (elegidos != null && !elegidos.isEmpty()) {
+      return elegidos;
+    }
     List<Usuario> participantes = new ArrayList<>();
     for (Usuario usuario : integrantes) {
       if (usuario.participaEn(gasto.getFecha())) {
@@ -251,7 +255,7 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   private double creditoDe(Usuario usuario) {
-    if (servicioCreditoTarea == null || usuario.getId() == null) {
+    if (usuario.getId() == null) {
       return 0.0;
     }
     Double credito = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuario.getId());
@@ -364,12 +368,8 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   private List<Usuario> sinElSaliente(List<Usuario> integrantes, Usuario saliente) {
-    List<Usuario> restantes = new ArrayList<>();
-    for (Usuario usuario : integrantes) {
-      if (!usuario.getId().equals(saliente.getId())) {
-        restantes.add(usuario);
-      }
-    }
+    List<Usuario> restantes = new ArrayList<>(integrantes);
+    restantes.removeIf(usuario -> usuario.getId().equals(saliente.getId()));
     return restantes;
   }
 
