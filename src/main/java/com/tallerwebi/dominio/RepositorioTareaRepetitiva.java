@@ -6,7 +6,7 @@ public interface RepositorioTareaRepetitiva {
   void guardar(TareaRepetitiva tareaRepetitiva);
   List<TareaRepetitiva> obtenerTodos();
   TareaRepetitiva obtenerPorId(Long id);
-  int contarAsignadasAUsuario(Usuario usuario); // borrar
+  int contarAsignadasAUsuario(Usuario usuario);
 
   List<TareaRepetitiva> obtenerPorHogar(Long hogarId);
 
