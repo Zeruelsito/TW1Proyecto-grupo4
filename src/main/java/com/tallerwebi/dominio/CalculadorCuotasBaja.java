@@ -247,7 +247,7 @@ public class CalculadorCuotasBaja {
       copias.add(copia);
     }
     return copias;
-  }
+  }   
 
   private void asignarPisoATodos(List<Usuario> copias, Double piso) {
     for (Usuario copia : copias) {
@@ -255,7 +255,6 @@ public class CalculadorCuotasBaja {
       copia.setHorasTareaARealizar(0.0);
     }
   }
-
   private void calcularCuotasYHoras(List<Usuario> copias, Double piso, Double precioHora) {
     servicioCalculosGasto.calcularPorcentajesDeCapacidadMensualDeUsuarios(copias);
     servicioCalculosGasto.calcularCuotasMensualesDeUsuarios(copias, piso);

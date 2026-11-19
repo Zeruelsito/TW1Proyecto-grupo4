@@ -295,8 +295,7 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     double creditoLiquidado = obtenerCreditoTareas(usuario);
     double netoTransferencias = calcularNetoTransferenciasRealizadas(usuario, pagosRealizados);
 
-    double balanceNeto =
-      (totalPagado + creditoLiquidado + netoTransferencias) - consumo;
+    double balanceNeto = (totalPagado + creditoLiquidado + netoTransferencias) - consumo;
 
     if (balanceNeto < -MARGEN_TOLERANCIA) {
       return -balanceNeto;

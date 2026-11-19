@@ -220,8 +220,11 @@ public class ServicioCalculoBajaImpl implements ServicioCalculoBaja {
   }
 
   private void aplicarPagosRealizados(Map<String, Double> balances, Long hogarId) {
+    if (hogarId == null || servicioPagoRealizado == null) {
+      return;
+    }
     for (PagoRealizado pago : servicioPagoRealizado.obtenerHistorialPagos(hogarId)) {
-      if (pago.getMonto() != null) {
+      if (pago.getMonto() != null && pago.getEmisor() != null && pago.getReceptor() != null) {
         balances.computeIfPresent(
           pago.getEmisor().getNombre(),
           (nombre, saldo) -> saldo + pago.getMonto()

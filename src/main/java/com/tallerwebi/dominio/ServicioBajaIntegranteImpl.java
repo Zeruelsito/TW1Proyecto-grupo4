@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,8 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
 
   private static final String CLAVE_HOGAR_ID = "HOGAR_ID";
   private static final String CLAVE_HOGAR_ACTIVO = "hogarActivoEnSession";
+  private static final double MONTO_CERO = 0.0;
+  private static final double MARGEN_MONTO = 0.01;
 
   private final RepositorioUsuario repositorioUsuario;
   private final RepositorioGasto repositorioGasto;
@@ -33,7 +36,6 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   private final ServicioPagoRealizado servicioPagoRealizado;
   private final ServicioPagoPendiente servicioPagoPendiente;
   private final HttpSession session;
-  private static final double MONTO_CERO = 0.0;
 
   @Autowired
   public ServicioBajaIntegranteImpl(
@@ -95,14 +97,9 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     String nombreSaliente = nombreDe(saliente);
     Double balanceFinal = redondear(balances.getOrDefault(nombreSaliente, 0.0));
     List<TransferenciaSugerida> liquidacionFinal = calcularLiquidacionSimulacion(
-      integrantes,
-      restantes,
-      saliente,
       nombreSaliente,
-      gastos,
-      hogarId,
-      deudaHorasPesos,
-      balances
+      balances,
+      hogarId
     );
 
     Set<String> clavesPendientes = obtenerClavesPendientes(hogar);
@@ -167,37 +164,62 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   private List<TransferenciaSugerida> calcularLiquidacionSimulacion(
-    List<Usuario> integrantes,
-    List<Usuario> restantes,
-    Usuario saliente,
     String nombreSaliente,
-    List<Gasto> gastos,
-    Long hogarId,
-    double deudaHorasPesos,
-    Map<String, Double> balancesConHoras
+    Map<String, Double> balancesConPagos,
+    Long hogarId
   ) {
-    if (deudaHorasPesos <= MONTO_CERO) {
-      return servicioCalculoBaja.liquidacionDelSaliente(nombreSaliente, balancesConHoras);
-    }
-    Map<String, Double> balancesSinHoras = servicioCalculoBaja.calcularBalancesConBaja(
-      integrantes,
-      restantes,
-      saliente,
-      gastos,
-      0.0,
-      hogarId
-    );
-    List<TransferenciaSugerida> directos = servicioCalculoBaja.liquidacionDelSaliente(
+    List<TransferenciaSugerida> base = servicioCalculoBaja.liquidacionDelSaliente(
       nombreSaliente,
-      balancesSinHoras
+      balancesConPagos
     );
-    CalculadorCuotasBaja combinador = new CalculadorCuotasBaja(repositorioUsuario, null);
-    return combinador.combinarLiquidacionConDeudaHoras(
-      saliente,
-      restantes,
-      directos,
-      deudaHorasPesos
-    );
+    List<PagoRealizado> pagos = servicioPagoRealizado != null && hogarId != null
+      ? servicioPagoRealizado.obtenerHistorialPagos(hogarId)
+      : Collections.emptyList();
+
+    if (pagos.isEmpty()) {
+      return base;
+    }
+
+    List<TransferenciaSugerida> ajustadas = new ArrayList<>();
+    for (TransferenciaSugerida t : base) {
+      double pagadoDirecto = sumarPagosDirectos(pagos, t.getEmisor(), t.getReceptor());
+      double restante = redondear(t.getMonto() - pagadoDirecto);
+      if (restante > MARGEN_MONTO) {
+        ajustadas.add(
+          new TransferenciaSugerida(
+            t.getEmisorId(),
+            t.getEmisor(),
+            t.getEmailEmisor(),
+            t.getReceptorId(),
+            t.getReceptor(),
+            restante
+          )
+        );
+      }
+    }
+    return ajustadas;
+  }
+
+  private double sumarPagosDirectos(
+    List<PagoRealizado> pagos,
+    String emisorNombre,
+    String receptorNombre
+  ) {
+    double total = MONTO_CERO;
+    for (PagoRealizado pago : pagos) {
+      if (
+        pago.getMonto() != null &&
+        pago.getEmisor() != null &&
+        pago.getReceptor() != null &&
+        emisorNombre != null &&
+        emisorNombre.equals(pago.getEmisor().getNombre()) &&
+        receptorNombre != null &&
+        receptorNombre.equals(pago.getReceptor().getNombre())
+      ) {
+        total += pago.getMonto();
+      }
+    }
+    return total;
   }
 
   private void quitarIntegranteDeHogar(Hogar hogar, Usuario saliente) {
