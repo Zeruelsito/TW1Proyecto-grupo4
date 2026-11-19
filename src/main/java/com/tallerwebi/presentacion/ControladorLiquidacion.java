@@ -43,10 +43,7 @@ public class ControladorLiquidacion {
 
   @GetMapping("/liquidacion")
   public ModelAndView irALiquidacion(HttpSession session, RedirectAttributes redirectAttributes) {
-    Map<String, Object> modelo = new HashMap<>();
-    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     Long hogarId = (Long) session.getAttribute("HOGAR_ID");
-
     if (hogarId == null) {
       redirectAttributes.addFlashAttribute(
         "alertaHogar",
@@ -55,46 +52,54 @@ public class ControladorLiquidacion {
       return new ModelAndView("redirect:/dashboard");
     }
 
-    List<Hogar> listaHogares = servicioHogar.obtenerHogares(usuarioId);
-    modelo.put("listaHogares", listaHogares);
+    Map<String, Object> modelo = new HashMap<>();
+    Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
+    modelo.put("listaHogares", servicioHogar.obtenerHogares(usuarioId));
 
-    Hogar hogarSesion = (Hogar) session.getAttribute("hogarActivoEnSession");
-    Long idHogarConsultar = (hogarSesion != null && hogarSesion.getId() != null)
-      ? hogarSesion.getId()
-      : hogarId;
-
-    Hogar hogar = servicioHogar.seleccionarHogarPorId(idHogarConsultar);
-
+    Hogar hogar = resolverHogarAConsultar(session, hogarId);
     if (hogar != null) {
-      modelo.put("casa", hogar);
-      List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogar.getId());
-      List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(
-        hogar
-      );
-      List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
-        hogar,
-        gastos
-      );
-      modelo.put("transferenciasPendientes", transferenciasPendientes);
-      Set<String> clavesPendientes = new HashSet<>();
-      for (PagoPendiente p : transferenciasPendientes) {
-        if (p.getEmisor() != null && p.getReceptor() != null && p.getMonto() != null) {
-          String clave =
-            p.getEmisor().getNombre() + "_" + p.getReceptor().getNombre() + "_" + p.getMonto();
-          clavesPendientes.add(clave);
-        }
-      }
-      modelo.put("clavesPendientes", clavesPendientes);
-      if (transferencias != null) {
-        modelo.put("transferencias", transferencias);
-      }
-
-      List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(
-        hogar.getId()
-      );
-      modelo.put("historialPagos", historialPagos);
+      cargarDatosLiquidacionEnModelo(hogar, modelo);
     }
 
     return new ModelAndView("liquidacion", modelo);
+  }
+
+  private Hogar resolverHogarAConsultar(HttpSession session, Long hogarIdFallback) {
+    Hogar hogarSesion = (Hogar) session.getAttribute("hogarActivoEnSession");
+    Long idHogarConsultar = hogarSesion != null && hogarSesion.getId() != null
+      ? hogarSesion.getId()
+      : hogarIdFallback;
+    return servicioHogar.seleccionarHogarPorId(idHogarConsultar);
+  }
+
+  private void cargarDatosLiquidacionEnModelo(Hogar hogar, Map<String, Object> modelo) {
+    modelo.put("casa", hogar);
+    List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogar.getId());
+    List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(hogar);
+    List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
+      hogar,
+      gastos
+    );
+
+    modelo.put("transferenciasPendientes", transferenciasPendientes);
+    modelo.put("clavesPendientes", construirClavesPendientes(transferenciasPendientes));
+    if (transferencias != null) {
+      modelo.put("transferencias", transferencias);
+    }
+
+    List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(hogar.getId());
+    modelo.put("historialPagos", historialPagos);
+  }
+
+  private Set<String> construirClavesPendientes(List<PagoPendiente> pendientes) {
+    Set<String> claves = new HashSet<>();
+    for (PagoPendiente p : pendientes) {
+      if (p.getEmisor() != null && p.getReceptor() != null && p.getMonto() != null) {
+        claves.add(
+          p.getEmisor().getNombre() + "_" + p.getReceptor().getNombre() + "_" + p.getMonto()
+        );
+      }
+    }
+    return claves;
   }
 }
