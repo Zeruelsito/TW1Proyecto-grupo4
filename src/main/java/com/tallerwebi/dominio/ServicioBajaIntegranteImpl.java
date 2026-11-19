@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -97,8 +98,11 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     String nombreSaliente = nombreDe(saliente);
     Double balanceFinal = redondear(balances.getOrDefault(nombreSaliente, 0.0));
     List<TransferenciaSugerida> liquidacionFinal = calcularLiquidacionSimulacion(
+      saliente,
       nombreSaliente,
+      restantes,
       balances,
+      deudaHorasPesos,
       hogarId
     );
 
@@ -164,40 +168,87 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   }
 
   private List<TransferenciaSugerida> calcularLiquidacionSimulacion(
+    Usuario saliente,
     String nombreSaliente,
+    List<Usuario> restantes,
     Map<String, Double> balancesConPagos,
+    double deudaHorasPesos,
     Long hogarId
   ) {
-    List<TransferenciaSugerida> base = servicioCalculoBaja.liquidacionDelSaliente(
-      nombreSaliente,
-      balancesConPagos
-    );
     List<PagoRealizado> pagos = servicioPagoRealizado != null && hogarId != null
       ? servicioPagoRealizado.obtenerHistorialPagos(hogarId)
       : Collections.emptyList();
 
-    if (pagos.isEmpty()) {
-      return base;
+    Map<String, Double> balancesSinPagos = revertirPagosEnBalances(balancesConPagos, pagos);
+    List<TransferenciaSugerida> base = servicioCalculoBaja.liquidacionDelSaliente(
+      nombreSaliente,
+      balancesSinPagos
+    );
+
+    Map<String, Double> montoHaciaRestante = new HashMap<>();
+    Map<String, String> emailPorRestante = new HashMap<>();
+    Map<String, Long> idPorRestante = new HashMap<>();
+
+    for (Usuario r : restantes) {
+      String nombreR = nombreDe(r);
+      montoHaciaRestante.put(nombreR, MONTO_CERO);
+      emailPorRestante.put(nombreR, r.getEmail());
+      idPorRestante.put(nombreR, r.getId());
     }
 
-    List<TransferenciaSugerida> ajustadas = new ArrayList<>();
     for (TransferenciaSugerida t : base) {
-      double pagadoDirecto = sumarPagosDirectos(pagos, t.getEmisor(), t.getReceptor());
-      double restante = redondear(t.getMonto() - pagadoDirecto);
-      if (restante > MARGEN_MONTO) {
-        ajustadas.add(
+      if (nombreSaliente.equals(t.getEmisor())) {
+        emailPorRestante.putIfAbsent(t.getReceptor(), t.getEmailEmisor());
+        idPorRestante.putIfAbsent(t.getReceptor(), t.getReceptorId());
+        montoHaciaRestante.merge(
+          t.getReceptor(),
+          t.getMonto() != null ? t.getMonto() : MONTO_CERO,
+          Double::sum
+        );
+      }
+    }
+
+    if (deudaHorasPesos > MARGEN_MONTO && !restantes.isEmpty()) {
+      double parteCasaPorRestante = deudaHorasPesos / restantes.size();
+      for (Usuario r : restantes) {
+        montoHaciaRestante.merge(nombreDe(r), parteCasaPorRestante, Double::sum);
+      }
+    }
+
+    List<TransferenciaSugerida> resultado = new ArrayList<>();
+    for (Map.Entry<String, Double> entry : montoHaciaRestante.entrySet()) {
+      String nombreReceptor = entry.getKey();
+      double bruto = entry.getValue();
+      double yaPagado = sumarPagosDirectos(pagos, nombreSaliente, nombreReceptor);
+      double pendiente = redondear(bruto - yaPagado);
+      if (pendiente > MARGEN_MONTO) {
+        resultado.add(
           new TransferenciaSugerida(
-            t.getEmisorId(),
-            t.getEmisor(),
-            t.getEmailEmisor(),
-            t.getReceptorId(),
-            t.getReceptor(),
-            restante
+            saliente.getId(),
+            nombreSaliente,
+            saliente.getEmail(),
+            idPorRestante.get(nombreReceptor),
+            nombreReceptor,
+            pendiente
           )
         );
       }
     }
-    return ajustadas;
+    return resultado;
+  }
+
+  private Map<String, Double> revertirPagosEnBalances(
+    Map<String, Double> balancesConPagos,
+    List<PagoRealizado> pagos
+  ) {
+    Map<String, Double> copia = new HashMap<>(balancesConPagos);
+    for (PagoRealizado pago : pagos) {
+      if (pago.getMonto() != null && pago.getEmisor() != null && pago.getReceptor() != null) {
+        copia.computeIfPresent(pago.getEmisor().getNombre(), (k, v) -> v - pago.getMonto());
+        copia.computeIfPresent(pago.getReceptor().getNombre(), (k, v) -> v + pago.getMonto());
+      }
+    }
+    return copia;
   }
 
   private double sumarPagosDirectos(
