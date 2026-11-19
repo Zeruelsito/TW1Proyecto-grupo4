@@ -59,36 +59,40 @@ public class ControladorLiquidacion {
     modelo.put("listaHogares", listaHogares);
 
     Hogar hogarSesion = (Hogar) session.getAttribute("hogarActivoEnSession");
+    Long idHogarConsultar = (hogarSesion != null && hogarSesion.getId() != null)
+      ? hogarSesion.getId()
+      : hogarId;
 
-    if (hogarSesion != null && hogarSesion.getId() != null) {
-      Hogar hogar = servicioHogar.seleccionarHogarPorId(hogarSesion.getId());
+    Hogar hogar = servicioHogar.seleccionarHogarPorId(idHogarConsultar);
 
-      if (hogar != null) {
-        modelo.put("casa", hogar);
-        List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogar.getId());
-        List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(
-          hogar
-        );
-        List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
-          hogar,
-          gastos
-        );
-        modelo.put("transferenciasPendientes", transferenciasPendientes);
-        Set<String> clavesPendientes = new HashSet<>();
-        for (PagoPendiente p : transferenciasPendientes) {
-          String clave = p.getEmisor() + "_" + p.getReceptor() + "_" + p.getMonto();
+    if (hogar != null) {
+      modelo.put("casa", hogar);
+      List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogar.getId());
+      List<PagoPendiente> transferenciasPendientes = servicioPagoPendiente.obtenerPendientes(
+        hogar
+      );
+      List<TransferenciaSugerida> transferencias = servicioLiquidacion.obtenerLiquidacionDelMes(
+        hogar,
+        gastos
+      );
+      modelo.put("transferenciasPendientes", transferenciasPendientes);
+      Set<String> clavesPendientes = new HashSet<>();
+      for (PagoPendiente p : transferenciasPendientes) {
+        if (p.getEmisor() != null && p.getReceptor() != null && p.getMonto() != null) {
+          String clave =
+            p.getEmisor().getNombre() + "_" + p.getReceptor().getNombre() + "_" + p.getMonto();
           clavesPendientes.add(clave);
         }
-        modelo.put("clavesPendientes", clavesPendientes);
-        if (transferencias != null) {
-          modelo.put("transferencias", transferencias);
-        }
-
-        List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(
-          hogar.getId()
-        );
-        modelo.put("historialPagos", historialPagos);
       }
+      modelo.put("clavesPendientes", clavesPendientes);
+      if (transferencias != null) {
+        modelo.put("transferencias", transferencias);
+      }
+
+      List<PagoRealizado> historialPagos = servicioPagoRealizado.obtenerHistorialPagos(
+        hogar.getId()
+      );
+      modelo.put("historialPagos", historialPagos);
     }
 
     return new ModelAndView("liquidacion", modelo);
