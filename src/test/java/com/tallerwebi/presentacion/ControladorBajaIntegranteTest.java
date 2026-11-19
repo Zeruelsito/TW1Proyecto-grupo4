@@ -10,55 +10,53 @@ import com.tallerwebi.dominio.SimulacionBaja;
 import com.tallerwebi.dominio.excepcion.IntegranteConSaldoPendienteException;
 import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
+import jakarta.servlet.http.HttpSession;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 public class ControladorBajaIntegranteTest {
 
   private ControladorBajaIntegrante controladorBaja;
   private ServicioBajaIntegrante servicioBajaMock;
+  private HttpSession sessionMock;
+  private RedirectAttributes redirectAttributesMock;
 
   @BeforeEach
   public void init() {
     servicioBajaMock = mock(ServicioBajaIntegrante.class);
+    sessionMock = mock(HttpSession.class);
+    redirectAttributesMock = mock(RedirectAttributes.class);
     when(servicioBajaMock.obtenerIntegrantesActivos()).thenReturn(List.of());
     controladorBaja = new ControladorBajaIntegrante(servicioBajaMock);
   }
 
   @Test
   public void irABajaDeberiaMostrarLaVista() {
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.irABaja(null);
+    ModelAndView modelAndView = controladorBaja.irABaja(null, sessionMock);
 
-    // validacion
     assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
   }
 
   @Test
   public void simularDeberiaMostrarLaSimulacion() {
-    // preparacion
     SimulacionBaja simulacion = mock(SimulacionBaja.class);
     when(servicioBajaMock.simularBaja(1L)).thenReturn(simulacion);
 
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.simular(1L, null);
+    ModelAndView modelAndView = controladorBaja.simular(1L, null, null, sessionMock);
 
-    // validacion
     assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
     assertThat(modelAndView.getModel().get("simulacion"), equalTo(simulacion));
   }
 
   @Test
   public void simularConUsuarioInexistenteDeberiaMostrarError() {
-    // preparacion
     when(servicioBajaMock.simularBaja(99L)).thenThrow(new UsuarioNoEncontrado());
 
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.simular(99L, null);
+    ModelAndView modelAndView = controladorBaja.simular(99L, null, null, sessionMock);
 
-    // validacion
     assertThat(
       modelAndView.getModel().get("error").toString(),
       equalToIgnoringCase("El integrante seleccionado no existe.")
@@ -67,26 +65,18 @@ public class ControladorBajaIntegranteTest {
 
   @Test
   public void confirmarDeberiaDarDeBajaYRedirigir() {
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.confirmar(1L);
+    ModelAndView modelAndView = controladorBaja.confirmar(1L, sessionMock, redirectAttributesMock);
 
-    // validacion
-    assertThat(
-      modelAndView.getViewName(),
-      equalToIgnoringCase("redirect:/hogar/baja?confirmada=true")
-    );
+    assertThat(modelAndView.getViewName(), equalToIgnoringCase("redirect:/dashboard"));
     verify(servicioBajaMock, times(1)).confirmarBaja(1L);
   }
 
   @Test
   public void confirmarUnUsuarioYaDadoDeBajaDeberiaMostrarError() {
-    // preparacion
     doThrow(new UsuarioYaDadoDeBajaException()).when(servicioBajaMock).confirmarBaja(1L);
 
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.confirmar(1L);
+    ModelAndView modelAndView = controladorBaja.confirmar(1L, sessionMock, redirectAttributesMock);
 
-    // validacion
     assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
     assertThat(
       modelAndView.getModel().get("error").toString(),
@@ -96,15 +86,12 @@ public class ControladorBajaIntegranteTest {
 
   @Test
   public void confirmarConSaldoPendienteDeberiaMostrarErrorYLaSimulacion() {
-    // preparacion
     SimulacionBaja simulacion = mock(SimulacionBaja.class);
     when(servicioBajaMock.simularBaja(1L)).thenReturn(simulacion);
     doThrow(new IntegranteConSaldoPendienteException()).when(servicioBajaMock).confirmarBaja(1L);
 
-    // ejecucion
-    ModelAndView modelAndView = controladorBaja.confirmar(1L);
+    ModelAndView modelAndView = controladorBaja.confirmar(1L, sessionMock, redirectAttributesMock);
 
-    // validacion
     assertThat(modelAndView.getViewName(), equalToIgnoringCase("baja-integrante"));
     assertThat(modelAndView.getModel().get("simulacion"), equalTo(simulacion));
     assertThat(

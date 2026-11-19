@@ -96,7 +96,6 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       return 0.0;
     }
 
-    // Suma el valor en pesos de todas las tareas completadas por el usuario
     double totalGenerado = repositorioTarea
       .obtenerPorUsuario(usuario)
       .stream()
@@ -104,15 +103,10 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       .mapToDouble(t -> t.getValorCredito() != null ? t.getValorCredito() : 0.0)
       .sum();
 
-    // Dinero que el usuario ya decidió descontar de la liquidación previamente
     double totalLiquidado = usuario.getCreditoLiquidado() != null
       ? usuario.getCreditoLiquidado()
       : 0.0;
 
-    // NOTA: Para evitar que el total bruto se arrastre completo y consuma la deuda que ya fue absorbida,
-    // el crédito acumulado neto disponible para liquidar se reduce por los créditos ya aplicados/liquidados
-    // y la compensación del hogar.
-    // Si ya liquidaste o el sistema absorbió los créditos para la cuota, devolvemos el remanente neto.
     return Math.max(0.0, totalGenerado - totalLiquidado);
   }
 
@@ -122,7 +116,6 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     if (usuario == null) {
       return 0.0;
     }
-    // Devuelve el total de plata que ya se reclamó/liquidó este mes para la tira informativa
     return usuario.getCreditoLiquidado() != null ? usuario.getCreditoLiquidado() : 0.0;
   }
 
@@ -136,7 +129,6 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       return;
     }
 
-    // Incrementa el acumulado de plata liquidada del usuario sin tocar las tareas del historial
     double actualLiquidado = usuario.getCreditoLiquidado() != null
       ? usuario.getCreditoLiquidado()
       : 0.0;
@@ -177,32 +169,32 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     Double precioHora
   ) {
     Map<String, Double> resultado = new HashMap<>();
-    Double dineroRequeridoBrecha = 0.0;
+    double dineroRequeridoBrecha = 0.0;
     double horasRequeridasBrecha = 0.0;
 
     List<Usuario> integrantes = obtenerIntegrantesHogares(hogar);
-    double totalGastosOcasionales = calcularTotalGastos(gastos);
-    double pisoMinimo = calcularPisoMinimoHogar(hogar);
+    Double tarifaHogar = (hogar != null && hogar.getPrecioHoraTarea() != null)
+      ? hogar.getPrecioHoraTarea()
+      : precioHora;
 
-    if (usuario != null && !integrantes.isEmpty() && servicioCalculosGasto != null) {
-      dineroRequeridoBrecha =
-        servicioCalculosGasto.calcularCuotaMensualPorUsuario(
-          usuario,
-          totalGastosOcasionales,
-          pisoMinimo,
-          integrantes
-        );
-
-      Double valorADeberTareas = servicioCalculosGasto.calcularValorDeHorasDeTareaPorUsuario(
+    if (
+      usuario != null &&
+      !integrantes.isEmpty() &&
+      servicioCalculosGasto != null &&
+      tarifaHogar != null &&
+      tarifaHogar > 0
+    ) {
+      double totalOcasionales = calcularTotalGastosOcasionalesCompartidos(gastos, integrantes);
+      double pisoMinimo = obtenerPisoMinimoHogar(hogar);
+      Double valorADeber = servicioCalculosGasto.calcularValorDeHorasDeTareaPorUsuario(
         usuario,
-        precioHora,
-        totalGastosOcasionales,
+        tarifaHogar,
+        totalOcasionales,
         pisoMinimo,
         integrantes
       );
-
-      horasRequeridasBrecha =
-        (precioHora > 0) ? Math.ceil((valorADeberTareas / precioHora) * 2.0) / 2.0 : 0.0;
+      dineroRequeridoBrecha = valorADeber != null ? Math.max(0.0, valorADeber) : 0.0;
+      horasRequeridasBrecha = Math.ceil((dineroRequeridoBrecha / tarifaHogar) * 2.0) / 2.0;
     }
 
     resultado.put("dineroRequeridoBrecha", dineroRequeridoBrecha);
@@ -216,29 +208,58 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       : Collections.emptyList();
   }
 
-  private double calcularTotalGastos(List<Gasto> gastos) {
+  private double calcularTotalGastosOcasionalesCompartidos(
+    List<Gasto> gastos,
+    List<Usuario> integrantes
+  ) {
+    if (gastos == null) {
+      return 0.0;
+    }
     return gastos
       .stream()
       .filter(g -> g != null && g.getMonto() != null)
+      .filter(g -> g.getTipoGasto() == TipoGasto.OCASIONAL)
+      .filter(g -> esCompartidoPorTodos(g, integrantes))
       .mapToDouble(Gasto::getMonto)
       .sum();
   }
 
-  private double calcularPisoMinimoHogar(Hogar hogar) {
-    double pisoMinimo = 0.0;
-    if (hogar != null && hogar.getId() != null) {
-      List<Gasto> gastosFijos = servicioRegistroGasto.obtenerGastosFijosRecurrentes(hogar.getId());
-      if (gastosFijos != null) {
-        for (Gasto gasto : gastosFijos) {
-          if (
-            gasto != null && gasto.getTipoGasto() != TipoGasto.OCASIONAL && gasto.getMonto() != null
-          ) {
-            pisoMinimo += gasto.getMonto();
-          }
-        }
+  private boolean esCompartidoPorTodos(Gasto gasto, List<Usuario> integrantes) {
+    List<Usuario> participantes = gasto.getParticipantes();
+    if (participantes == null || participantes.isEmpty()) {
+      return true;
+    }
+    return participantes.size() >= integrantes.size();
+  }
+
+  private double obtenerPisoMinimoHogar(Hogar hogar) {
+    if (hogar == null) {
+      return 0.0;
+    }
+    Double pisoConfigurado = hogar.getPisoMinimoHogar();
+    if (pisoConfigurado != null && pisoConfigurado > 0) {
+      return pisoConfigurado;
+    }
+    return sumarGastosNoOcasionales(hogar.getId());
+  }
+
+  private double sumarGastosNoOcasionales(Long hogarId) {
+    if (hogarId == null || servicioRegistroGasto == null) {
+      return 0.0;
+    }
+    List<Gasto> gastosFijos = servicioRegistroGasto.obtenerGastosFijosRecurrentes(hogarId);
+    if (gastosFijos == null) {
+      return 0.0;
+    }
+    double total = 0.0;
+    for (Gasto gasto : gastosFijos) {
+      if (
+        gasto != null && gasto.getTipoGasto() != TipoGasto.OCASIONAL && gasto.getMonto() != null
+      ) {
+        total += gasto.getMonto();
       }
     }
-    return pisoMinimo;
+    return total;
   }
 
   @Override
@@ -249,16 +270,21 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
     Hogar hogar
   ) {
     Usuario usuario = repositorioUsuario.buscarPorId(usuarioId);
-    if (usuario == null || hogar == null) return;
+    if (
+      usuario == null ||
+      hogar == null ||
+      hogar.getPrecioHoraTarea() == null ||
+      hogar.getPrecioHoraTarea() <= 0
+    ) {
+      return;
+    }
 
     double deuda = servicioLiquidacion.obtenerDeudaUsuario(usuario, hogar, gastos);
-    double precioHora = (hogar.getPrecioHoraTarea() != null) ? hogar.getPrecioHoraTarea() : 1000.0;
-
     Map<String, Double> metricasBrecha = calcularMetricasBrechaUsuario(
       usuario,
       hogar,
       gastos,
-      precioHora
+      hogar.getPrecioHoraTarea()
     );
     double dineroRequeridoBrecha = metricasBrecha.get("dineroRequeridoBrecha");
 
@@ -276,8 +302,6 @@ public class ServicioCreditoTareaImpl implements ServicioCreditoTarea {
       liquidarCreditosParciales(usuarioId, montoALiquidar);
     }
   }
-
-  /* --- Métodos Auxiliares Privados --- */
 
   private void validarEstadoPendiente(Tarea tarea) {
     if (EstadoTarea.COMPLETADA.equals(tarea.getEstado())) {

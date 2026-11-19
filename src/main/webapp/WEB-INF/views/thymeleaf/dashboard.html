@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kumo - Dashboard</title>
 
-    <!-- Bootstrap 5 CSS & Iconos -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/kumo-theme.css}">
     <style>
-        /* Estilo personalizado para destacar la opción activa del Dashboard en la barra lateral */
         .nav-link.dashboard-active {
             background-color: rgba(255, 182, 193, 0.45) !important;
             color: #212529 !important;
@@ -23,21 +21,20 @@
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Navigation Unificado -->
         <div class="col-md-2 d-none d-md-block p-3 kumo-sidebar d-flex flex-column justify-content-between">
             <div>
                 <h3 class="fw-bold px-3 my-3 text-white">KUMO</h3>
                 <ul class="nav flex-column mt-4">
                     <li class="nav-item"><a class="nav-link active" th:href="@{/dashboard}"><i class="bi bi-grid-1x2-fill me-2"></i> Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
-                    <li class="nav-item"><a class="nav-link" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/gastos}"><i class="bi bi-receipt me-2"></i> Gastos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/tareas}"><i class="bi bi-check2-square me-2"></i> Tareas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/tareas-repetitivas}"><i class="bi bi-arrow-repeat me-2"></i> Rotación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/vencimientos}"><i class="bi bi-calendar-event me-2"></i> Vencimientos</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/liquidacion}"><i class="bi bi-wallet2 me-2"></i> Liquidación</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/hogar}"><i class="bi bi-house-gear me-2"></i> Hogar</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/propuestas}"><i class="bi bi-hand-thumbs-up me-2"></i> Propuestas</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/lista-compras}"><i class="bi bi-cart3 me-2"></i> Lista de compras</a></li>
+                    <li class="nav-item"><a class="nav-link" th:classappend="${session.HOGAR_ID == null} ? 'disabled opacity-50'" th:href="@{/reporte}"><i class="bi bi-file-earmark-text me-2"></i> Reporte</a></li>
                 </ul>
             </div>
             <div class="px-3">
@@ -47,9 +44,7 @@
             </div>
         </div>
 
-        <!-- Main Content Area -->
         <div class="col-md-10 px-4">
-            <!-- Header Bar -->
             <div class="d-flex justify-content-between align-items-center my-3">
                 <div>
                     <h2 class="fw-bold mb-0">
@@ -62,12 +57,10 @@
                         <i class="bi bi-plus-circle"></i> Nuevo Gasto
                     </a>
 
-                    <!-- CAMPANITA DE NOTIFICACIONES -->
                     <div class="dropdown notification-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center justify-content-center bg-white" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer; width: 44px; height: 44px;">
                             <div class="position-relative text-dark">
                                 <i class="bi bi-bell fs-5"></i>
-                                <!-- Badge con el total de alertas dinámico -->
                                 <span th:with="totalAlertas=${(vencidosNotif != null ? vencidosNotif.size() : 0) + (proximosNotif != null ? proximosNotif.size() : 0)}"
                                       th:if="${totalAlertas > 0}"
                                       class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -78,20 +71,17 @@
                             </div>
                         </div>
 
-                        <!-- Menú Desplegable de Notificaciones -->
                         <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3 mt-2" style="width: 320px; max-height: 400px; overflow-y: auto;">
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
                                 <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-danger me-1"></i> Notificaciones</h6>
                                 <a th:href="@{/gastos}" class="small text-decoration-none fw-semibold">Ver todos</a>
                             </div>
 
-                            <!-- Si NO hay ninguna notificación -->
                             <div th:if="${(vencidosNotif == null or #lists.isEmpty(vencidosNotif)) and (proximosNotif == null or #lists.isEmpty(proximosNotif))}" class="text-center py-3 text-muted small">
                                 <i class="bi bi-check-circle fs-3 text-success d-block mb-1"></i>
                                 ¡Todo al día! No hay vencimientos cercanos.
                             </div>
 
-                            <!-- Sección: Gastos Vencidos -->
                             <div th:if="${vencidosNotif != null and not #lists.isEmpty(vencidosNotif)}" class="mb-3">
                                 <span class="badge bg-danger text-white rounded-pill px-2 py-1 mb-2 small fw-bold">Vencidos</span>
                                 <a th:each="vencido : ${vencidosNotif}"
@@ -107,7 +97,6 @@
                                 </a>
                             </div>
 
-                            <!-- Sección: Próximos a Vencer -->
                             <div th:if="${proximosNotif != null and not #lists.isEmpty(proximosNotif)}">
                                 <span class="badge bg-warning text-dark rounded-pill px-2 py-1 mb-2 small fw-bold">Próximos a vencer</span>
                                 <a th:each="prox : ${proximosNotif}"
@@ -124,7 +113,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- DROPDOWN DE USUARIO -->
+
                     <div class="dropdown user-dropdown position-relative">
                         <div class="kumo-card py-2 px-3 d-flex align-items-center gap-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
                             <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
@@ -134,7 +123,6 @@
                             <i class="bi bi-chevron-down small text-muted ms-1"></i>
                         </div>
 
-                        <!-- Menú Desplegable con acciones -->
                         <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 p-2 mt-2">
                             <div class="px-3 py-2 border-bottom mb-2">
                                 <p class="mb-0 fw-bold text-dark small" th:text="${nombreUsuario != null ? nombreUsuario : 'Mi Cuenta'}">Mi Cuenta</p>
@@ -152,7 +140,6 @@
                 </div>
             </div>
 
-            <!-- Bento Box Grande: Si el usuario NO pertenece a ningún hogar -->
             <div class="row mb-4" th:if="${hogaresUsuario == null or #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card kumo-badge-pink p-5 rounded-4 shadow-sm text-center">
@@ -175,7 +162,6 @@
                 </div>
             </div>
 
-            <!-- Bento Box Reducido y Discreto: Si el usuario SÍ pertenece a algún hogar -->
             <div class="row mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card kumo-badge-blue p-3 rounded-4 shadow-sm d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
@@ -200,9 +186,7 @@
                 </div>
             </div>
 
-            <!-- Bento Grid Principal (Visible solo si pertenece a un hogar) -->
             <div class="row g-4 mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
-                <!-- Bento Card 1 -->
                 <div class="col-md-6 col-lg-4">
                     <div class="kumo-card kumo-badge-pink d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -220,7 +204,6 @@
                     </div>
                 </div>
 
-                <!-- Bento Card 2: Balance Mensual (Gastos Pagados) -->
                 <div class="col-md-6 col-lg-4">
                     <div class="kumo-card kumo-badge-purple d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -229,14 +212,10 @@
                                 <i class="bi bi-wallet2 fs-5 text-primary"></i>
                             </div>
                             <h6 class="text-muted fw-semibold mt-3 mb-1">Total Gastado en el hogar</h6>
-
-                            <!-- Muestra la suma total de los gastos pagados -->
                             <h3 class="fw-bold text-primary mb-0"
                                 th:text="${totalGastosMes != null ? '$' + #numbers.formatDecimal(totalGastosMes, 1, 'POINT', 2, 'COMMA') : '$0,00'}">
                                 $0,00
                             </h3>
-
-                            <!-- Muestra la cantidad exacta de gastos pagados -->
                             <p class="small text-muted mb-0 mt-2"
                                th:text="${cantidadGastos != null ? cantidadGastos + ' gastos pagados registrados' : '0 gastos pagados'}">
                                 0 gastos registrados
@@ -248,7 +227,6 @@
                     </div>
                 </div>
 
-                <!-- Bento Card 3 -->
                 <div class="col-md-12 col-lg-4">
                     <div class="kumo-card kumo-badge-blue d-flex flex-column justify-content-between h-100 p-4">
                         <div>
@@ -266,7 +244,6 @@
                 </div>
             </div>
 
-            <!-- Lista de Miembros -->
             <div class="row pt-3 pb-3" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card p-4">
@@ -298,7 +275,6 @@
                 </div>
             </div>
 
-            <!-- Actividad Reciente -->
             <div class="row mb-4" th:if="${hogaresUsuario != null and not #lists.isEmpty(hogaresUsuario)}">
                 <div class="col-12">
                     <div class="kumo-card p-4">
@@ -339,7 +315,7 @@
     </div>
 </div>
 
-<!-- MODAL: Crear Hogar (Formato Bento Box) -->
+<!-- MODAL: Crear Hogar -->
 <div class="modal fade" id="modalCrearHogar" tabindex="-1" aria-labelledby="modalCrearHogarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
@@ -368,7 +344,7 @@
     </div>
 </div>
 
-<!-- MODAL: Unirse a Hogar (Solo PIN) -->
+<!-- MODAL: Unirse a Hogar -->
 <div class="modal fade" id="modalUnirseHogar" tabindex="-1" aria-labelledby="modalUnirseHogarLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
@@ -394,7 +370,7 @@
     </div>
 </div>
 
-<!-- MODAL: Confirmacion de Hogar Encontrado (Se abre solo si se encontro el hogar por PIN) -->
+<!-- MODAL: Confirmación de Hogar Encontrado -->
 <div th:if="${hogarPrevisualizado != null}" class="modal fade show" id="modalConfirmarHogar" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);" aria-modal="true" role="dialog">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content kumo-card border-0 rounded-4 p-4 shadow-lg">
@@ -406,7 +382,6 @@
                     <input type="hidden" name="hogarId" th:value="${hogarPrevisualizado.id}" />
                     <div class="p-3 bg-light rounded-3 mb-3">
                         <p class="mb-1 text-muted small">Nombre del Hogar:</p>
-                        <!-- Corregido a nombreHogar para evitar el error de Thymeleaf -->
                         <h4 class="fw-bold text-dark mb-3" th:text="${hogarPrevisualizado.nombreHogar}">Depto Palermo</h4>
                         <p class="mb-1 text-muted small">Integrantes actuales:</p>
                         <h5 class="fw-semibold text-primary mb-0" th:text="${hogarPrevisualizado.integrantes != null ? hogarPrevisualizado.integrantes.size() : 0} + ' integrantes'">3 integrantes</h5>
@@ -422,27 +397,46 @@
     </div>
 </div>
 
-<!-- Modal de advertencia de Hogar requerido (Manejado puramente por Bootstrap, sin pantalla gris trabada) -->
+<!-- Modal de advertencia de Hogar requerido -->
 <div class="modal fade" id="modalHogarRequerido" tabindex="-1" aria-labelledby="modalHogarRequeridoLabel" aria-hidden="true" th:if="${alertaHogar != null}">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content shadow-lg border-0 rounded-4 p-3">
-        <div class="modal-header border-0">
-          <h5 class="modal-title fw-bold text-dark" id="modalHogarRequeridoLabel">Hogar requerido</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content shadow-lg border-0 rounded-4 p-3">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-dark" id="modalHogarRequeridoLabel">Hogar requerido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary fs-6" th:text="${alertaHogar}">Mensaje de alerta</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-primary w-100 rounded-pill py-2" data-bs-dismiss="modal">
+                    Entendido, crear o unirme a un hogar
+                </button>
+            </div>
         </div>
-        <div class="modal-body">
-          <p class="text-secondary fs-6" th:text="${alertaHogar}">Mensaje de alerta</p>
-        </div>
-        <div class="modal-footer border-0">
-          <button type="button" class="btn btn-primary w-100 rounded-pill py-2" data-bs-dismiss="modal">
-            Entendido, crear o unirme a un hogar
-          </button>
-        </div>
-      </div>
     </div>
 </div>
 
-<!-- Scripts de Bootstrap y lógica limpia para abrir/cerrar el pop-up de alerta -->
+<!-- Modal Pop-up de Baja Exitosa -->
+<div th:if="${mensajeExitoBaja != null}" class="modal fade" id="modalExitoBaja" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-success">
+                    <i class="bi bi-check-circle-fill me-2"></i>¡Salida exitosa!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0" th:text="${mensajeExitoBaja}">Saliste del hogar exitosamente.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-dark rounded-3 px-4" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script th:if="${alertaHogar != null}">
     document.addEventListener("DOMContentLoaded", function() {
@@ -450,6 +444,15 @@
         if (modalEl) {
             var myModal = new bootstrap.Modal(modalEl);
             myModal.show();
+        }
+    });
+</script>
+<script th:if="${mensajeExitoBaja != null}">
+    document.addEventListener("DOMContentLoaded", function () {
+        var modalEl = document.getElementById('modalExitoBaja');
+        if (modalEl) {
+            var modal = new bootstrap.Modal(modalEl);
+            modal.show();
         }
     });
 </script>

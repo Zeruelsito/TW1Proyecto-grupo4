@@ -1,7 +1,9 @@
 package com.tallerwebi.dominio;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 public class SimulacionBaja {
 
@@ -9,7 +11,10 @@ public class SimulacionBaja {
 
   private final Usuario usuarioSaliente;
   private final Double balanceFinal;
+  private final Double deudaHorasTarea;
+  private final Double horasTareaAdeudadas;
   private final List<TransferenciaSugerida> liquidacionFinal;
+  private final Set<String> clavesPagosPendientes;
   private final List<FilaCuota> cuotasRestantes;
   private final Double totalGastosFijosMes;
   private final boolean cuotasCalculadas;
@@ -22,9 +27,37 @@ public class SimulacionBaja {
     Double totalGastosFijosMes,
     boolean cuotasCalculadas
   ) {
+    this(
+      usuarioSaliente,
+      balanceFinal,
+      0.0,
+      0.0,
+      liquidacionFinal,
+      Collections.emptySet(),
+      cuotasRestantes,
+      totalGastosFijosMes,
+      cuotasCalculadas
+    );
+  }
+
+  public SimulacionBaja(
+    Usuario usuarioSaliente,
+    Double balanceFinal,
+    Double deudaHorasTarea,
+    Double horasTareaAdeudadas,
+    List<TransferenciaSugerida> liquidacionFinal,
+    Set<String> clavesPagosPendientes,
+    List<FilaCuota> cuotasRestantes,
+    Double totalGastosFijosMes,
+    boolean cuotasCalculadas
+  ) {
     this.usuarioSaliente = usuarioSaliente;
     this.balanceFinal = balanceFinal;
+    this.deudaHorasTarea = deudaHorasTarea != null ? deudaHorasTarea : 0.0;
+    this.horasTareaAdeudadas = horasTareaAdeudadas != null ? horasTareaAdeudadas : 0.0;
     this.liquidacionFinal = liquidacionFinal;
+    this.clavesPagosPendientes =
+      clavesPagosPendientes != null ? clavesPagosPendientes : Collections.emptySet();
     this.cuotasRestantes = cuotasRestantes;
     this.totalGastosFijosMes = totalGastosFijosMes;
     this.cuotasCalculadas = cuotasCalculadas;
@@ -38,8 +71,20 @@ public class SimulacionBaja {
     return balanceFinal;
   }
 
+  public Double getDeudaHorasTarea() {
+    return deudaHorasTarea;
+  }
+
+  public Double getHorasTareaAdeudadas() {
+    return horasTareaAdeudadas;
+  }
+
   public List<TransferenciaSugerida> getLiquidacionFinal() {
     return liquidacionFinal;
+  }
+
+  public Set<String> getClavesPagosPendientes() {
+    return clavesPagosPendientes;
   }
 
   public List<FilaCuota> getCuotasRestantes() {
@@ -56,11 +101,28 @@ public class SimulacionBaja {
   }
 
   public boolean isDebePagar() {
-    return balanceFinal != null && balanceFinal < 0;
+    return balanceFinal != null && balanceFinal < -MARGEN_MONTO;
   }
 
   public boolean isDebeCobrar() {
-    return balanceFinal != null && balanceFinal > 0;
+    return balanceFinal != null && balanceFinal > MARGEN_MONTO;
+  }
+
+  public boolean isTieneDeudaHorasTarea() {
+    return deudaHorasTarea != null && deudaHorasTarea > MARGEN_MONTO;
+  }
+
+  public boolean esTransferenciaPendienteConfirmacion(TransferenciaSugerida transferencia) {
+    if (transferencia == null) {
+      return false;
+    }
+    String clave =
+      transferencia.getEmisor() +
+      "_" +
+      transferencia.getReceptor() +
+      "_" +
+      transferencia.getMonto();
+    return clavesPagosPendientes.contains(clave);
   }
 
   public boolean tieneTransferenciaPendiente(Usuario emisor, Usuario receptor, Double monto) {
@@ -80,6 +142,6 @@ public class SimulacionBaja {
   }
 
   public boolean isSaldoPendiente() {
-    return balanceFinal != null && balanceFinal < -0.01;
+    return balanceFinal != null && balanceFinal < -MARGEN_MONTO;
   }
 }

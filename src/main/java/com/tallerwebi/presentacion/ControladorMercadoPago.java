@@ -9,7 +9,6 @@ import com.tallerwebi.dominio.*;
 import jakarta.servlet.http.HttpSession;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +27,6 @@ public class ControladorMercadoPago {
 
   private static final Logger logger = LoggerFactory.getLogger(ControladorMercadoPago.class);
 
-  // Constantes para cumplir con las reglas de PMD (Evitar literales repetidos)
   private static final String HOGAR_SESSION_KEY = "hogarActivoEnSession";
   private static final String TIPO_PAYMENT = "payment";
   private static final String STATUS_APPROVED = "approved";
@@ -39,7 +37,6 @@ public class ControladorMercadoPago {
   private static final String REDIRECT_SIMULAR_BAJA = "redirect:/hogar/baja/simular?usuarioId=";
   private static final String REDIRECT_LIQUIDACION = "redirect:/liquidacion";
 
-  // Constantes de sesión para los pagos (Soluciona el aviso de AvoidDuplicateLiterals)
   private static final String SESSION_EMISOR_PAGO = "emisorPago";
   private static final String SESSION_RECEPTOR_PAGO = "receptorPago";
   private static final String SESSION_MONTO_PAGO = "montoPago";
@@ -62,7 +59,6 @@ public class ControladorMercadoPago {
     this.servicioMercadoPago = servicioMercadoPago;
   }
 
-  // 1. Endpoint para iniciar el pago
   @PostMapping("/pago")
   public ModelAndView pago(
     @RequestParam("emisor") String emisor,
@@ -77,7 +73,6 @@ public class ControladorMercadoPago {
 
     try {
       Preference preference = servicioMercadoPago.crearUrl(titulo, BigDecimal.valueOf(monto));
-
       return new ModelAndView("redirect:" + preference.getSandboxInitPoint());
     } catch (MPApiException e) {
       if (logger.isErrorEnabled()) {
@@ -86,18 +81,15 @@ public class ControladorMercadoPago {
           : "Sin contenido de respuesta";
         logger.error("Error de API de Mercado Pago: {}", errorContent, e);
       }
-      // Redirigimos a liquidación con el mensaje de error
       return new ModelAndView(REDIRECT_LIQUIDACION + "?error=Error+al+conectar+con+Mercado+Pago");
     } catch (MPException e) {
       if (logger.isErrorEnabled()) {
         logger.error("Error general de Mercado Pago", e);
       }
-      // Redirigimos a liquidación con el mensaje de error
       return new ModelAndView(REDIRECT_LIQUIDACION + "?error=Error+al+conectar+con+Mercado+Pago");
     }
   }
 
-  // 1.b Endpoint para pagar con Mercado Pago la liquidación final de una baja
   @PostMapping("/pago/baja")
   public ModelAndView pagoBaja(@ModelAttribute("datosPagoBaja") DatosPagoBaja datos) {
     Long usuarioId = datos.getUsuarioId();
@@ -197,6 +189,9 @@ public class ControladorMercadoPago {
 
   @GetMapping("/pago/pending")
   public ModelAndView pagoPendiente() {
+    Long bajaUsuarioId = (Long) session.getAttribute(BAJA_USUARIO_SESSION_KEY);
+    session.removeAttribute(BAJA_USUARIO_SESSION_KEY);
+
     Hogar casa = (Hogar) session.getAttribute(HOGAR_SESSION_KEY);
     String nombreEmisor = (String) session.getAttribute(SESSION_EMISOR_PAGO);
     String nombreReceptor = (String) session.getAttribute(SESSION_RECEPTOR_PAGO);
@@ -210,6 +205,10 @@ public class ControladorMercadoPago {
         PagoPendiente pendiente = new PagoPendiente(emisor, receptor, monto, casa);
         servicioPagoPendiente.guardarPendiente(pendiente);
       }
+    }
+
+    if (bajaUsuarioId != null) {
+      return new ModelAndView(REDIRECT_SIMULAR_BAJA + bajaUsuarioId + "&pagoPendiente=true");
     }
 
     return new ModelAndView(REDIRECT_LIQUIDACION);
