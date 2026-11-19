@@ -32,16 +32,23 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
 
   @Override
   public Double calculoCapacidadRelativaDePago(Usuario usuario, Double valorPisoMinimoSeguro) {
+    return calculoCapacidadRelativaDePago(usuario, valorPisoMinimoSeguro, 1);
+  }
+
+  public Double calculoCapacidadRelativaDePago(
+    Usuario usuario,
+    Double valorPisoMinimoSeguro,
+    int cantidadIntegrantes
+  ) {
     validarPisoMinimo(valorPisoMinimoSeguro);
     if (usuario == null) {
       return 0.0;
     }
 
-    Double ingresoMensual = usuario.getIngresoMensual();
-    double ingresoSeguro = (ingresoMensual != null) ? ingresoMensual : 0.0;
-
-    double capacidadDelUsuario = ingresoSeguro - valorPisoMinimoSeguro;
-    double capacidadFinal = Math.max(capacidadDelUsuario, 0.0);
+    int divisor = Math.max(1, cantidadIntegrantes);
+    double ingresoSeguro = usuario.getIngresoMensual() != null ? usuario.getIngresoMensual() : 0.0;
+    double pisoIndividual = valorPisoMinimoSeguro / divisor;
+    double capacidadFinal = Math.max(ingresoSeguro - pisoIndividual, 0.0);
 
     usuario.setCapacidadRelativaPagoMensual(capacidadFinal);
     return capacidadFinal;
@@ -58,15 +65,10 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
     }
 
     limpiarAtributosCalculados(usuarios);
+    int cantidad = usuarios.size();
 
     for (Usuario usuario : usuarios) {
-      Double ingresoMensual = usuario.getIngresoMensual();
-      double ingresoSeguro = (ingresoMensual != null) ? ingresoMensual : 0.0;
-
-      double capacidadDelUsuario = ingresoSeguro - valorPisoMinimoSeguro;
-      double capacidadFinal = Math.max(capacidadDelUsuario, 0.0);
-
-      usuario.setCapacidadRelativaPagoMensual(capacidadFinal);
+      calculoCapacidadRelativaDePago(usuario, valorPisoMinimoSeguro, cantidad);
     }
   }
 
@@ -102,11 +104,8 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
     for (Usuario usuario : usuarios) {
       Double capacidad = usuario.getCapacidadRelativaPagoMensual();
       double capacidadSegura = (capacidad != null) ? capacidad : 0.0;
-
       double porcentajeParcial =
         (capacidadSegura / valorPozoTotalDeSumaCapacidadesDeCadaUsuario) * 100.0;
-
-      // Redondeamos a 2 decimales para calzar exactamente con las expectativas del test
       double porcentajeRedondeado = BigDecimal
         .valueOf(porcentajeParcial)
         .setScale(2, RoundingMode.HALF_UP)
@@ -135,7 +134,6 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
     for (Usuario usuario : usuariosConPorcentajes) {
       Double porcentajeObj = usuario.getPorcentajeSegunCapacidadDePagoMensual();
       double porcentaje = (porcentajeObj != null) ? porcentajeObj : 0.0;
-
       double calculoCuota = (baseAConvertir * porcentaje) / 100.0;
 
       usuario.setCuotaMensual(
@@ -179,18 +177,24 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
     }
 
     double pisoMinimoSeguro = (valorPisoMinimoSeguro != null) ? valorPisoMinimoSeguro : 0.0;
+    int cantidad = integrantes.size();
+
+    if (pisoMinimoSeguro <= 0) {
+      return 100.0 / cantidad;
+    }
 
     double sumaCapacidadesHogar = integrantes
       .stream()
-      .mapToDouble(integrante -> calculoCapacidadRelativaDePago(integrante, pisoMinimoSeguro))
+      .mapToDouble(integrante ->
+        calculoCapacidadRelativaDePago(integrante, pisoMinimoSeguro, cantidad)
+      )
       .sum();
 
     if (sumaCapacidadesHogar <= 0) {
-      // Si nadie supera el piso mínimo, los gastos opcionales se reparten en partes iguales
-      return 100.0 / integrantes.size();
+      return 100.0 / cantidad;
     }
 
-    double capacidadUsuario = calculoCapacidadRelativaDePago(usuario, pisoMinimoSeguro);
+    double capacidadUsuario = calculoCapacidadRelativaDePago(usuario, pisoMinimoSeguro, cantidad);
     return (capacidadUsuario / sumaCapacidadesHogar) * 100.0;
   }
 
@@ -212,21 +216,20 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
       return 0.0;
     }
 
-    double porcentajeDeAporteMinimo = (100.0 / integrantes.size()) / 2.0;
+    double porcentajeReferencia = 100.0 / integrantes.size();
     double porcentajeDeUsuario = calcularPorcentajeDeAporteDeGastosPorUsuario(
       usuario,
       integrantes,
       valorPisoMinimoSeguro
     );
 
-    if (porcentajeDeUsuario >= porcentajeDeAporteMinimo) {
+    if (porcentajeDeUsuario >= porcentajeReferencia) {
       return 0.0;
     }
 
     double gastosSeguros = (montoGastosOcasionales != null) ? montoGastosOcasionales : 0.0;
-    double valorADeber = (gastosSeguros * (porcentajeDeAporteMinimo - porcentajeDeUsuario)) / 100.0;
-
-    return valorADeber;
+    double montoBrecha = (gastosSeguros * (porcentajeReferencia - porcentajeDeUsuario)) / 100.0;
+    return BigDecimal.valueOf(montoBrecha).setScale(2, RoundingMode.HALF_UP).doubleValue();
   }
 
   @Override
@@ -242,6 +245,30 @@ public class ServicioCalculosGastoImpl implements ServicioCalculosGasto {
 
     for (Usuario usuario : usuariosConPorcentajes) {
       calcularYAsignarHorasTarea(usuario, valorDeCuotaMaxima, valorHoraTarea);
+    }
+  }
+
+  public void calcularHorasDeTareasDeUsuarios(
+    List<Usuario> usuarios,
+    Double valorHoraTarea,
+    Double montoGastosOcasionales,
+    Double valorPisoMinimoSeguro
+  ) {
+    if (!esValidoParaCalcularHoras(usuarios, valorHoraTarea)) {
+      return;
+    }
+
+    for (Usuario usuario : usuarios) {
+      Double montoBrecha = calcularValorDeHorasDeTareaPorUsuario(
+        usuario,
+        valorHoraTarea,
+        montoGastosOcasionales,
+        valorPisoMinimoSeguro,
+        usuarios
+      );
+      double valor = (montoBrecha != null && montoBrecha > 0) ? montoBrecha : 0.0;
+      double horas = valor > 0 ? Math.ceil((valor / valorHoraTarea) * 2.0) / 2.0 : 0.0;
+      usuario.setHorasTareaARealizar(horas);
     }
   }
 

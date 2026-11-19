@@ -10,12 +10,13 @@ import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,51 +24,48 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
 
-  private static final int CUOTA = 0;
-  private static final int HORAS = 1;
-  private static final double MARGEN_SALDO = 0.01;
+  private static final String CLAVE_HOGAR_ID = "HOGAR_ID";
+  private static final String CLAVE_HOGAR_ACTIVO = "hogarActivoEnSession";
+  private static final double MONTO_CERO = 0.0;
+  private static final double MARGEN_MONTO = 0.01;
 
   private final RepositorioUsuario repositorioUsuario;
   private final RepositorioGasto repositorioGasto;
-  private final ServicioLiquidacion servicioLiquidacion;
-  private final ServicioCalculosGasto servicioCalculosGasto;
+  private final RepositorioHogar repositorioHogar;
+  private final ServicioCalculoBaja servicioCalculoBaja;
   private final ServicioHogar servicioHogar;
-  private final ServicioCreditoTarea servicioCreditoTarea;
   private final ServicioPagoRealizado servicioPagoRealizado;
-  private final HttpSession session; // <-- Inyectamos la sesión para obtener el hogarId actual
+  private final ServicioPagoPendiente servicioPagoPendiente;
+  private final HttpSession session;
 
   @Autowired
   public ServicioBajaIntegranteImpl(
     RepositorioUsuario repositorioUsuario,
     RepositorioGasto repositorioGasto,
-    ServicioLiquidacion servicioLiquidacion,
-    ServicioCalculosGasto servicioCalculosGasto,
+    RepositorioHogar repositorioHogar,
+    ServicioCalculoBaja servicioCalculoBaja,
     ServicioHogar servicioHogar,
-    ServicioCreditoTarea servicioCreditoTarea,
     ServicioPagoRealizado servicioPagoRealizado,
+    ServicioPagoPendiente servicioPagoPendiente,
     HttpSession session
   ) {
     this.repositorioUsuario = repositorioUsuario;
     this.repositorioGasto = repositorioGasto;
-    this.servicioLiquidacion = servicioLiquidacion;
-    this.servicioCalculosGasto = servicioCalculosGasto;
+    this.repositorioHogar = repositorioHogar;
+    this.servicioCalculoBaja = servicioCalculoBaja;
     this.servicioHogar = servicioHogar;
-    this.servicioCreditoTarea = servicioCreditoTarea;
     this.servicioPagoRealizado = servicioPagoRealizado;
+    this.servicioPagoPendiente = servicioPagoPendiente;
     this.session = session;
   }
 
-  // Método auxiliar para obtener el hogarId actual de la sesión
   private Long obtenerHogarIdActual() {
-    Long hogarId = (Long) session.getAttribute("HOGAR_ID");
-    if (hogarId == null) {
-      // Fallback por seguridad o si el hogar viene directo del servicioHogar
-      Hogar hogarActivo = servicioHogar.obtenerHogar();
-      if (hogarActivo != null) {
-        hogarId = hogarActivo.getId();
-      }
+    Long hogarId = (Long) session.getAttribute(CLAVE_HOGAR_ID);
+    if (hogarId != null) {
+      return hogarId;
     }
-    return hogarId;
+    Hogar hogarActivo = servicioHogar.obtenerHogar();
+    return hogarActivo != null ? hogarActivo.getId() : null;
   }
 
   @Override
@@ -78,24 +76,40 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   @Override
   public SimulacionBaja simularBaja(Long usuarioId) {
     Long hogarId = obtenerHogarIdActual();
+    Hogar hogar = resolverHogar(hogarId);
     Usuario saliente = validarSaliente(usuarioId, hogarId);
     List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
     List<Usuario> restantes = sinElSaliente(integrantes, saliente);
     List<Gasto> gastos = repositorioGasto.obtenerTodosPorHogar(hogarId);
 
-    Map<String, Double> balances = calcularBalances(integrantes, gastos);
-    aplicarPagosRealizados(balances, hogarId);
-    String nombreSaliente = nombreDe(saliente);
-    Double balanceFinal = redondear(balances.getOrDefault(nombreSaliente, 0.0));
-    List<TransferenciaSugerida> liquidacionFinal = transferenciasDe(
-      nombreSaliente,
-      servicioLiquidacion.calcularLiquidacionOptima(balances)
+    double[] deudaHorasInfo = servicioCalculoBaja.calcularDeudaHorasTarea(saliente, hogar, gastos);
+    double deudaHorasPesos = redondear(deudaHorasInfo[0]);
+    double horasAdeudadas = redondear(deudaHorasInfo[1]);
+
+    Map<String, Double> balances = servicioCalculoBaja.calcularBalancesConBaja(
+      integrantes,
+      restantes,
+      saliente,
+      gastos,
+      deudaHorasPesos,
+      hogarId
     );
 
-    double totalFijos = totalGastosFijosDelMes(gastos);
-    Hogar hogar = servicioHogar.obtenerHogar();
-    boolean cuotasCalculables = parametrosValidos(hogar);
-    List<FilaCuota> filas = armarFilasCuota(
+    String nombreSaliente = nombreDe(saliente);
+    Double balanceFinal = redondear(balances.getOrDefault(nombreSaliente, 0.0));
+    List<TransferenciaSugerida> liquidacionFinal = calcularLiquidacionSimulacion(
+      saliente,
+      nombreSaliente,
+      restantes,
+      balances,
+      deudaHorasPesos,
+      hogarId
+    );
+
+    Set<String> clavesPendientes = obtenerClavesPendientes(hogar);
+    double totalFijos = servicioCalculoBaja.totalGastosFijosDelMes(gastos);
+    boolean cuotasCalculables = servicioCalculoBaja.parametrosValidos(hogar);
+    List<FilaCuota> filas = servicioCalculoBaja.armarFilasCuota(
       integrantes,
       restantes,
       totalFijos,
@@ -106,7 +120,10 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     return new SimulacionBaja(
       saliente,
       balanceFinal,
+      deudaHorasPesos,
+      horasAdeudadas,
       liquidacionFinal,
+      clavesPendientes,
       filas,
       redondear(totalFijos),
       cuotasCalculables
@@ -116,26 +133,26 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
   @Override
   public void confirmarBaja(Long usuarioId) {
     Long hogarId = obtenerHogarIdActual();
+    Hogar hogar = resolverHogar(hogarId);
     Usuario saliente = validarSaliente(usuarioId, hogarId);
     List<Usuario> integrantes = repositorioUsuario.obtenerIntegrantesDelHogar(hogarId);
     SimulacionBaja simulacion = simularBaja(usuarioId);
+
     if (simulacion.isSaldoPendiente()) {
       throw new IntegranteConSaldoPendienteException();
     }
-    List<Usuario> restantes = sinElSaliente(integrantes, saliente);
 
-    saliente.setFechaBaja(LocalDateTime.now());
-    repositorioUsuario.modificar(saliente);
-
-    Hogar hogar = servicioHogar.obtenerHogar();
-    if (!parametrosValidos(hogar)) {
-      return;
+    if (simulacion.isDebeCobrar()) {
+      limpiarDeudasAFavorDelSaliente(simulacion, hogar, integrantes);
     }
-    Map<Long, Double[]> nuevas = calcularCuotasSobreCopias(restantes, hogar);
-    for (Usuario usuario : restantes) {
-      usuario.setCuotaMensual(valorDe(nuevas, usuario.getId(), CUOTA));
-      usuario.setHorasTareaARealizar(valorDe(nuevas, usuario.getId(), HORAS));
-      repositorioUsuario.modificar(usuario);
+
+    List<Usuario> restantes = sinElSaliente(integrantes, saliente);
+    quitarIntegranteDeHogar(hogar, saliente);
+    servicioCalculoBaja.recalcularYGuardarCuotasRestantes(restantes, hogar);
+
+    Long usuarioLogueadoId = obtenerUsuarioLogueadoId();
+    if (usuarioLogueadoId != null && usuarioLogueadoId.equals(saliente.getId())) {
+      actualizarSesionPostBaja(saliente.getId(), hogarId);
     }
   }
 
@@ -145,24 +162,208 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     if (!simulacion.tieneTransferenciaPendiente(emisor, receptor, monto)) {
       throw new PagoNoCorrespondeALiquidacionException();
     }
-    Hogar hogar = servicioHogar.seleccionarHogarPorId(obtenerHogarIdActual());
+    Hogar hogar = resolverHogar(obtenerHogarIdActual());
     PagoRealizado pago = new PagoRealizado(emisor, receptor, monto, LocalDateTime.now(), hogar);
     servicioPagoRealizado.registrarPagoExitoso(pago);
   }
 
-  private void aplicarPagosRealizados(Map<String, Double> balances, Long hogarId) {
-    for (PagoRealizado pago : servicioPagoRealizado.obtenerHistorialPagos(hogarId)) {
-      if (pago.getMonto() == null) {
+  private List<TransferenciaSugerida> calcularLiquidacionSimulacion(
+    Usuario saliente,
+    String nombreSaliente,
+    List<Usuario> restantes,
+    Map<String, Double> balancesConPagos,
+    double deudaHorasPesos,
+    Long hogarId
+  ) {
+    List<PagoRealizado> pagos = servicioPagoRealizado != null && hogarId != null
+      ? servicioPagoRealizado.obtenerHistorialPagos(hogarId)
+      : Collections.emptyList();
+
+    Map<String, Double> balancesSinPagos = revertirPagosEnBalances(balancesConPagos, pagos);
+    List<TransferenciaSugerida> base = servicioCalculoBaja.liquidacionDelSaliente(
+      nombreSaliente,
+      balancesSinPagos
+    );
+
+    Map<String, Double> montoHaciaRestante = new HashMap<>();
+    Map<String, String> emailPorRestante = new HashMap<>();
+    Map<String, Long> idPorRestante = new HashMap<>();
+
+    for (Usuario r : restantes) {
+      String nombreR = nombreDe(r);
+      montoHaciaRestante.put(nombreR, MONTO_CERO);
+      emailPorRestante.put(nombreR, r.getEmail());
+      idPorRestante.put(nombreR, r.getId());
+    }
+
+    for (TransferenciaSugerida t : base) {
+      if (nombreSaliente.equals(t.getEmisor())) {
+        emailPorRestante.putIfAbsent(t.getReceptor(), t.getEmailEmisor());
+        idPorRestante.putIfAbsent(t.getReceptor(), t.getReceptorId());
+        montoHaciaRestante.merge(
+          t.getReceptor(),
+          t.getMonto() != null ? t.getMonto() : MONTO_CERO,
+          Double::sum
+        );
+      }
+    }
+
+    if (deudaHorasPesos > MARGEN_MONTO && !restantes.isEmpty()) {
+      double parteCasaPorRestante = deudaHorasPesos / restantes.size();
+      for (Usuario r : restantes) {
+        montoHaciaRestante.merge(nombreDe(r), parteCasaPorRestante, Double::sum);
+      }
+    }
+
+    List<TransferenciaSugerida> resultado = new ArrayList<>();
+    for (Map.Entry<String, Double> entry : montoHaciaRestante.entrySet()) {
+      String nombreReceptor = entry.getKey();
+      double bruto = entry.getValue();
+      double yaPagado = sumarPagosDirectos(pagos, nombreSaliente, nombreReceptor);
+      double pendiente = redondear(bruto - yaPagado);
+      if (pendiente > MARGEN_MONTO) {
+        resultado.add(
+          new TransferenciaSugerida(
+            saliente.getId(),
+            nombreSaliente,
+            saliente.getEmail(),
+            idPorRestante.get(nombreReceptor),
+            nombreReceptor,
+            pendiente
+          )
+        );
+      }
+    }
+    return resultado;
+  }
+
+  private Map<String, Double> revertirPagosEnBalances(
+    Map<String, Double> balancesConPagos,
+    List<PagoRealizado> pagos
+  ) {
+    Map<String, Double> copia = new HashMap<>(balancesConPagos);
+    for (PagoRealizado pago : pagos) {
+      if (pago.getMonto() != null && pago.getEmisor() != null && pago.getReceptor() != null) {
+        copia.computeIfPresent(pago.getEmisor().getNombre(), (k, v) -> v - pago.getMonto());
+        copia.computeIfPresent(pago.getReceptor().getNombre(), (k, v) -> v + pago.getMonto());
+      }
+    }
+    return copia;
+  }
+
+  private double sumarPagosDirectos(
+    List<PagoRealizado> pagos,
+    String emisorNombre,
+    String receptorNombre
+  ) {
+    double total = MONTO_CERO;
+    for (PagoRealizado pago : pagos) {
+      if (
+        pago.getMonto() != null &&
+        pago.getEmisor() != null &&
+        pago.getReceptor() != null &&
+        emisorNombre != null &&
+        emisorNombre.equals(pago.getEmisor().getNombre()) &&
+        receptorNombre != null &&
+        receptorNombre.equals(pago.getReceptor().getNombre())
+      ) {
+        total += pago.getMonto();
+      }
+    }
+    return total;
+  }
+
+  private void quitarIntegranteDeHogar(Hogar hogar, Usuario saliente) {
+    if (hogar == null || hogar.getIntegrantes() == null) {
+      return;
+    }
+    hogar.getIntegrantes().removeIf(u -> u.getId().equals(saliente.getId()));
+    if (repositorioHogar != null) {
+      repositorioHogar.actualizar(hogar);
+    }
+  }
+
+  private Hogar resolverHogar(Long hogarId) {
+    if (hogarId != null && servicioHogar != null) {
+      Hogar porId = servicioHogar.seleccionarHogarPorId(hogarId);
+      if (porId != null) {
+        return porId;
+      }
+    }
+    return servicioHogar != null ? servicioHogar.obtenerHogar() : null;
+  }
+
+  private Long obtenerUsuarioLogueadoId() {
+    for (String clave : List.of("ID", "usuarioId", "USUARIO_ID")) {
+      Object valor = session.getAttribute(clave);
+      if (valor instanceof Long id) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  private Set<String> obtenerClavesPendientes(Hogar hogar) {
+    Set<String> clavesPendientes = new HashSet<>();
+    if (hogar == null || servicioPagoPendiente == null) {
+      return clavesPendientes;
+    }
+    List<PagoPendiente> pendientes = servicioPagoPendiente.obtenerPendientes(hogar);
+    if (pendientes == null) {
+      return clavesPendientes;
+    }
+    for (PagoPendiente p : pendientes) {
+      if (p.getEmisor() != null && p.getReceptor() != null && p.getMonto() != null) {
+        clavesPendientes.add(
+          p.getEmisor().getNombre() + "_" + p.getReceptor().getNombre() + "_" + p.getMonto()
+        );
+      }
+    }
+    return clavesPendientes;
+  }
+
+  private void limpiarDeudasAFavorDelSaliente(
+    SimulacionBaja simulacion,
+    Hogar hogar,
+    List<Usuario> integrantes
+  ) {
+    if (hogar == null) {
+      return;
+    }
+    String nombreSaliente = nombreDe(simulacion.getUsuarioSaliente());
+    for (TransferenciaSugerida t : simulacion.getLiquidacionFinal()) {
+      if (!nombreSaliente.equals(t.getReceptor())) {
         continue;
       }
-      balances.computeIfPresent(
-        pago.getEmisor().getNombre(),
-        (nombre, saldo) -> saldo + pago.getMonto()
-      );
-      balances.computeIfPresent(
-        pago.getReceptor().getNombre(),
-        (nombre, saldo) -> saldo - pago.getMonto()
-      );
+      Usuario deudor = integrantes
+        .stream()
+        .filter(u -> nombreDe(u).equals(t.getEmisor()))
+        .findFirst()
+        .orElse(null);
+      if (deudor != null) {
+        PagoRealizado condonacion = new PagoRealizado(
+          deudor,
+          simulacion.getUsuarioSaliente(),
+          t.getMonto(),
+          LocalDateTime.now(),
+          hogar
+        );
+        servicioPagoRealizado.registrarPagoExitoso(condonacion);
+      }
+    }
+  }
+
+  private void actualizarSesionPostBaja(Long usuarioId, Long hogarAbandonadoId) {
+    List<Hogar> otrosHogares = new ArrayList<>(servicioHogar.obtenerHogares(usuarioId));
+    otrosHogares.removeIf(h -> h.getId() != null && h.getId().equals(hogarAbandonadoId));
+
+    if (!otrosHogares.isEmpty()) {
+      Hogar siguienteHogar = servicioHogar.seleccionarHogarPorId(otrosHogares.get(0).getId());
+      session.setAttribute(CLAVE_HOGAR_ID, siguienteHogar.getId());
+      session.setAttribute(CLAVE_HOGAR_ACTIVO, siguienteHogar);
+    } else {
+      session.removeAttribute(CLAVE_HOGAR_ID);
+      session.removeAttribute(CLAVE_HOGAR_ACTIVO);
     }
   }
 
@@ -180,196 +381,9 @@ public class ServicioBajaIntegranteImpl implements ServicioBajaIntegrante {
     return saliente;
   }
 
-  private boolean parametrosValidos(Hogar hogar) {
-    return (hogar != null && hogar.getPisoMinimoHogar() != null && hogar.getPisoMinimoHogar() > 0);
-  }
-
-  private Map<String, Double> calcularBalances(List<Usuario> integrantes, List<Gasto> gastos) {
-    Map<Long, Double> consumo = new HashMap<>();
-    Map<Long, Double> pagado = new HashMap<>();
-    for (Usuario usuario : integrantes) {
-      consumo.put(usuario.getId(), 0.0);
-      pagado.put(usuario.getId(), 0.0);
-    }
-
-    for (Gasto gasto : gastos) {
-      repartirGasto(gasto, integrantes, consumo, pagado);
-    }
-
-    Map<String, Double> balances = new LinkedHashMap<>();
-    for (Usuario usuario : integrantes) {
-      Long id = usuario.getId();
-      balances.put(nombreDe(usuario), pagado.get(id) + creditoDe(usuario) - consumo.get(id));
-    }
-    return balances;
-  }
-
-  private void repartirGasto(
-    Gasto gasto,
-    List<Usuario> integrantes,
-    Map<Long, Double> consumo,
-    Map<Long, Double> pagado
-  ) {
-    if (gasto.getMonto() == null || !Boolean.TRUE.equals(gasto.getPagado())) {
-      return;
-    }
-    List<Usuario> participantes = participantesDe(gasto, integrantes);
-    double parte = gasto.getMonto() / participantes.size();
-    for (Usuario usuario : participantes) {
-      consumo.merge(usuario.getId(), parte, Double::sum);
-    }
-    Usuario pagador = gasto.getUsuarioPagador();
-    if (pagador != null && pagado.containsKey(pagador.getId())) {
-      pagado.merge(pagador.getId(), gasto.getMonto(), Double::sum);
-    }
-  }
-
-  private List<Usuario> participantesDe(Gasto gasto, List<Usuario> integrantes) {
-    List<Usuario> participantes = new ArrayList<>();
-    for (Usuario usuario : integrantes) {
-      if (usuario.participaEn(gasto.getFecha())) {
-        participantes.add(usuario);
-      }
-    }
-    if (participantes.isEmpty()) {
-      return integrantes;
-    }
-    return participantes;
-  }
-
-  private List<TransferenciaSugerida> transferenciasDe(
-    String nombre,
-    List<TransferenciaSugerida> todas
-  ) {
-    List<TransferenciaSugerida> resultado = new ArrayList<>();
-    for (TransferenciaSugerida transferencia : todas) {
-      if (nombre.equals(transferencia.getEmisor()) || nombre.equals(transferencia.getReceptor())) {
-        resultado.add(transferencia);
-      }
-    }
-    return resultado;
-  }
-
-  private double creditoDe(Usuario usuario) {
-    if (servicioCreditoTarea == null || usuario.getId() == null) {
-      return 0.0;
-    }
-    Double credito = servicioCreditoTarea.obtenerCreditoAcumuladoPorUsuario(usuario.getId());
-    return credito != null ? credito : 0.0;
-  }
-
-  private double totalGastosFijosDelMes(List<Gasto> gastos) {
-    YearMonth mesActual = YearMonth.now();
-    double total = 0.0;
-    for (Gasto gasto : gastos) {
-      boolean esFijo = gasto.getTipoGasto() == TipoGasto.FIJO;
-      boolean esDelMes =
-        gasto.getFecha() == null || YearMonth.from(gasto.getFecha()).equals(mesActual);
-      if (esFijo && esDelMes && gasto.getMonto() != null) {
-        total += gasto.getMonto();
-      }
-    }
-    return total;
-  }
-
-  private List<FilaCuota> armarFilasCuota(
-    List<Usuario> integrantes,
-    List<Usuario> restantes,
-    double totalFijos,
-    Hogar hogar,
-    boolean cuotasCalculables
-  ) {
-    double parteFijaAntes = redondear(totalFijos / integrantes.size());
-    double parteFijaDespues = redondear(totalFijos / restantes.size());
-
-    Map<Long, Double[]> antes = new HashMap<>();
-    Map<Long, Double[]> despues = new HashMap<>();
-    if (cuotasCalculables) {
-      antes = calcularCuotasSobreCopias(integrantes, hogar);
-      despues = calcularCuotasSobreCopias(restantes, hogar);
-    }
-
-    List<FilaCuota> filas = new ArrayList<>();
-    for (Usuario usuario : restantes) {
-      Long id = usuario.getId();
-      filas.add(
-        new FilaCuota(
-          nombreDe(usuario),
-          valorDe(antes, id, CUOTA),
-          valorDe(despues, id, CUOTA),
-          valorDe(antes, id, HORAS),
-          valorDe(despues, id, HORAS),
-          parteFijaAntes,
-          parteFijaDespues
-        )
-      );
-    }
-    return filas;
-  }
-
-  private Map<Long, Double[]> calcularCuotasSobreCopias(List<Usuario> originales, Hogar hogar) {
-    List<Usuario> copias = crearCopias(originales);
-    Double piso = hogar.getPisoMinimoHogar();
-
-    servicioCalculosGasto.calcularTotalSumaDeCapacidadesDeCadaUsuario(copias, piso);
-    servicioCalculosGasto.establecerMontoTotalDeLasSumasDeCapacidades(copias);
-    Double pozo = servicioCalculosGasto.getMontoCapacidadTotalDeLosUsuarios();
-
-    if (pozo == null || pozo == 0.0) {
-      asignarPisoATodos(copias, piso);
-    } else {
-      calcularCuotasYHoras(copias, piso, hogar.getPrecioHoraTarea());
-    }
-    return extraerResultado(copias);
-  }
-
-  private List<Usuario> crearCopias(List<Usuario> originales) {
-    List<Usuario> copias = new ArrayList<>();
-    for (Usuario original : originales) {
-      Double ingreso = original.getIngresoMensual() != null ? original.getIngresoMensual() : 0.0;
-      Usuario copia = new Usuario(original.getNombre(), ingreso);
-      copia.setId(original.getId());
-      copias.add(copia);
-    }
-    return copias;
-  }
-
-  private void asignarPisoATodos(List<Usuario> copias, Double piso) {
-    for (Usuario copia : copias) {
-      copia.setCuotaMensual(piso);
-      copia.setHorasTareaARealizar(0.0);
-    }
-  }
-
-  private void calcularCuotasYHoras(List<Usuario> copias, Double piso, Double precioHora) {
-    servicioCalculosGasto.calcularPorcentajesDeCapacidadMensualDeUsuarios(copias);
-    servicioCalculosGasto.calcularCuotasMensualesDeUsuarios(copias, piso);
-    if (precioHora != null && precioHora > 0) {
-      servicioCalculosGasto.calcularHorasDeTareasDeUsuarios(copias, precioHora);
-    }
-  }
-
-  private Map<Long, Double[]> extraerResultado(List<Usuario> copias) {
-    Map<Long, Double[]> resultado = new HashMap<>();
-    for (Usuario copia : copias) {
-      Double horas = copia.getHorasTareaARealizar() != null ? copia.getHorasTareaARealizar() : 0.0;
-      resultado.put(copia.getId(), new Double[] { copia.getCuotaMensual(), horas });
-    }
-    return resultado;
-  }
-
-  private Double valorDe(Map<Long, Double[]> valores, Long id, int posicion) {
-    Double[] fila = valores.get(id);
-    return fila == null ? null : fila[posicion];
-  }
-
   private List<Usuario> sinElSaliente(List<Usuario> integrantes, Usuario saliente) {
-    List<Usuario> restantes = new ArrayList<>();
-    for (Usuario usuario : integrantes) {
-      if (!usuario.getId().equals(saliente.getId())) {
-        restantes.add(usuario);
-      }
-    }
+    List<Usuario> restantes = new ArrayList<>(integrantes);
+    restantes.removeIf(usuario -> usuario.getId().equals(saliente.getId()));
     return restantes;
   }
 

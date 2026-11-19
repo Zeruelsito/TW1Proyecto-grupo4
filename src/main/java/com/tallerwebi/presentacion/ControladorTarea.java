@@ -276,9 +276,7 @@ public class ControladorTarea {
   }
 
   private Double obtenerPrecioHoraHogar(Hogar hogar) {
-    return (hogar != null && hogar.getPrecioHoraTarea() != null)
-      ? hogar.getPrecioHoraTarea()
-      : 1000.0;
+    return (hogar != null && hogar.getPrecioHoraTarea() != null) ? hogar.getPrecioHoraTarea() : 0.0;
   }
 
   private Long obtenerUsuarioIdDeSesion(HttpServletRequest request) {

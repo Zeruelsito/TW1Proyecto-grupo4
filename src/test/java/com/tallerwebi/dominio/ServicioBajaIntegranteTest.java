@@ -4,7 +4,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import com.tallerwebi.dominio.excepcion.HogarSinIntegrantesException;
@@ -14,9 +17,12 @@ import com.tallerwebi.dominio.excepcion.UsuarioNoEncontrado;
 import com.tallerwebi.dominio.excepcion.UsuarioYaDadoDeBajaException;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -25,11 +31,11 @@ public class ServicioBajaIntegranteTest {
 
   private RepositorioUsuario repositorioUsuarioMock;
   private RepositorioGasto repositorioGastoMock;
-  private ServicioLiquidacion servicioLiquidacionMock;
-  private ServicioCalculosGasto servicioCalculosGastoMock;
+  private RepositorioHogar repositorioHogarMock;
+  private ServicioCalculoBaja servicioCalculoBajaMock;
   private ServicioHogar servicioHogarMock;
-  private ServicioCreditoTarea servicioCreditoTareaMock;
   private ServicioPagoRealizado servicioPagoRealizadoMock;
+  private ServicioPagoPendiente servicioPagoPendienteMock;
   private HttpSession sessionMock;
 
   private ServicioBajaIntegranteImpl servicioBajaIntegrante;
@@ -42,29 +48,24 @@ public class ServicioBajaIntegranteTest {
   public void setUp() {
     repositorioUsuarioMock = Mockito.mock(RepositorioUsuario.class);
     repositorioGastoMock = Mockito.mock(RepositorioGasto.class);
-    servicioLiquidacionMock = Mockito.mock(ServicioLiquidacion.class);
-    servicioCalculosGastoMock = Mockito.mock(ServicioCalculosGasto.class);
+    repositorioHogarMock = Mockito.mock(RepositorioHogar.class);
+    servicioCalculoBajaMock = Mockito.mock(ServicioCalculoBaja.class);
     servicioHogarMock = Mockito.mock(ServicioHogar.class);
-    servicioCreditoTareaMock = Mockito.mock(ServicioCreditoTarea.class);
     servicioPagoRealizadoMock = Mockito.mock(ServicioPagoRealizado.class);
+    servicioPagoPendienteMock = Mockito.mock(ServicioPagoPendiente.class);
     sessionMock = Mockito.mock(HttpSession.class);
 
     servicioBajaIntegrante =
       new ServicioBajaIntegranteImpl(
         repositorioUsuarioMock,
         repositorioGastoMock,
-        servicioLiquidacionMock,
-        servicioCalculosGastoMock,
+        repositorioHogarMock,
+        servicioCalculoBajaMock,
         servicioHogarMock,
-        servicioCreditoTareaMock,
         servicioPagoRealizadoMock,
+        servicioPagoPendienteMock,
         sessionMock
       );
-
-    hogarTest = new Hogar();
-    hogarTest.setId(10L);
-    hogarTest.setPisoMinimoHogar(1000.0);
-    hogarTest.setPrecioHoraTarea(100.0);
 
     usuario1 = new Usuario();
     usuario1.setId(1L);
@@ -76,19 +77,36 @@ public class ServicioBajaIntegranteTest {
     usuario2.setNombre("Juan");
     usuario2.setIngresoMensual(60000.0);
 
+    hogarTest = new Hogar();
+    hogarTest.setId(10L);
+    hogarTest.setPisoMinimoHogar(1000.0);
+    hogarTest.setPrecioHoraTarea(100.0);
+    hogarTest.setIntegrantes(new ArrayList<>(Arrays.asList(usuario1, usuario2)));
+
     when(sessionMock.getAttribute("HOGAR_ID")).thenReturn(10L);
+    when(servicioHogarMock.seleccionarHogarPorId(10L)).thenReturn(hogarTest);
+    when(servicioPagoPendienteMock.obtenerPendientes(any())).thenReturn(Collections.emptyList());
+    when(servicioCalculoBajaMock.calcularDeudaHorasTarea(any(), any(), anyList()))
+      .thenReturn(new double[] { 0.0, 0.0 });
+    when(servicioCalculoBajaMock.liquidacionDelSaliente(anyString(), any()))
+      .thenReturn(Collections.emptyList());
+    when(
+      servicioCalculoBajaMock.armarFilasCuota(
+        anyList(),
+        anyList(),
+        anyDouble(),
+        any(),
+        anyBoolean()
+      )
+    )
+      .thenReturn(Collections.emptyList());
   }
 
   @Test
   public void queLanceExcepcionSiUsuarioNoExisteAlSimularBaja() {
     when(repositorioUsuarioMock.buscarPorId(99L)).thenReturn(null);
 
-    assertThrows(
-      UsuarioNoEncontrado.class,
-      () -> {
-        servicioBajaIntegrante.simularBaja(99L);
-      }
-    );
+    assertThrows(UsuarioNoEncontrado.class, () -> servicioBajaIntegrante.simularBaja(99L));
   }
 
   @Test
@@ -96,12 +114,7 @@ public class ServicioBajaIntegranteTest {
     usuario1.setFechaBaja(LocalDateTime.now().minusDays(5));
     when(repositorioUsuarioMock.buscarPorId(1L)).thenReturn(usuario1);
 
-    assertThrows(
-      UsuarioYaDadoDeBajaException.class,
-      () -> {
-        servicioBajaIntegrante.simularBaja(1L);
-      }
-    );
+    assertThrows(UsuarioYaDadoDeBajaException.class, () -> servicioBajaIntegrante.simularBaja(1L));
   }
 
   @Test
@@ -110,12 +123,7 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1));
 
-    assertThrows(
-      HogarSinIntegrantesException.class,
-      () -> {
-        servicioBajaIntegrante.simularBaja(1L);
-      }
-    );
+    assertThrows(HogarSinIntegrantesException.class, () -> servicioBajaIntegrante.simularBaja(1L));
   }
 
   @Test
@@ -124,10 +132,20 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1, usuario2));
     when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
-    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
-      .thenReturn(Collections.emptyList());
-    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
-    when(servicioCreditoTareaMock.obtenerCreditoAcumuladoPorUsuario(anyLong())).thenReturn(0.0);
+    Map<String, Double> balances = new LinkedHashMap<>();
+    balances.put("Carlos", 0.0);
+    balances.put("Juan", 0.0);
+    when(
+      servicioCalculoBajaMock.calcularBalancesConBaja(
+        anyList(),
+        anyList(),
+        any(),
+        anyList(),
+        anyDouble(),
+        anyLong()
+      )
+    )
+      .thenReturn(balances);
 
     SimulacionBaja simulacion = servicioBajaIntegrante.simularBaja(2L);
 
@@ -141,25 +159,25 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.buscarPorId(2L)).thenReturn(usuario2);
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1, usuario2));
-
-    Gasto gasto = new Gasto();
-    gasto.setPagado(true);
-    gasto.setMonto(1000.0);
-    gasto.setUsuarioPagador(usuario1);
-    gasto.setParticipantes(Arrays.asList(usuario1, usuario2));
-    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Arrays.asList(gasto));
-
-    List<TransferenciaSugerida> transferencias = Arrays.asList(
-      new TransferenciaSugerida("Juan", "juan@mail.com", "Carlos", 500.0)
-    );
-    when(servicioLiquidacionMock.calcularLiquidacionOptima(any())).thenReturn(transferencias);
-    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
+    when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
+    Map<String, Double> balances = new LinkedHashMap<>();
+    balances.put("Carlos", 500.0);
+    balances.put("Juan", -500.0);
+    when(
+      servicioCalculoBajaMock.calcularBalancesConBaja(
+        anyList(),
+        anyList(),
+        any(),
+        anyList(),
+        anyDouble(),
+        anyLong()
+      )
+    )
+      .thenReturn(balances);
 
     assertThrows(
       IntegranteConSaldoPendienteException.class,
-      () -> {
-        servicioBajaIntegrante.confirmarBaja(2L);
-      }
+      () -> servicioBajaIntegrante.confirmarBaja(2L)
     );
   }
 
@@ -169,14 +187,26 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1, usuario2));
     when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
-    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
-      .thenReturn(Collections.emptyList());
-    when(servicioHogarMock.obtenerHogar()).thenReturn(hogarTest);
+    Map<String, Double> balances = new LinkedHashMap<>();
+    balances.put("Carlos", 0.0);
+    balances.put("Juan", 0.0);
+    when(
+      servicioCalculoBajaMock.calcularBalancesConBaja(
+        anyList(),
+        anyList(),
+        any(),
+        anyList(),
+        anyDouble(),
+        anyLong()
+      )
+    )
+      .thenReturn(balances);
+    when(servicioHogarMock.obtenerHogares(2L)).thenReturn(Collections.emptyList());
 
     servicioBajaIntegrante.confirmarBaja(2L);
 
-    verify(repositorioUsuarioMock, times(1)).modificar(usuario2);
-    assertThat(usuario2.getFechaBaja(), notNullValue());
+    verify(repositorioHogarMock, times(1)).actualizar(hogarTest);
+    assertThat(hogarTest.getIntegrantes(), not(hasItem(usuario2)));
   }
 
   @Test
@@ -185,12 +215,24 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1, usuario2));
     when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
-
-    List<TransferenciaSugerida> transferencias = Arrays.asList(
-      new TransferenciaSugerida("Juan", "juan@mail.com", "Carlos", 500.0)
-    );
-    when(servicioLiquidacionMock.calcularLiquidacionOptima(any())).thenReturn(transferencias);
-    when(servicioHogarMock.seleccionarHogarPorId(10L)).thenReturn(hogarTest);
+    Map<String, Double> balances = new LinkedHashMap<>();
+    balances.put("Carlos", 500.0);
+    balances.put("Juan", -500.0);
+    when(
+      servicioCalculoBajaMock.calcularBalancesConBaja(
+        anyList(),
+        anyList(),
+        any(),
+        anyList(),
+        anyDouble(),
+        anyLong()
+      )
+    )
+      .thenReturn(balances);
+    when(servicioCalculoBajaMock.liquidacionDelSaliente(anyString(), any()))
+      .thenReturn(
+        Arrays.asList(new TransferenciaSugerida("Juan", "juan@mail.com", "Carlos", 500.0))
+      );
 
     servicioBajaIntegrante.registrarPago(2L, usuario2, usuario1, 500.0);
 
@@ -203,14 +245,24 @@ public class ServicioBajaIntegranteTest {
     when(repositorioUsuarioMock.obtenerIntegrantesDelHogar(10L))
       .thenReturn(Arrays.asList(usuario1, usuario2));
     when(repositorioGastoMock.obtenerTodosPorHogar(10L)).thenReturn(Collections.emptyList());
-    when(servicioLiquidacionMock.calcularLiquidacionOptima(any()))
-      .thenReturn(Collections.emptyList());
+    Map<String, Double> balances = new LinkedHashMap<>();
+    balances.put("Carlos", 0.0);
+    balances.put("Juan", 0.0);
+    when(
+      servicioCalculoBajaMock.calcularBalancesConBaja(
+        anyList(),
+        anyList(),
+        any(),
+        anyList(),
+        anyDouble(),
+        anyLong()
+      )
+    )
+      .thenReturn(balances);
 
     assertThrows(
       PagoNoCorrespondeALiquidacionException.class,
-      () -> {
-        servicioBajaIntegrante.registrarPago(2L, usuario2, usuario1, 500.0);
-      }
+      () -> servicioBajaIntegrante.registrarPago(2L, usuario2, usuario1, 500.0)
     );
   }
 

@@ -17,6 +17,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class ControladorDashboard {
 
   private static final String HOGAR_ID = "HOGAR_ID";
+  private static final String HOGAR_ACTIVO_EN_SESSION = "hogarActivoEnSession";
   private static final String REDIRECT_DASHBOARD = "redirect:/dashboard";
 
   @Autowired
@@ -38,15 +39,15 @@ public class ControladorDashboard {
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     List<Hogar> hogaresUsuario = servicioHogar.obtenerHogares(usuarioId);
     model.put("hogaresUsuario", hogaresUsuario);
+    model.put("sinHogar", hogaresUsuario == null || hogaresUsuario.isEmpty());
 
     if (hogaresUsuario != null && !hogaresUsuario.isEmpty()) {
-      Hogar primerHogar = hogaresUsuario.getFirst();
-      if (session.getAttribute(HOGAR_ID) == null) {
-        session.setAttribute(HOGAR_ID, primerHogar.getId());
-        session.setAttribute("hogarActivoEnSession", primerHogar);
-      }
-      procesarMetricasHogar(primerHogar, model);
-      Long hogarId = primerHogar.getId();
+      Hogar hogarActivo = resolverHogarActivo(session, hogaresUsuario);
+      session.setAttribute(HOGAR_ID, hogarActivo.getId());
+      session.setAttribute(HOGAR_ACTIVO_EN_SESSION, hogarActivo);
+
+      procesarMetricasHogar(hogarActivo, model);
+      Long hogarId = hogarActivo.getId();
       List<Gasto> todosLosGastos = servicioRegistroGasto.obtenerTodosLosGastos(hogarId);
       List<Gasto> gastosPagados = todosLosGastos
         .stream()
@@ -56,9 +57,24 @@ public class ControladorDashboard {
       double totalGastosPagados = gastosPagados.stream().mapToDouble(Gasto::getMonto).sum();
       model.put("totalGastosMes", totalGastosPagados);
       model.put("cantidadGastos", gastosPagados.size());
+    } else {
+      session.removeAttribute(HOGAR_ID);
+      session.removeAttribute(HOGAR_ACTIVO_EN_SESSION);
     }
 
     return new ModelAndView("dashboard", model);
+  }
+
+  private Hogar resolverHogarActivo(HttpSession session, List<Hogar> hogaresUsuario) {
+    Object hogarIdSesion = session.getAttribute(HOGAR_ID);
+    if (hogarIdSesion instanceof Long idSesion) {
+      for (Hogar h : hogaresUsuario) {
+        if (h.getId() != null && h.getId().equals(idSesion)) {
+          return h;
+        }
+      }
+    }
+    return hogaresUsuario.getFirst();
   }
 
   private void procesarMetricasHogar(Hogar hogarActual, Map<String, Object> model) {
@@ -78,19 +94,70 @@ public class ControladorDashboard {
       Double precioHora = hogarActual.getPrecioHoraTarea() != null
         ? hogarActual.getPrecioHoraTarea()
         : 5000d;
-      servicioCalculosGasto.calcularHorasDeTareasDeUsuarios(usuariosAgregados, precioHora);
+      double totalOcasionales = obtenerTotalGastosOcasionales(
+        hogarActual.getId(),
+        usuariosAgregados
+      );
+      asignarHorasSegunReglaTareas(
+        usuariosAgregados,
+        precioHora,
+        totalOcasionales,
+        valorPisoMinimo
+      );
     }
 
     model.put("usuarios", usuariosAgregados);
     model.put("sugerenciaProximoPagador", resolverSugerenciaPagador(hogarActual));
   }
 
-  private String resolverSugerenciaPagador(Hogar hogarActual) {
-    String sugerencia = obtenerSugerenciaSegura(hogarActual.getId());
-    if (esSugerenciaValida(sugerencia)) {
-      return sugerencia;
+  private void asignarHorasSegunReglaTareas(
+    List<Usuario> integrantes,
+    Double precioHora,
+    double totalOcasionales,
+    Double valorPisoMinimo
+  ) {
+    if (precioHora == null || precioHora <= 0) {
+      return;
     }
-    return sugerencia;
+    for (Usuario usuario : integrantes) {
+      Double montoBrecha = servicioCalculosGasto.calcularValorDeHorasDeTareaPorUsuario(
+        usuario,
+        precioHora,
+        totalOcasionales,
+        valorPisoMinimo,
+        integrantes
+      );
+      double valor = (montoBrecha != null && montoBrecha > 0) ? montoBrecha : 0.0;
+      double horas = valor > 0 ? Math.ceil((valor / precioHora) * 2.0) / 2.0 : 0.0;
+      usuario.setHorasTareaARealizar(horas);
+    }
+  }
+
+  private double obtenerTotalGastosOcasionales(Long hogarId, List<Usuario> integrantes) {
+    if (hogarId == null || servicioRegistroGasto == null) {
+      return 0.0;
+    }
+    List<Gasto> gastos = servicioRegistroGasto.obtenerTodosLosGastos(hogarId);
+    if (gastos == null || integrantes == null || integrantes.isEmpty()) {
+      return 0.0;
+    }
+    return gastos
+      .stream()
+      .filter(g -> g != null && g.getMonto() != null && g.getTipoGasto() == TipoGasto.OCASIONAL)
+      .filter(g -> esGastoCompartidoPorTodos(g, integrantes))
+      .mapToDouble(Gasto::getMonto)
+      .sum();
+  }
+
+  private boolean esGastoCompartidoPorTodos(Gasto gasto, List<Usuario> integrantes) {
+    List<Usuario> participantes = gasto.getParticipantes();
+    return (
+      participantes == null || participantes.isEmpty() || participantes.size() >= integrantes.size()
+    );
+  }
+
+  private String resolverSugerenciaPagador(Hogar hogarActual) {
+    return obtenerSugerenciaSegura(hogarActual.getId());
   }
 
   private String obtenerSugerenciaSegura(Long hogarId) {
@@ -99,13 +166,6 @@ public class ControladorDashboard {
     } catch (Exception e) {
       return "Sin datos";
     }
-  }
-
-  private boolean esSugerenciaValida(String sugerencia) {
-    if (sugerencia == null || sugerencia.isEmpty()) {
-      return false;
-    }
-    return !"Sin datos".equalsIgnoreCase(sugerencia);
   }
 
   private List<Usuario> obtenerIntegrantesOTodos(Hogar hogarActual) {
@@ -147,20 +207,18 @@ public class ControladorDashboard {
       nuevoHogar.getIntegrantes().add(usuario);
       servicioHogar.crearHogar(nuevoHogar);
       session.setAttribute(HOGAR_ID, nuevoHogar.getId());
-      session.setAttribute("hogarActivoEnSession", nuevoHogar);
+      session.setAttribute(HOGAR_ACTIVO_EN_SESSION, nuevoHogar);
     }
 
     return new ModelAndView(REDIRECT_DASHBOARD);
   }
 
-  // NUEVO FLUJO PASO 1: Buscar hogar por PIN para previsualizarlo
   @PostMapping("/previsualizar-unirse")
   public ModelAndView previsualizarUnirse(
     @RequestParam("pin") String pin,
     HttpSession session,
     RedirectAttributes redirectAttributes
   ) {
-    // Buscamos a través del servicio para asegurar la transacción de Hibernate
     Hogar hogarEncontrado = servicioHogar.buscarPorPin(pin);
 
     if (hogarEncontrado == null) {
@@ -171,7 +229,6 @@ public class ControladorDashboard {
       return new ModelAndView(REDIRECT_DASHBOARD);
     }
 
-    // Validar si el usuario ya es parte de este hogar
     Long usuarioId = SessionUtils.obtenerUsuarioIdDeSesion(session);
     List<Hogar> hogaresDelUsuario = servicioHogar.obtenerHogares(usuarioId);
 
@@ -191,7 +248,6 @@ public class ControladorDashboard {
     return new ModelAndView(REDIRECT_DASHBOARD);
   }
 
-  // NUEVO FLUJO PASO 2: Confirmar la unión definitiva al hogar encontrado
   @PostMapping("/confirmar-unirse-hogar")
   public ModelAndView confirmarUnirseHogar(
     @RequestParam("hogarId") Long hogarId,
@@ -205,7 +261,7 @@ public class ControladorDashboard {
       if (hogar != null) {
         servicioHogar.unirseAHogar(hogar.getNombreHogar(), hogar.getPin(), usuario);
         session.setAttribute(HOGAR_ID, hogar.getId());
-        session.setAttribute("hogarActivoEnSession", hogar);
+        session.setAttribute(HOGAR_ACTIVO_EN_SESSION, hogar);
       }
     }
 

@@ -36,35 +36,37 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     }
 
     List<Usuario> integrantes = hogar.getIntegrantes();
+    List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null && hogar.getId() != null
+      ? servicioPagoRealizado.obtenerHistorialPagos(hogar.getId())
+      : Collections.emptyList();
+
     Map<String, Double> balances = new HashMap<>();
     Map<String, String> emailToNombre = new HashMap<>();
-    Map<String, Long> emailToId = new HashMap<>(); // <-- Mapa para asociar email con ID del usuario
+    Map<String, Long> emailToId = new HashMap<>();
 
     for (Usuario usuario : integrantes) {
       double totalPagadoPorUsuario = calcularTotalPagadoPorUsuario(usuario, gastos);
       double creditoTareas = obtenerCreditoTareas(usuario);
       double consumoIndividual = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
+      double netoTransferencias = calcularNetoTransferenciasRealizadas(usuario, pagosRealizados);
 
-      double balanceNeto = (totalPagadoPorUsuario + creditoTareas) - consumoIndividual;
+      double balanceNeto =
+        (totalPagadoPorUsuario + creditoTareas + netoTransferencias) - consumoIndividual;
 
       String email = usuario.getEmail();
       String nombre = usuario.getNombre() != null ? usuario.getNombre() : "Usuario";
-      Long id = usuario.getId(); // <-- Obtenemos el ID
+      Long id = usuario.getId();
 
       emailToNombre.put(email, nombre);
-      emailToId.put(email, id); // <-- Almacenamos el ID
+      emailToId.put(email, id);
       balances.put(email, balanceNeto);
     }
 
     List<TransferenciaSugerida> transferencias = calcularLiquidacionOptimaConNombres(
       balances,
       emailToNombre,
-      emailToId // <-- Se lo pasamos al generador
+      emailToId
     );
-
-    List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null
-      ? servicioPagoRealizado.obtenerHistorialPagos(hogar.getId())
-      : Collections.emptyList();
 
     return transferencias
       .stream()
@@ -73,13 +75,48 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
           .stream()
           .noneMatch(p ->
             p.getEmisor() != null &&
+            p.getEmisor().getNombre() != null &&
             p.getEmisor().getNombre().equals(t.getEmisor()) &&
             p.getReceptor() != null &&
+            p.getReceptor().getNombre() != null &&
             p.getReceptor().getNombre().equals(t.getReceptor()) &&
+            p.getMonto() != null &&
             Math.abs(p.getMonto() - t.getMonto()) < MARGEN_TOLERANCIA
           )
       )
       .collect(Collectors.toList());
+  }
+
+  private double calcularNetoTransferenciasRealizadas(
+    Usuario usuario,
+    List<PagoRealizado> pagosRealizados
+  ) {
+    if (usuario == null || pagosRealizados == null || pagosRealizados.isEmpty()) {
+      return 0.0;
+    }
+    double neto = 0.0;
+    for (PagoRealizado pago : pagosRealizados) {
+      if (pago.getMonto() == null) {
+        continue;
+      }
+      if (esMismoUsuario(usuario, pago.getEmisor())) {
+        neto += pago.getMonto();
+      }
+      if (esMismoUsuario(usuario, pago.getReceptor())) {
+        neto -= pago.getMonto();
+      }
+    }
+    return neto;
+  }
+
+  private boolean esMismoUsuario(Usuario base, Usuario candidato) {
+    if (base == null || candidato == null) {
+      return false;
+    }
+    if (base.getId() != null && candidato.getId() != null) {
+      return base.getId().equals(candidato.getId());
+    }
+    return base.getNombre() != null && base.getNombre().equals(candidato.getNombre());
   }
 
   private double calcularConsumoIndividualPorUsuario(
@@ -87,7 +124,9 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     Hogar hogar,
     List<Gasto> gastos
   ) {
-    if (gastos == null || usuario == null || usuario.getId() == null) return 0.0;
+    if (gastos == null || usuario == null || usuario.getId() == null) {
+      return 0.0;
+    }
     double totalConsumo = 0.0;
     List<Usuario> integrantesHogar = hogar.getIntegrantes();
 
@@ -121,12 +160,16 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
 
   @Transactional(readOnly = true)
   public List<PagoRealizado> obtenerHistorialPagos(Long hogarId) {
-    if (servicioPagoRealizado == null || hogarId == null) return Collections.emptyList();
+    if (servicioPagoRealizado == null || hogarId == null) {
+      return Collections.emptyList();
+    }
     return servicioPagoRealizado.obtenerHistorialPagos(hogarId);
   }
 
   private double calcularTotalPagadoPorUsuario(Usuario usuario, List<Gasto> gastos) {
-    if (gastos == null || usuario == null || usuario.getId() == null) return 0.0;
+    if (gastos == null || usuario == null || usuario.getId() == null) {
+      return 0.0;
+    }
     double totalPagado = 0.0;
     for (Gasto gasto : gastos) {
       if (
@@ -171,13 +214,12 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
       if (monto > 0) {
         String emailEmisor = deudor.nombre;
         String nombreEmisor = emailToNombre.getOrDefault(emailEmisor, emailEmisor);
-        Long emisorId = emailToId != null ? emailToId.get(emailEmisor) : null; // <-- Obtenemos ID emisor
+        Long emisorId = emailToId != null ? emailToId.get(emailEmisor) : null;
 
         String emailReceptor = acreedor.nombre;
         String nombreReceptor = emailToNombre.getOrDefault(emailReceptor, emailReceptor);
-        Long receptorId = emailToId != null ? emailToId.get(emailReceptor) : null; // <-- Obtenemos ID receptor
+        Long receptorId = emailToId != null ? emailToId.get(emailReceptor) : null;
 
-        // Usamos el constructor que incluye los IDs
         transferencias.add(
           new TransferenciaSugerida(
             emisorId,
@@ -244,11 +286,16 @@ public class ServicioLiquidacionImpl implements ServicioLiquidacion {
     if (usuario == null || hogar == null) {
       return 0.0;
     }
+    List<PagoRealizado> pagosRealizados = servicioPagoRealizado != null && hogar.getId() != null
+      ? servicioPagoRealizado.obtenerHistorialPagos(hogar.getId())
+      : Collections.emptyList();
+
     double totalPagado = calcularTotalPagadoPorUsuario(usuario, gastos);
     double consumo = calcularConsumoIndividualPorUsuario(usuario, hogar, gastos);
     double creditoLiquidado = obtenerCreditoTareas(usuario);
+    double netoTransferencias = calcularNetoTransferenciasRealizadas(usuario, pagosRealizados);
 
-    double balanceNeto = (totalPagado + creditoLiquidado) - consumo;
+    double balanceNeto = (totalPagado + creditoLiquidado + netoTransferencias) - consumo;
 
     if (balanceNeto < -MARGEN_TOLERANCIA) {
       return -balanceNeto;
